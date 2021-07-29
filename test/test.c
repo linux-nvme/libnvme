@@ -15,6 +15,7 @@
  * program exists successfully; an ungraceful exit means a bug exists
  * somewhere.
  */
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -270,7 +271,7 @@ static int test_namespace(nvme_ns_t n)
 	if (ret)
 		return ret;
 
-	printf("%s: nsze:%lx lba size:%d\n", nvme_ns_get_name(n), le64_to_cpu(ns.nsze),
+	printf("%s: nsze:%" PRIx64 " lba size:%d\n", nvme_ns_get_name(n), le64_to_cpu(ns.nsze),
 		1 << ns.lbaf[ns.flbas & NVME_NS_FLBAS_LBA_MASK].ds);
 
 	ret = nvme_identify_allocated_ns(fd, nsid, &allocated);
@@ -363,7 +364,7 @@ int main(int argc, char **argv)
 					char uuid_str[40];
 					uuid_t uuid;
 #endif
-					printf("   `- %s lba size:%d lba max:%lu\n",
+					printf("   `- %s lba size:%d lba max:%" PRIu64 "\n",
 					       nvme_ns_get_name(n),
 					       nvme_ns_get_lba_size(n),
 					       nvme_ns_get_lba_count(n));
@@ -386,7 +387,7 @@ int main(int argc, char **argv)
 			}
 
 			nvme_subsystem_for_each_ns(s, n) {
-				printf(" `- %s lba size:%d lba max:%lu\n",
+				printf(" `- %s lba size:%d lba max:%" PRIu64 "\n",
 				       nvme_ns_get_name(n),
 				       nvme_ns_get_lba_size(n),
 				       nvme_ns_get_lba_count(n));

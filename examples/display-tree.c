@@ -10,6 +10,7 @@
  * display-tree: Scans the nvme topology, prints as an ascii tree with some
  * selected attributes for each component.
  */
+#include <inttypes.h>
 #include <stdio.h>
 #include <libnvme.h>
 
@@ -34,7 +35,7 @@ int main()
 			       nvme_subsystem_get_nqn(s));
 
 			nvme_subsystem_for_each_ns_safe(s, n, _n) {
-				printf("%c   |-- %s lba size:%d lba max:%lu\n",
+				printf("%c   |-- %s lba size:%d lba max:%" PRIu64 "\n",
 				       _s ? '|' : ' ',
 				       nvme_ns_get_name(n),
 				       nvme_ns_get_lba_size(n),
@@ -50,7 +51,7 @@ int main()
 				       nvme_ctrl_get_state(c));
 
 				nvme_ctrl_for_each_ns_safe(c, n, _n)
-					printf("%c   %c   %c-- %s lba size:%d lba max:%lu\n",
+					printf("%c   %c   %c-- %s lba size:%d lba max:%" PRIu64 "\n",
 					       _s ? '|' : ' ', _c ? '|' : ' ',
 					       _n ? '|' : '`',
 					       nvme_ns_get_name(n),

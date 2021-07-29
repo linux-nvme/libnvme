@@ -10,6 +10,7 @@
  * display-columnar: Scans the nvme topology, prints each record type in a
  * column format for easy visual scanning.
  */
+#include <inttypes.h>
 #include <stdio.h>
 #include <libnvme.h>
 
@@ -90,7 +91,7 @@ int main()
 		nvme_for_each_subsystem(h, s) {
 			nvme_subsystem_for_each_ctrl(s, c) {
 				nvme_ctrl_for_each_ns(c, n)
-					printf("%-12s %-8d %-16lu %-8d %s\n",
+					printf("%-12s %-8d %-16" PRIu64 " %-8d %s\n",
 					       nvme_ns_get_name(n),
 					       nvme_ns_get_nsid(n),
 					       nvme_ns_get_lba_count(n),
@@ -101,7 +102,7 @@ int main()
 			nvme_subsystem_for_each_ns(s, n) {
 				bool first = true;
 
-				printf("%-12s %-8d %-16lu %-8d ",
+				printf("%-12s %-8d %-16" PRIu64 " %-8d ",
 				       nvme_ns_get_name(n),
 				       nvme_ns_get_nsid(n),
 				       nvme_ns_get_lba_count(n),
