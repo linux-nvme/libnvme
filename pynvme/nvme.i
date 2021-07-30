@@ -18,6 +18,19 @@
 %rename(subsystem) nvme_subsystem;
 %rename(ns)        nvme_ns;
 
+/* There is a name conflict. In tree.h, the function nvme_ctrl_identify() is
+ * already defined, which means that we can't define nvme_ctrl::identify()
+ * when we extend "struct nvme_ctrl" (see "%extend nvme_ctrl" below).
+ * Instead, we define the method as nvme_ctrl::__identify__() to avoid the
+ * conflict. Fortunately, we can work around the problem with SWIG's %rename()
+ * command so that in the generated Python code the method will be named
+ * identify() and not __identify__() as hown here:
+ *
+ *    def identify(self) -> "struct nvme_id_ctrl *":
+ *        return _nvme.ctrl_identify(self)
+ */
+%rename(identify)  __identify__;
+
 %{
 #include <assert.h>
 #include <ccan/list/list.h>
@@ -32,6 +45,7 @@ static int ctrl_iter_err = 0;
 static int ns_iter_err = 0;
 static int connect_err = 0;
 static int discover_err = 0;
+static int identify_err = 0;
 %}
 
 %inline %{
@@ -117,6 +131,12 @@ static int discover_err = 0;
     discover_err = 0;
     SWIG_exception(SWIG_RuntimeError,"Discover failed");
   }
+}
+
+%exception nvme_ctrl::__identify__ {
+  identify_err = 0;
+  $action
+  if (identify_err) SWIG_exception(SWIG_RuntimeError,"Identify failed");
 }
 
 #include "tree.h"
@@ -261,6 +281,218 @@ static int discover_err = 0;
   }
   $result = obj;
  };
+
+%{
+#define SUCCESS_OR_GETOUT(_val, _label) do { if ((_val) != 0) goto _label; } while (0)
+int add_long_to_dict(PyObject * dict, const char * key, long v)
+{
+        int       ret = -1;
+        PyObject *val = PyLong_FromLong(v);
+        if (!val)
+                return -1;
+
+        /* PyDict_SetItemString does not steal the reference to tmp_p.
+         * So one must decrement the ref count. */
+        ret = PyDict_SetItemString(dict, key, val);
+        Py_CLEAR(val);
+        return ret;
+}
+
+int add_string_to_dict(PyObject * dict, const char * key, const char * s, size_t maxlen)
+{
+        int       ret = -1;
+        PyObject *val = NULL;
+        size_t    len = maxlen;
+        while ((len > 0) && ((s[len-1] == '\0') || (s[len-1] == ' '))) // strip trailing spaces
+                len--;
+
+        val = PyUnicode_FromStringAndSize(s, len);
+
+        /* PyDict_SetItemString does not steal the reference to tmp_p.
+         * So one must decrement the ref count. */
+        ret = PyDict_SetItemString(dict, key, val);
+        Py_CLEAR(val);
+        return ret;
+}
+
+int add_bytearray_to_dict(PyObject * dict, const char * key, const unsigned char * b, size_t len)
+{
+        PyObject * val = PyByteArray_FromStringAndSize((const char *)b, len);
+        int        ret = PyDict_SetItemString(dict, key, val);
+        Py_CLEAR(val);
+        return ret;
+}
+
+PyObject * get_psd_dict(struct nvme_id_psd * psd)
+{
+        PyObject *dict = PyDict_New();
+        if (dict == NULL)
+                goto cleanup;
+
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "mp", psd->mp), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "flags", psd->flags), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "enlat", psd->enlat), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "exlat", psd->exlat), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "rrt", psd->rrt), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "rrl", psd->rrl), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "rwt", psd->rwt), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "rwl", psd->rwl), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "idlp", psd->idlp), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "ips", psd->ips), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "actp", psd->actp), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "apw", psd->apw), cleanup);
+        SUCCESS_OR_GETOUT(add_long_to_dict(dict, "aps", psd->aps), cleanup);
+        return dict;
+
+cleanup:
+        Py_CLEAR(dict);
+        return NULL;
+}
+%};
+
+%typemap(newfree) struct nvme_id_ctrl * {
+   if ($1) free($1);
+}
+
+%typemap(out) struct nvme_id_ctrl * {
+   struct nvme_id_ctrl *id   = $1;
+   PyObject            *dict = NULL;
+   PyObject            *psd  = NULL;
+   int                  ret  = 0;
+   size_t               i    = 0;
+
+   if (id == NULL)
+     goto cleanup;
+
+   dict = PyDict_New();
+   if (dict == NULL)
+     goto cleanup;
+
+   psd = PyList_New(32);
+   if (psd == NULL)
+     goto cleanup;
+
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "vid", id->vid), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "ssvid", id->ssvid), cleanup);
+
+   SUCCESS_OR_GETOUT(add_string_to_dict(dict, "sn", id->sn, sizeof(id->sn)), cleanup);
+   SUCCESS_OR_GETOUT(add_string_to_dict(dict, "mn", id->mn, sizeof(id->mn)), cleanup);
+   SUCCESS_OR_GETOUT(add_string_to_dict(dict, "fr", id->fr, sizeof(id->fr)), cleanup);
+
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "rab", id->rab), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "ieee", (((unsigned)id->ieee[0]) << 16) | ((unsigned)id->ieee[1]) << 8) | (unsigned)id->ieee[2], cleanup);
+
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "cmic", id->cmic), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "mdts", id->mdts), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "cntlid", id->cntlid), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "ver", id->ver), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "rtd3r", id->rtd3r), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "rtd3e", id->rtd3e), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "oaes", id->oaes), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "ctratt", id->ctratt), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "rrls", id->rrls), cleanup);
+   switch (id->cntrltype) {
+   case NVME_CTRL_CNTRLTYPE_IO:
+     SUCCESS_OR_GETOUT(add_string_to_dict(dict, "cntrltype", "I/O", strlen("I/O")), cleanup);
+     break;
+   case NVME_CTRL_CNTRLTYPE_DISCOVERY:
+     SUCCESS_OR_GETOUT(add_string_to_dict(dict, "cntrltype", "Discovery", strlen("Discovery")), cleanup);
+     break;
+   case NVME_CTRL_CNTRLTYPE_ADMIN:
+     SUCCESS_OR_GETOUT(add_string_to_dict(dict, "cntrltype", "Admin", strlen("Admin")), cleanup);
+     break;
+   default:
+     SUCCESS_OR_GETOUT(add_long_to_dict(dict, "cntrltype", id->cntrltype), cleanup);
+   }
+
+   SUCCESS_OR_GETOUT(add_bytearray_to_dict(dict, "fguid", id->fguid, sizeof(id->fguid)), cleanup);
+
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "crdt1", id->crdt1), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "crdt2", id->crdt3), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "crdt3", id->crdt3), cleanup);
+
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "nvmsr", id->nvmsr), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "vwci", id->vwci), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "mec", id->mec), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "oacs", id->oacs), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "acl", id->acl), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "aerl", id->aerl), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "frmw", id->frmw), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "lpa", id->lpa), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "elpe", id->elpe), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "npss", id->npss), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "avscc", id->avscc), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "apsta", id->apsta), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "wctemp", id->wctemp), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "cctemp", id->cctemp), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "mtfa", id->mtfa), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "hmpre", id->hmpre), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "hmmin", id->hmmin), cleanup);
+   SUCCESS_OR_GETOUT(add_bytearray_to_dict(dict, "tnvmcap", id->tnvmcap, sizeof(id->tnvmcap)), cleanup);
+   SUCCESS_OR_GETOUT(add_bytearray_to_dict(dict, "unvmcap", id->unvmcap, sizeof(id->unvmcap)), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "rpmbs", id->rpmbs), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "edstt", id->edstt), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "dsto", id->dsto), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "fwug", id->fwug), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "kas", id->kas), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "hctma", id->hctma), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "mntmt", id->mntmt), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "mxtmt", id->mxtmt), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "sanicap", id->sanicap), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "hmminds", id->hmminds), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "hmmaxd", id->hmmaxd), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "nsetidmax", id->nsetidmax), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "endgidmax", id->endgidmax), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "anatt", id->anatt), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "anacap", id->anacap), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "anagrpmax", id->anagrpmax), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "nanagrpid", id->nanagrpid), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "pels", id->pels), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "sqes", id->sqes), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "cqes", id->cqes), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "maxcmd", id->maxcmd), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "nn", id->nn), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "oncs", id->oncs), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "fuses", id->fuses), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "fna", id->fna), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "vwc", id->vwc), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "awun", id->awun), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "awupf", id->awupf), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "icsvscc", id->icsvscc), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "nwpc", id->nwpc), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "acwu", id->acwu), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "sgls", id->sgls), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "mnan", id->mnan), cleanup);
+
+   SUCCESS_OR_GETOUT(add_string_to_dict(dict, "subnqn", id->subnqn, sizeof(id->subnqn)), cleanup);
+
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "ioccsz", id->ioccsz), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "iorcsz", id->iorcsz), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "icdoff", id->icdoff), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "fcatt", id->fcatt), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "msdbd", id->msdbd), cleanup);
+   SUCCESS_OR_GETOUT(add_long_to_dict(dict, "ofcs", id->ofcs), cleanup);
+
+   for (i = 0; i < 32; i++)
+   {
+     PyObject * obj = get_psd_dict(&id->psd[i]);
+     if (obj == NULL)
+       goto cleanup;
+     PyList_SET_ITEM(psd, i, obj);
+   }
+   ret = PyDict_SetItemString(dict, "psd", psd);
+   if (ret == -1)
+     goto cleanup;
+
+   $result = dict;
+
+cleanup:
+   if ($result != dict) {
+     Py_CLEAR(dict);
+     Py_CLEAR(psd);
+   }
+};
+
 struct nvme_root {
   %immutable config_file;
   char *config_file;
@@ -537,6 +769,22 @@ struct nvme_ns {
       return NULL;
     }
     return logp;
+  }
+
+  /* Note about the name __identify__: this dunder method is to workaround a
+     name conflict with function "nvme_ctrl_identify()" defined in tree.h.
+     We use the %rename command (at the top of this file) to rename
+     "__identify__" to "identify" in the generated Python class. */
+  %newobject __identify__;
+  struct nvme_id_ctrl * __identify__() {
+    struct nvme_id_ctrl * id = (struct nvme_id_ctrl *)calloc(1, sizeof(struct nvme_id_ctrl));
+    if (nvme_ctrl_identify($self, id) < 0)
+    {
+      free(id);
+      identify_err = 1;
+      return NULL;
+    }
+    return id;
   }
   char *__str__() {
     static char tmp[1024];
