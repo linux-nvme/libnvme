@@ -19,7 +19,6 @@ examples/display-columnar
 examples/telemetry-listen
 examples/discover-loop
 
-ccan/config.h
 ccan/tools/configurator/configurator
 
 doc/_build

@@ -38,9 +38,6 @@ include ../Makefile.quiet
 
 all: $(all_targets)
 
-$(CCANDIR)config.h: $(CCANDIR)tools/configurator/configurator
-	$< > $@
-
 libccan_headers := $(wildcard $(CCANDIR)ccan/*/*.h)
 libccan_srcs := $(wildcard $(CCANDIR)ccan/*/*.c)
 libccan_objs := $(patsubst %.c,%.ol,$(libccan_srcs))
@@ -90,6 +87,4 @@ $(libccan_objs): $(libccan_headers) $(CCANDIR)config.h
 
 clean:
 	rm -f $(all_targets) $(libnvme_objs) $(libnvme_sobjs) $(libccan_objs) $(libccan_sobjs) $(soname).new
-	rm -f $(CCANDIR)config.h
-	rm -f $(CCANDIR)tools/configurator/configurator
 	rm -f *.so* *.a *.o
