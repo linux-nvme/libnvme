@@ -20,8 +20,6 @@ libnvme_CFLAGS = -Wall -fPIC
 libnvme_SO_CFLAGS = $(libnvme_CFLAGS) -shared
 libnvme_L_CFLAGS = $(libnvme_CFLAGS)
 
-LINK_FLAGS= -L /usr/lib64
-LINK_FLAGS+=$(LDFLAGS)
 ENABLE_SHARED ?= 1
 SED ?= sed
 INSTALL ?= install
@@ -76,7 +74,7 @@ libnvme.a: $(libnvme_objs) $(libccan_objs)
 	$(QUIET_RANLIB)$(RANLIB) libnvme.a
 
 $(libname): $(libnvme_sobjs) $(libccan_sobjs) libnvme.map
-	$(QUIET_CC)$(CC) $(SO_CFLAGS) -Wl,--version-script=libnvme.map -Wl,-soname=$(soname) -o $@ $(libnvme_sobjs) $(libccan_sobjs) $(libnvme_SO_CFLAGS) $(LINK_FLAGS) $(LIBS)
+	$(QUIET_CC)$(CC) $(SO_CFLAGS) -Wl,--version-script=libnvme.map -Wl,-soname=$(soname) -o $@ $(libnvme_sobjs) $(libccan_sobjs) $(libnvme_SO_CFLAGS) $(LDFLAGS) $(LIBS)
 
 install: $(all_targets)
 	$(INSTALL) -D -m 644 libnvme.a $(DESTDIR)$(libdir)/libnvme.a
