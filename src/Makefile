@@ -75,12 +75,12 @@ $(libname): $(libnvme_sobjs) $(libccan_sobjs) libnvme.map
 	$(QUIET_CC)$(CC) $(SO_CFLAGS) -Wl,--version-script=libnvme.map -Wl,-soname=$(soname) -o $@ $(libnvme_sobjs) $(libccan_sobjs) $(LINK_FLAGS) $(LIBS)
 
 install: $(all_targets)
-	$(INSTALL) -D -m 644 libnvme.a $(libdir)/libnvme.a
-	for i in $(libnvme_api); do $(INSTALL) -D -m 644 $$i $(includedir)/$$i; done
+	$(INSTALL) -D -m 644 libnvme.a $(DESTDIR)$(libdir)/libnvme.a
+	for i in $(libnvme_api); do $(INSTALL) -D -m 644 $$i $(DESTDIR)$(includedir)/$$i; done
 ifeq ($(ENABLE_SHARED),1)
-	$(INSTALL) -D -m 755 $(libname) $(libdir)/$(libname)
-	ln -sf $(libname) $(libdir)/$(soname)
-	ln -sf $(libname) $(libdir)/libnvme.so
+	$(INSTALL) -D -m 755 $(libname) $(DESTDIR)$(libdir)/$(libname)
+	ln -sf $(libname) $(DESTDIR)$(libdir)/$(soname)
+	ln -sf $(libname) $(DESTDIR)$(libdir)/libnvme.so
 endif
 
 $(libnvme_objs): $(libnvme_api) $(libnvme_private)

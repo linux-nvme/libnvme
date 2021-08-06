@@ -46,13 +46,13 @@ SED_PROCESS = \
 	$(SED_PROCESS)
 
 install: $(NAME).pc
-	@$(MAKE) -C src install prefix=$(DESTDIR)$(prefix) includedir=$(DESTDIR)$(includedir) libdir=$(DESTDIR)$(libdir)
+	@$(MAKE) -C src install
 	$(INSTALL) -D -m 644 $(NAME).pc $(DESTDIR)$(libdir)/pkgconfig/$(NAME).pc
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man2
 	$(INSTALL) -m 644 doc/man/*.2 $(DESTDIR)$(mandir)/man2
 
 install-tests:
-	@$(MAKE) -C test install prefix=$(DESTDIR)$(prefix) datadir=$(DESTDIR)$(datadir)
+	@$(MAKE) -C test install
 
 clean:
 	@rm -f config-host.mak config-host.h cscope.out $(NAME).pc
