@@ -219,7 +219,11 @@ print_config "libjson-c" "${libjsonc}"
 ##########################################
 # check for c++
 cpp="no"
-which g++ > /dev/null 2> /dev/null
+cpp_binary=$CXX
+if [ -z "$cpp_binary" ] ; then
+    cpp_binary=g++
+fi
+which $cpp_binary > /dev/null 2> /dev/null
 if [ $? -eq 0 ]; then
   cpp="yes"
 fi
