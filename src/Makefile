@@ -12,10 +12,14 @@ libdir ?= $(prefix)/lib
 
 CCANDIR=../ccan/
 
-CFLAGS ?= -g -fomit-frame-pointer -O2 -I/usr/include -Invme/ -I$(CCANDIR) -include ../config-host.h -D_GNU_SOURCE
-override CFLAGS += -Wall -fPIC
-SO_CFLAGS=-shared $(CFLAGS)
-L_CFLAGS=$(CFLAGS)
+libnvme_CPPFLAGS = -Invme/ -I$(CCANDIR) -include ../config-host.h -D_GNU_SOURCE
+
+CFLAGS ?= -g -fomit-frame-pointer -O2
+libnvme_CFLAGS = -Wall -fPIC
+
+libnvme_SO_CFLAGS = $(libnvme_CFLAGS) -shared
+libnvme_L_CFLAGS = $(libnvme_CFLAGS)
+
 LINK_FLAGS= -L /usr/lib64
 LINK_FLAGS+=$(LDFLAGS)
 ENABLE_SHARED ?= 1
@@ -58,10 +62,10 @@ libnvme_sobjs := $(patsubst %.c,%.os,$(libnvme_srcs))
 $(libnvme_objs) $(libnvme_sobjs): $(libnvme_api) $(libnvme_private) $(libccan_objs)
 
 %.os: %.c
-	$(QUIET_CC)$(CC) $(SO_CFLAGS) -c -o $@ $<
+	$(QUIET_CC)$(CC) $(libnvme_CPPFLAGS) $(CPPFLAGS) $(libnvme_SO_CFLAGS) $(CFLAGS) -c -o $@ $<
 
 %.ol: %.c
-	$(QUIET_CC)$(CC) $(L_CFLAGS) -c -o $@ $<
+	$(QUIET_CC)$(CC) $(libnvme_CPPFLAGS) $(CPPFLAGS) $(libnvme_L_CFLAGS) $(CFLAGS) -c -o $@ $<
 
 AR ?= ar
 RANLIB ?= ranlib
@@ -72,7 +76,7 @@ libnvme.a: $(libnvme_objs) $(libccan_objs)
 	$(QUIET_RANLIB)$(RANLIB) libnvme.a
 
 $(libname): $(libnvme_sobjs) $(libccan_sobjs) libnvme.map
-	$(QUIET_CC)$(CC) $(SO_CFLAGS) -Wl,--version-script=libnvme.map -Wl,-soname=$(soname) -o $@ $(libnvme_sobjs) $(libccan_sobjs) $(LINK_FLAGS) $(LIBS)
+	$(QUIET_CC)$(CC) $(SO_CFLAGS) -Wl,--version-script=libnvme.map -Wl,-soname=$(soname) -o $@ $(libnvme_sobjs) $(libccan_sobjs) $(libnvme_SO_CFLAGS) $(LINK_FLAGS) $(LIBS)
 
 install: $(all_targets)
 	$(INSTALL) -D -m 644 libnvme.a $(DESTDIR)$(libdir)/libnvme.a
