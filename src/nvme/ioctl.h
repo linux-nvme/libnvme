@@ -2282,9 +2282,36 @@ int nvme_ns_mgmt(int fd, __u32 nsid, enum nvme_ns_mgmt_sel sel,
 		 struct nvme_id_ns *ns, __u32 *result, __u32 timeout);
 
 /**
+ * nvme_ns_mgmt_csi() -
+ * @fd:		File descriptor of nvme device
+ */
+int nvme_ns_mgmt_csi(int fd, __u32 nsid, enum nvme_ns_mgmt_sel sel,
+		      struct nvme_id_ns *ns, __u32 *result, __u32 timeout,
+		      __u8 csi);
+
+/**
+ * nvme_ns_mgmt_create_csi() -
+ * @fd:		File descriptor of nvme device
+ * @ns:		Namespace identification that defines ns creation parameters
+ * @nsid:	On success, set to the namespace id that was created
+ * @timeout:	Overide the default timeout to this value in milliseconds;
+ * 		set to 0 to use the system default.
+ * @csi		Command Set Identifier
+ *
+ * On successful creation, the namespace exists in the subsystem, but is not
+ * attached to any controller. Use the &nvme_ns_attach_ctrls() to assign the
+ * namespace to one or more controllers.
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise.
+ */
+int nvme_ns_mgmt_create_csi(int fd, struct nvme_id_ns *ns, __u32 *nsid,
+			__u32 timeout, __u8 csi);
+
+/**
  * nvme_ns_mgmt_create() -
  * @fd:		File descriptor of nvme device
- * @ns:		Namespace identifiaction that defines creation parameters
+ * @ns:		Namespace identification that defines ns creation parameters
  * @nsid:	On success, set to the namespace id that was created
  * @timeout:	Overide the default timeout to this value in milliseconds;
  * 		set to 0 to use the system default.
