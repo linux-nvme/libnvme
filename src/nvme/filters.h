@@ -71,6 +71,14 @@ int nvme_scan_subsystem_ctrls(nvme_subsystem_t s, struct dirent ***ctrls);
 int nvme_scan_subsystem_namespaces(nvme_subsystem_t s, struct dirent ***namespaces);
 
 /**
+ * nvme_scan_ctrls() -
+ * @ctrls:
+ *
+ * Return: 
+ */
+int nvme_scan_ctrls(struct dirent ***ctrls);
+
+/**
  * nvme_scan_ctrl_namespace_paths() -
  * @c:
  * @namespaces:

@@ -293,3 +293,10 @@ LIBNVME_1.0 {
 	local:
 		*;
 };
+
+LIBNVME_1.1 {
+	global:
+		nvme_configure_ctrl;
+		nvme_deconfigure_ctrl;
+		nvme_scan_ctrls;
+} LIBNVME_1.0;

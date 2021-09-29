@@ -224,6 +224,22 @@ nvme_ctrl_t nvme_lookup_ctrl(nvme_subsystem_t s, const char *transport,
 
 
 /**
+ * nvme_configure_ctrl() -
+ * @c:
+ * @path:
+ * @name:
+ *
+ * Return: 
+ */
+int nvme_configure_ctrl(nvme_ctrl_t c, const char *path, const char *name);
+
+/**
+ * nvme_deconfigure_ctrl() -
+ * @c:
+ */
+void nvme_deconfigure_ctrl(nvme_ctrl_t c);
+
+/**
  * nvme_subsystem_first_ns() -
  * @s:
  *
