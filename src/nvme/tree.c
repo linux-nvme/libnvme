@@ -889,9 +889,12 @@ free_addrinfo:
 	freeaddrinfo(host_info);
 }
 
-struct nvme_ctrl *nvme_create_ctrl(const char *subsysnqn, const char *transport,
-				   const char *traddr, const char *host_traddr,
-				   const char *host_iface, const char *trsvcid)
+static struct nvme_ctrl *nvme_create_ctrl(const char *subsysnqn,
+					  const char *transport,
+					  const char *traddr,
+					  const char *host_traddr,
+					  const char *host_iface,
+					  const char *trsvcid)
 {
 	struct nvme_ctrl *c;
 	bool discovery = false;
@@ -1068,6 +1071,15 @@ static int nvme_configure_ctrl(nvme_ctrl_t c, const char *path,
 	return 0;
 }
 
+/*
+ * Initialize an existing controller.
+ *
+ * Check the existing controller against sysfs and move the subsystem
+ * to the correct entry if the name of the subsystem entry is different.
+ * This might happen eg for discovery controllers, where every subsystem
+ * will be getting a new sysfs entry, even though the subsystem NQN is
+ * identical.
+ */
 int nvme_init_ctrl(nvme_host_t h, nvme_ctrl_t c, int instance)
 {
 	nvme_subsystem_t s;
@@ -1127,9 +1139,30 @@ int nvme_init_ctrl(nvme_host_t h, nvme_ctrl_t c, int instance)
 			goto out_free_subsys;
 		}
 	}
-	c->s = s;
-	list_add(&s->ctrls, &c->entry);
-out_free_subsys:
+	/* Check if the subsystem has moved */
+	if (c->s && s != c->s) {
+		nvme_msg(LOG_DEBUG, "Move controller to new parent\n");
+		list_del_init(&c->entry);
+		c->s = s;
+		list_add(&s->ctrls, &c->entry);
+	}
+
+	ret = asprintf(&path, "%s/nvme%d", nvme_ctrl_sysfs_dir, instance);
+	if (ret < 0) {
+		errno = ENOMEM;
+		goto out_free_subsys;
+	}
+
+	ret = nvme_configure_ctrl(c, path, name);
+	if (ret < 0) {
+		free(path);
+		goto out_free_subsys;
+	}
+
+	nvme_ctrl_scan_namespaces(c);
+	nvme_ctrl_scan_paths(c);
+
+ out_free_subsys:
 	free(subsys_name);
  out_free_name:
 	free(name);

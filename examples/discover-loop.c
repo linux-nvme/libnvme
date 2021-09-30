@@ -49,6 +49,7 @@ int main()
 	struct nvmf_discovery_log *log = NULL;
 	nvme_root_t r;
 	nvme_host_t h;
+	nvme_subsystem_t s;
 	nvme_ctrl_t c;
 	int ret;
 
@@ -62,8 +63,12 @@ int main()
 		fprintf(stderr, "Failed to allocated memory\n");
 		return ENOMEM;
 	}
-	c = nvme_create_ctrl(NVME_DISC_SUBSYS_NAME, "loop",
-			     NULL, NULL, NULL, NULL);
+	s = nvme_lookup_subsystem(h, NULL, NVME_DISC_SUBSYS_NAME);
+	if (!s) {
+		fprintf(stderr, "Failed to allocate memory\n");
+		return ENOMEM;
+	}
+	c = nvme_lookup_ctrl(s, "loop", NULL, NULL, NULL, NULL);
 	if (!c) {
 		fprintf(stderr, "Failed to allocate memory\n");
 		return ENOMEM;

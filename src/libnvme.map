@@ -7,7 +7,6 @@ LIBNVME_1.0 {
 		nvme_attach_ns;
 		nvme_compare;
 		nvme_copy;
-		nvme_create_ctrl;
 		nvme_ctrl_disconnect;
 		nvme_ctrl_first_ns;
 		nvme_ctrl_first_path;

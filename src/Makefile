@@ -24,7 +24,7 @@ INSTALL ?= install
 
 soname=$(NAME).so.1
 minor=0
-micro=1
+micro=2
 libname=$(soname).$(minor).$(micro)
 all_targets += $(NAME).a
 

@@ -224,22 +224,6 @@ nvme_ctrl_t nvme_lookup_ctrl(nvme_subsystem_t s, const char *transport,
 
 
 /**
- * nvme_create_ctrl() -
- * @subsysnqn:
- * @transport:
- * @traddr:
- * @host_traddr:
- * @host_iface:
- * @trsvcid:
- *
- * Return: 
- */
-nvme_ctrl_t nvme_create_ctrl(const char *subsysnqn, const char *transport,
-			     const char *traddr, const char *host_traddr,
-			     const char *host_iface, const char *trsvcid);
-
-
-/**
  * nvme_subsystem_first_ns() -
  * @s:
  *

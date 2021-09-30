@@ -567,6 +567,7 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 {
 	const char *transport;
 	char *traddr = NULL, *trsvcid = NULL;
+	nvme_subsystem_t s;
 	nvme_ctrl_t c;
 	bool disable_sqflow = false;
 	int ret;
@@ -625,12 +626,19 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 		return NULL;
 	}
 
+	s = nvme_lookup_subsystem(h, NULL, e->subnqn);
+	if (!s) {
+		nvme_msg(LOG_ERR, "Failed to allocate subsystem %s\n",
+			 e->subnqn);
+		errno = ENOMEM;
+		return NULL;
+	}
 	transport = nvmf_trtype_str(e->trtype);
 
 	nvme_msg(LOG_DEBUG, "lookup ctrl "
 		 "(transport: %s, traddr: %s, trsvcid %s)\n",
 		 transport, traddr, trsvcid);
-	c = nvme_create_ctrl(e->subnqn, transport, traddr, NULL, NULL, trsvcid);
+	c = nvme_lookup_ctrl(s, transport, traddr, NULL, NULL, trsvcid);
 	if (!c) {
 		nvme_msg(LOG_DEBUG, "skipping discovery entry, "
 			 "failed to allocate %s controller with traddr %s\n",
