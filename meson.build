@@ -182,6 +182,7 @@ pkg.generate(
     description: 'Manage "libnvme" subsystem devices (Non-volatile Memory Express)',
     url: 'http://github.com/linux-nvme/libnvme/',
     libraries: ['-L${libdir}', '-lnvme'],
+    requires: [libuuid, libjson, libsystemd],
 )
 
 ################################################################################
