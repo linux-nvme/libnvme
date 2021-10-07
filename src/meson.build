@@ -52,16 +52,20 @@ libnvme_static = static_library(
     install : false
 )
 
-headers = [
-    'libnvme.h',
-    'nvme/fabrics.h',
-    'nvme/filters.h',
-    'nvme/ioctl.h',
-    'nvme/log.h',
-    'nvme/tree.h',
-    'nvme/types.h',
-    'nvme/util.h',
-]
+mode = ['rw-r--r--', 0, 0]
+install_headers('libnvme.h', install_mode: mode)
+install_headers([
+        'nvme/fabrics.h',
+        'nvme/filters.h',
+        'nvme/ioctl.h',
+        'nvme/log.h',
+        'nvme/tree.h',
+        'nvme/types.h',
+        'nvme/util.h',
+    ],
+    subdir: 'nvme',
+    install_mode: mode,
+)
 
-install_headers(headers)
+
 

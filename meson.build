@@ -60,7 +60,7 @@
 ################################################################################
 project(
     'libnvme', ['c', 'cpp'],
-    meson_version: '>= 0.46.1',
+    meson_version: '>= 0.47.0',
     version: '0.1',
     license: 'LGPLv2+',
     default_options: [
