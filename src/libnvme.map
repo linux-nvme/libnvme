@@ -1,4 +1,4 @@
-{
+LIBNVME_1.0 {
 	global:
 		__nvme_get_log_page;
 		__nvme_msg;
