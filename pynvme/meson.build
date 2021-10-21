@@ -31,7 +31,7 @@ if have_python_support
         pymod_swig[1],
         dependencies : py3_dep,
         include_directories: incdir,
-        link_with: libnvme,
+        link_with: libnvme.get_static_lib(),
         install: true,
         subdir: 'libnvme',
     )

@@ -66,6 +66,7 @@ project(
     default_options: [
         'buildtype=release',
         'prefix=/usr',
+        'default_library=both',
     ]
 )
 
