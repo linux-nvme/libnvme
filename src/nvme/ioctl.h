@@ -157,8 +157,8 @@ int nvme_submit_admin_passthru64(int fd, struct nvme_passthru_cmd64 *cmd,
  * @data:	Pointer to user address of the data buffer
  * @metadata_len:Length of metadata transfered in this command
  * @metadata:	Pointer to user address of the metadata buffer
- * @timeout_ms:	How long the kernel waits for the command to complete
  * @result:	Optional field to return the result from the CQE dword 0
+ * @timeout_ms:	How long the kernel waits for the command to complete
  *
  * Parameterized form of nvme_submit_admin_passthru64(). This sets up and
  * submits a &struct nvme_passthru_cmd64.
@@ -279,7 +279,6 @@ int nvme_io_passthru64(int fd, __u8 opcode, __u8 flags, __u16 rsvd,
  * @fd:		File descriptor of nvme device
  * @cmd:	The nvme io command to send
  * @result:	Optional field to return the result from the CQE dword 0
- * @result:	Optional field to return the result from the CQE DW0
  *
  * Uses NVME_IOCTL_IO_CMD for the ioctl request.
  *
@@ -328,38 +327,46 @@ int nvme_io_passthru(int fd, __u8 opcode, __u8 flags, __u16 rsvd,
 /**
  * nvme_subsystem_reset() - Initiate a subsystem reset
  * @fd:		File descriptor of nvme device
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This should only be sent to controller handles, not to namespaces.
  *
  * Return: Zero if a subsystem reset was initiated or -1 with errno set
  * otherwise.
  */
-int nvme_subsystem_reset(int fd);
+int nvme_subsystem_reset(int fd, __u32 timeout_ms);
 
 /**
  * nvme_ctrl_reset() - Initiate a controller reset
  * @fd:		File descriptor of nvme device
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This should only be sent to controller handles, not to namespaces.
  *
  * Return: 0 if a reset was initiated or -1 with errno set otherwise.
  */
-int nvme_ctrl_reset(int fd);
+int nvme_ctrl_reset(int fd, __u32 timeout_ms);
 
 /**
  * nvme_ns_rescan() - Initiate a controller rescan
  * @fd:		File descriptor of nvme device
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This should only be sent to controller handles, not to namespaces.
  *
  * Return: 0 if a rescan was initiated or -1 with errno set otherwise.
  */
-int nvme_ns_rescan(int fd);
+int nvme_ns_rescan(int fd, __u32 timeout_ms);
 
 /**
  * nvme_get_nsid() - Retrieve the NSID from a namespace file descriptor
  * @fd:		File descriptor of nvme namespace
  * @nsid:	User pointer to namespace id
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This should only be sent to namespace handles, not to controllers. The
  * kernel's interface returns the nsid as the return value. This is unfortunate
@@ -368,7 +375,7 @@ int nvme_ns_rescan(int fd);
  *
  * Return: 0 if @nsid was set successfully or -1 with errno set otherwise.
  */
-int nvme_get_nsid(int fd, __u32 *nsid);
+int nvme_get_nsid(int fd, __u32 *nsid, __u32 timeout_ms);
 
 /**
  * nvme_identify() - Send the NVMe Identify command
@@ -381,6 +388,8 @@ int nvme_get_nsid(int fd, __u32 *nsid);
  * @uuidx:	UUID Index if controller supports this id selection method
  * @csi:	Command Set Identifier
  * @data:	User space destination address to transfer the data
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Identify command returns a data buffer that describes information about
  * the NVM subsystem, the controller or the namespace(s).
@@ -390,12 +399,14 @@ int nvme_get_nsid(int fd, __u32 *nsid);
  */
 int nvme_identify(int fd, enum nvme_identify_cns cns, __u32 nsid,
 		  __u16 cntid, __u16 nvmsetid, __u16 domid,
-		  __u8 uuidx, __u8 csi, void *data);
+		  __u8 uuidx, __u8 csi, void *data, __u32 timeout_ms);
 
 /**
  * nvme_identify_ctrl() - Retrieves nvme identify controller
  * @fd:		File descriptor of nvme device
  * id:		User space destination address to transfer the data,
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Sends nvme identify with CNS value %NVME_IDENTIFY_CNS_CTRL.
  *
@@ -404,13 +415,16 @@ int nvme_identify(int fd, enum nvme_identify_cns cns, __u32 nsid,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_identify_ctrl(int fd, struct nvme_id_ctrl *id);
+int nvme_identify_ctrl(int fd, struct nvme_id_ctrl *id,
+		       __u32 timeout_ms);
 
 /**
  * nvme_identify_ns() - Retrieves nvme identify namespace
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace to identify
  * @ns:		User space destination address to transfer the data
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * If the Namespace Identifier (NSID) field specifies an active NSID, then the
  * Identify Namespace data structure is returned to the host for that specified
@@ -755,6 +769,8 @@ int nvme_identify_iocs(int fd, __u16 cntlid, struct nvme_id_iocs *iocs);
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace to identify
  * @data:	User space destination address to transfer the data
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
@@ -765,6 +781,8 @@ int nvme_zns_identify_ns(int fd, __u32 nsid, struct nvme_zns_id_ns *data);
  * nvme_zns_identify_ctrl() -
  * @fd:	File descriptor of nvme device
  * @id:	User space destination address to transfer the data
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
@@ -775,8 +793,8 @@ int nvme_zns_identify_ctrl(int fd, struct nvme_zns_id_ctrl *id);
  * nvme_get_log() - NVMe Admin Get Log command
  * @fd:		File descriptor of nvme device
  * @lid:	Log page identifier, see &enum nvme_cmd_get_log_lid for known
- * 		values
- * @nsid: 	Namespace identifier, if applicable
+ *		values
+ * @nsid:	Namespace identifier, if applicable
  * @lpo:	Log page offset for partial log transfers
  * @lsp:   Log specific field
  * @lsi:   Endurance group information
@@ -784,37 +802,43 @@ int nvme_zns_identify_ctrl(int fd, struct nvme_zns_id_ctrl *id);
  * @uuidx: UUID selection, if supported
  * @len:   Length of provided user buffer to hold the log data in bytes
  * @log:   User space destination address to transfer the data
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_log(int fd, enum nvme_cmd_get_log_lid lid, __u32 nsid, __u64 lpo,
 		 __u8 lsp, __u16 lsi, bool rae, __u8 uuidx, enum nvme_csi csi,
-		 __u32 len, void *log);
+		 __u32 len, void *log, __u32 timeout_ms);
 
 static inline int nvme_get_nsid_log(int fd, enum nvme_cmd_get_log_lid lid,
-				    __u32 nsid, __u32 len, void *log)
+				    __u32 nsid, __u32 len, void *log,
+				    __u32 timeout_ms)
 {
 	return nvme_get_log(fd, lid, nsid, 0, 0, 0, false, 0, NVME_CSI_NVM, len,
-			    log);
+			    log, timeout_ms);
 }
 
 static inline int nvme_get_log_simple(int fd, enum nvme_cmd_get_log_lid lid,
-				      __u32 len, void *log)
+				      __u32 len, void *log, __u32 timeout_ms)
 {
-	return nvme_get_nsid_log(fd, lid, NVME_NSID_ALL, len, log);
+	return nvme_get_nsid_log(fd, lid, NVME_NSID_ALL, len, log, timeout_ms);
 }
 
 /** nvme_get_log_supported_log_pages() - Retrieve nmve supported log pages
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
  * @log:	Array of LID supported and Effects data structures
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_log_supported_log_pages(int fd, bool rae,
-				     struct nvme_supported_log_pages *log);
+				     struct nvme_supported_log_pages *log,
+				     __u32 timeout_ms);
 
 /**
  * nvme_get_log_error() - Retrieve nvme error log
@@ -822,6 +846,8 @@ int nvme_get_log_supported_log_pages(int fd, bool rae,
  * @entries:	Number of error log entries allocated
  * @rae:	Retain asynchronous events
  * @err_log:	Array of error logs of size 'entries'
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This log page describes extended error information for a command that
  * completed with error, or may report an error that is not specific to a
@@ -831,7 +857,7 @@ int nvme_get_log_supported_log_pages(int fd, bool rae,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_log_error(int fd, unsigned nr_entries, bool rae,
-		       struct nvme_error_log_page *log);
+		       struct nvme_error_log_page *log, __u32 timeout_ms);
 
 /**
  * nvme_get_log_smart() - Retrieve nvme smart log
@@ -839,6 +865,8 @@ int nvme_get_log_error(int fd, unsigned nr_entries, bool rae,
  * @nsid:	Optional namespace identifier
  * @rae:	Retain asynchronous events
  * @smart_log:	User address to store the smart log
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This log page provides SMART and general health information. The information
  * provided is over the life of the controller and is retained across power
@@ -850,13 +878,16 @@ int nvme_get_log_error(int fd, unsigned nr_entries, bool rae,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_log_smart(int fd, __u32 nsid, bool rae, struct nvme_smart_log *log);
+int nvme_get_log_smart(int fd, __u32 nsid, bool rae, struct nvme_smart_log *log,
+		       __u32 timeout_ms);
 
 /**
  * nvme_get_log_fw_slot() - Retrieves the controller firmware log
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
  * @fw_log:	User address to store the log page
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This log page describes the firmware revision stored in each firmware slot
  * supported. The firmware revision is indicated as an ASCII string. The log
@@ -865,13 +896,16 @@ int nvme_get_log_smart(int fd, __u32 nsid, bool rae, struct nvme_smart_log *log)
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_log_fw_slot(int fd, bool rae, struct nvme_firmware_slot *log);
+int nvme_get_log_fw_slot(int fd, bool rae, struct nvme_firmware_slot *log,
+			 __u32 timeout_ms);
 
 /**
  * nvme_get_log_changed_ns_list() - Retrieve namespace changed list
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
  * @ns_list:	User address to store the log page
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This log page describes namespaces attached to this controller that have
  * changed since the last time the namespace was identified, been added, or
@@ -880,13 +914,16 @@ int nvme_get_log_fw_slot(int fd, bool rae, struct nvme_firmware_slot *log);
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_log_changed_ns_list(int fd, bool rae, struct nvme_ns_list *log);
+int nvme_get_log_changed_ns_list(int fd, bool rae, struct nvme_ns_list *log,
+				 __u32 timeout_ms);
 
 /**
  * nvme_get_log_cmd_effects() - Retrieve nvme command effects log
  * @fd:		File descriptor of nvme device
  * @csi:	Command Set Identifier
  * @effects_log:User address to store the effects log
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This log page describes the commands that the controller supports and the
  * effects of those commands on the state of the NVM subsystem.
@@ -895,13 +932,16 @@ int nvme_get_log_changed_ns_list(int fd, bool rae, struct nvme_ns_list *log);
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_log_cmd_effects(int fd, enum nvme_csi csi,
-			     struct nvme_cmd_effects_log *log);
+			     struct nvme_cmd_effects_log *log,
+			     __u32 timeout_ms);
 
 /**
  * nvme_get_log_device_self_test() - Retrieve the device self test log
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID being tested
  * @log:	Userspace address of the log payload
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The log page indicates the status of an in progress self test and the
  * percent complete of that operation, and the results of the previous 20
@@ -910,12 +950,18 @@ int nvme_get_log_cmd_effects(int fd, enum nvme_csi csi,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_log_device_self_test(int fd, struct nvme_self_test_log *log);
+int nvme_get_log_device_self_test(int fd, struct nvme_self_test_log *log,
+				  __u32 timeout_ms);
 
 /**
  * nvme_get_log_create_telemetry_host() -
+ * @fd:
+ * @log:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
-int nvme_get_log_create_telemetry_host(int fd, struct nvme_telemetry_log *log);
+int nvme_get_log_create_telemetry_host(int fd, struct nvme_telemetry_log *log,
+				       __u32 timeout_ms);
 
 /**
  * nvme_get_log_telemetry_host() -
@@ -923,6 +969,8 @@ int nvme_get_log_create_telemetry_host(int fd, struct nvme_telemetry_log *log);
  * @offset:	Offset into the telemetry data
  * @len:	Length of provided user buffer to hold the log data in bytes
  * @log:	User address for log page data
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Retreives the Telemetry Host-Initiated log page at the requested offset
  * using the previously existing capture.
@@ -930,7 +978,8 @@ int nvme_get_log_create_telemetry_host(int fd, struct nvme_telemetry_log *log);
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_log_telemetry_host(int fd, __u64 offset, __u32 len, void *log);
+int nvme_get_log_telemetry_host(int fd, __u64 offset, __u32 len, void *log,
+				__u32 timeout_ms);
 
 /**
  * nvme_get_log_telemetry_ctrl() -
@@ -939,15 +988,19 @@ int nvme_get_log_telemetry_host(int fd, __u64 offset, __u32 len, void *log);
  * @offset:	Offset into the telemetry data
  * @len:	Length of provided user buffer to hold the log data in bytes
  * @log:	User address for log page data
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
 int nvme_get_log_telemetry_ctrl(int fd, bool rae, __u64 offset, __u32 len,
-				void *log);
+				__u32 timeout_ms, void *log);
 
 /**
  * nvme_get_log_endurance_group() -
  * @fd:		File descriptor of nvme device
  * @endgid:	Starting group identifier to return in the list
  * @log:	User address to store the endurance log
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This log page indicates if an Endurance Group Event has occurred for a
  * particular Endurance Group. If an Endurance Group Event has occurred, the
@@ -960,26 +1013,32 @@ int nvme_get_log_telemetry_ctrl(int fd, bool rae, __u64 offset, __u32 len,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_log_endurance_group(int fd, __u16 endgid,
-				 struct nvme_endurance_group_log *log);
+				 struct nvme_endurance_group_log *log,
+				 __u32 timeout_ms);
 
 /**
  * nvme_get_log_predictable_lat_nvmset() -
  * @fd:
  * @nvmsetid:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_log_predictable_lat_nvmset(int fd, __u16 nvmsetid,
-					struct nvme_nvmset_predictable_lat_log *log);
+					struct nvme_nvmset_predictable_lat_log *log,
+					__u32 timeout_ms);
 
 /**
  * nvme_get_log_predictable_lat_event() -
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
 int nvme_get_log_predictable_lat_event(int fd, bool rae, __u32 offset,
-				       __u32 len, void *log);
+				       __u32 len, void *log, __u32 timeout_ms);
 
 /**
  * nvme_get_log_ana() -
@@ -987,7 +1046,9 @@ int nvme_get_log_predictable_lat_event(int fd, bool rae, __u32 offset,
  * @lsp:	Log specific, see &enum nvme_get_log_ana_lsp
  * @rae:	Retain asynchronous events
  * @len:	The allocated length of the log page
- * @log: 	User address to store the ana log
+ * @log:	User address to store the ana log
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This log consists of a header describing the log and descriptors containing
  * the asymmetric namespace access information for ANA Groups that contain
@@ -999,45 +1060,63 @@ int nvme_get_log_predictable_lat_event(int fd, bool rae, __u32 offset,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_log_ana(int fd, enum nvme_log_ana_lsp lsp, bool rae, __u64 offset,
-		     __u32 len, void *log);
+		     __u32 len, void *log, __u32 timeout_ms);
 
 /**
  * nvme_get_log_ana_groups() -
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
+ * @len:
+ * @log:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * See &struct nvme_ana_group_desc for the defintion of the returned structure.
  */
 int nvme_get_log_ana_groups(int fd, bool rae, __u32 len,
-			    struct nvme_ana_group_desc *log);
+			    struct nvme_ana_group_desc *log,
+			    __u32 timeout_ms);
 
 /**
  * nvme_get_log_lba_status() -
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
+ * @offset:
+ * @len:
+ * @log:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
 int nvme_get_log_lba_status(int fd, bool rae, __u64 offset, __u32 len,
-			    void *log);
+			    void *log, __u32 timeout_ms);
 
 /**
  * nvme_get_log_endurance_grp_evt() -
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
+ * @offset:
+ * @len:
+ * @log:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
 int nvme_get_log_endurance_grp_evt(int fd, bool rae, __u32 offset, __u32 len,
-				   void *log);
+				   void *log, __u32 timeout_ms);
 
 /**
  * nvme_get_log_fid_supported_effects() -
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
  * @log:	FID Supported and Effects data structure
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
 int nvme_get_log_fid_supported_effects(int fd, bool rae,
-				       struct nvme_fid_supported_effects_log *log);
+				       struct nvme_fid_supported_effects_log *log,
+				       __u32 timeout_ms);
 
 /**
  * nvme_get_log_boot_partition() -
@@ -1046,12 +1125,15 @@ int nvme_get_log_fid_supported_effects(int fd, bool rae,
  * @lsp:	The log specified field of LID
  * @len:	The allocated size, minimum
  *		struct nvme_boot_partition
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
 int nvme_get_log_boot_partition(int fd, bool rae, __u8 lsp, __u32 len,
-			        struct nvme_boot_partition *part);
+			        struct nvme_boot_partition *part,
+				__u32 timeout_ms);
 
 /**
  * nvme_get_log_discovery() -
@@ -1060,6 +1142,8 @@ int nvme_get_log_boot_partition(int fd, bool rae, __u8 lsp, __u32 len,
  * @offset:	Offset of this log to retrieve
  * @len:	The allocated size for this portion of the log
  * @log:	User address to store the discovery log
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Supported only by fabrics discovery controllers, returning discovery
  * records.
@@ -1067,21 +1151,27 @@ int nvme_get_log_boot_partition(int fd, bool rae, __u8 lsp, __u32 len,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_log_discovery(int fd, bool rae, __u32 offset, __u32 len, void *log);
+int nvme_get_log_discovery(int fd, bool rae, __u32 offset, __u32 len, void *log,
+			   __u32 timeout_ms);
 
 /**
  * nvme_get_log_reservation() -
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
 int nvme_get_log_reservation(int fd, bool rae,
-			     struct nvme_resv_notification_log *log);
+			     struct nvme_resv_notification_log *log,
+			     __u32 timeout_ms);
 
 /**
  * nvme_get_log_sanitize() -
  * @fd:		File descriptor of nvme device
  * @rae:	Retain asynchronous events
  * @log:	User address to store the sanitize log
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Sanitize Status log page reports sanitize operation time estimates and
  * information about the most recent sanitize operation.
@@ -1090,7 +1180,8 @@ int nvme_get_log_reservation(int fd, bool rae,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_log_sanitize(int fd, bool rae,
-			  struct nvme_sanitize_log_page *log);
+			  struct nvme_sanitize_log_page *log,
+			  __u32 timeout_ms);
 
 /**
  * nvme_get_log_zns_changed_zones() -
@@ -1098,6 +1189,8 @@ int nvme_get_log_sanitize(int fd, bool rae,
  * @nsid:	Namespace ID
  * @rae:	Retain asynchronous events
  * @log:	User address to store the changed zone log
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The list of zones that have changed state due to an exceptional event.
  *
@@ -1105,7 +1198,8 @@ int nvme_get_log_sanitize(int fd, bool rae,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_log_zns_changed_zones(int fd, __u32 nsid, bool rae,
-				   struct nvme_zns_changed_zone_log *log);
+				   struct nvme_zns_changed_zone_log *log,
+				   __u32 timeout_ms);
 
 /**
  * nvme_get_log_persistent_event() -
@@ -1113,9 +1207,12 @@ int nvme_get_log_zns_changed_zones(int fd, __u32 nsid, bool rae,
  * &action:
  * @size:
  * @pevent_log:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
 int nvme_get_log_persistent_event(int fd, enum nvme_pevent_log_action action,
-				  __u32 size, void *pevent_log);
+				  __u32 size, void *pevent_log,
+				  __u32 timeout_ms);
 
 /**
  * nvme_set_features() - Set a feature attribute
@@ -1129,6 +1226,8 @@ int nvme_get_log_persistent_event(int fd, enum nvme_pevent_log_action action,
  * @cdw14:	Feature specific command dword15 field
  * @data_len:	Length of feature data, if applicable, in bytes
  * @data:	User address of feature data, if applicable
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -1136,63 +1235,73 @@ int nvme_get_log_persistent_event(int fd, enum nvme_pevent_log_action action,
  */
 int nvme_set_features(int fd, __u8 fid, __u32 nsid, __u32 cdw11, __u32 cdw12,
 		      bool save, __u8 uuidx, __u32 cdw15, __u32 data_len,
-		      void *data, __u32 *result);
+		      void *data,  __u32 timeout_ms, __u32 *result);
 
 static inline int nvme_set_features_data(int fd, __u8 fid, __u32 nsid,
 			__u32 cdw11, bool save, __u32 data_len, void *data,
-		 	__u32 *result)
+		        __u32 timeout_ms, __u32 *result)
 {
 	return nvme_set_features(fd, fid, nsid, cdw11, 0, save, 0, 0, data_len,
-				data, result);
+				data, timeout_ms, result);
 }
 
 static inline int nvme_set_features_simple(int fd, __u8 fid, __u32 nsid,
-			__u32 cdw11, bool save, __u32 *result)
+			__u32 cdw11, bool save, __u32 timeout_ms, __u32 *result)
 {
 	return nvme_set_features_data(fd, fid, nsid, cdw11, save, 0, NULL,
-				 result);
+				      timeout_ms, result);
 }
 
 /**
  * nvme_set_features_arbitration() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_arbitration(int fd, __u8 ab, __u8 lpw, __u8 mpw,
-				  __u8 hpw, bool  save, __u32 *result);
+				  __u8 hpw, bool  save, __u32 timeout_ms,
+				  __u32 *result);
 
 /**
  * nvme_set_features_power_mgmt() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_power_mgmt(int fd, __u8 ps, __u8 wh, bool save,
-				 __u32 *result);
+				__u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_set_features_lba_range() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_lba_range(int fd, __u32 nsid, __u32 nr_ranges, bool save,
-				struct nvme_lba_range_type *data, __u32 *result);
+				struct nvme_lba_range_type *data,
+				__u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_set_features_temp_thresh() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -1200,84 +1309,100 @@ int nvme_set_features_lba_range(int fd, __u32 nsid, __u32 nr_ranges, bool save,
  */
 int nvme_set_features_temp_thresh(int fd, __u16 tmpth, __u8 tmpsel,
 				  enum nvme_feat_tmpthresh_thsel thsel,
-				  bool save, __u32 *result);
+				  bool save, __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_set_features_err_recovery() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
  * @result:	The command completion result from CQE dword0
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_err_recovery(int fd, __u32 nsid, __u16 tler,
-				   bool dulbe, bool save, __u32 *result);
+				   bool dulbe, bool save, __u32 timeout_ms,
+				   __u32 *result);
 
 /**
  * nvme_set_features_volatile_wc() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_volatile_wc(int fd, bool wce, bool save,
-				  __u32 *result);
+				  __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_set_features_irq_coalesce() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_irq_coalesce(int fd, __u8 thr, __u8 time,
-				   bool save, __u32 *result);
+				   bool save, __u32 timeout_ms,
+				   __u32 *result);
 
 /**
  * nvme_set_features_irq_config() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_irq_config(int fd, __u16 iv, bool cd, bool save,
-				 __u32 *result);
+				 __u32 timeout_ms,__u32 *result);
 
 /**
  * nvme_set_features_write_atomic() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_write_atomic(int fd, bool dn, bool save,
-				   __u32 *result);
+				   __u32 timeout_ms,__u32 *result);
 
 /**
  * nvme_set_features_async_event() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_async_event(int fd, __u32 events, bool save,
-				  __u32 *result);
+				  __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_set_features_auto_pst() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -1285,58 +1410,72 @@ int nvme_set_features_async_event(int fd, __u32 events, bool save,
  */
 int nvme_set_features_auto_pst(int fd, bool apste, bool save,
 			       struct nvme_feat_auto_pst *apst,
-			       __u32 *result);
+			       __u32 timeout_ms,__u32 *result);
 
 /**
  * nvme_set_features_timestamp() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @timestamp:	The current timestamp value to assign to this this feature
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_set_features_timestamp(int fd, bool save, __u64 timestamp);
+int nvme_set_features_timestamp(int fd, bool save, __u64 timestamp,
+				__u32 timeout_ms);
 
 /**
  * nvme_set_features_hctm() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_hctm(int fd, __u16 tmt2, __u16 tmt1, bool save,
-			   __u32 *result);
+			   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_set_features_nopsc() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_set_features_nopsc(int fd, bool noppme, bool save, __u32 *result);
+int nvme_set_features_nopsc(int fd, bool noppme, bool save,
+			    __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_set_features_rrl() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_rrl(int fd, __u8 rrl, __u16 nvmsetid, bool save,
-			  __u32 *result);
+			  __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_set_features_plm_config() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -1344,55 +1483,67 @@ int nvme_set_features_rrl(int fd, __u8 rrl, __u16 nvmsetid, bool save,
  */
 int nvme_set_features_plm_config(int fd, bool enable, __u16 nvmsetid,
 				 bool save, struct nvme_plm_config *data,
-				 __u32*result);
+				 __u32 timeout_ms,__u32 *result);
 
 /**
  * nvme_set_features_plm_window() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_plm_window(int fd, enum nvme_feat_plm_window_select sel,
-				 __u16 nvmsetid, bool save, __u32 *result);
+				 __u16 nvmsetid, bool save, __u32 timeout_ms,
+				 __u32 *result);
 
 /**
  * nvme_set_features_lba_sts_interval() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_lba_sts_interval(int fd, __u16 lsiri, __u16 lsipi,
-				       bool save, __u32 *result);
+				       bool save, __u32 timeout_ms,
+				       __u32 *result);
 
 /**
  * nvme_set_features_host_behavior() -
  * @fd:		File descriptor of nvme device
  * @save:	Save value across power states
- * @data:	
+ * @data:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_host_behavior(int fd, bool save,
-				    struct nvme_feat_host_behavior *data);
+				    struct nvme_feat_host_behavior *data,
+				    __u32 timeout_ms);
 
 /**
  * nvme_set_features_sanitize() -
  * @fd:		File descriptor of nvme device
- * @nodrm:	
+ * @nodrm:
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_set_features_sanitize(int fd, bool nodrm, bool save, __u32 *result);
+int nvme_set_features_sanitize(int fd, bool nodrm, bool save, __u32 timeout_ms,
+			       __u32 *result);
 
 /**
  * nvme_set_features_endurance_evt_cfg() -
@@ -1400,87 +1551,107 @@ int nvme_set_features_sanitize(int fd, bool nodrm, bool save, __u32 *result);
  * @endgid:
  * @egwarn:	Flags to enable warning, see &enum nvme_eg_critical_warning_flags
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_endurance_evt_cfg(int fd, __u16 endgid, __u8 egwarn,
-					bool save, __u32 *result);
+					bool save, __u32 timeout_ms,
+					__u32 *result);
 
 /**
  * nvme_set_features_sw_progress() -
  * @fd:		File descriptor of nvme device
- * @pbslc:	
+ * @pbslc:
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_sw_progress(int fd, __u8 pbslc, bool save,
-				  __u32 *result);
+				  __u32 timeout_ms, __u32 *result);
 
 
 /**
  * nvme_set_features_host_id() -
  * @fd:		File descriptor of nvme device
- * @exhid:	
+ * @exhid:
  * @save:	Save value across power states
+ * hostid:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_set_features_host_id(int fd, bool exhid, bool save, __u8 *hostid);
+int nvme_set_features_host_id(int fd, bool exhid, bool save, __u8 *hostid,
+			      __u32 timeout_ms);
 
 /**
  * nvme_set_features_resv_mask() -
  * @fd:		File descriptor of nvme device
- * @mask:	
+ * @mask:
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_set_features_resv_mask(int fd, __u32 mask, bool save, __u32 *result);
+int nvme_set_features_resv_mask(int fd, __u32 mask, bool save, __u32 timeout_ms,
+				__u32 *result);
 
 /**
  * nvme_set_features_resv_persist() -
  * @fd:		File descriptor of nvme device
- * @ptpl:	
+ * @ptpl:
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_set_features_resv_persist(int fd, bool ptpl, bool save, __u32 *result);
+int nvme_set_features_resv_persist(int fd, bool ptpl, bool save, __u32 timeout_ms,
+				   __u32 *result);
 
 /**
  * nvme_set_features_write_protect() -
  * @fd:		File descriptor of nvme device
- * @stat:	
+ * @stat:
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_set_features_write_protect(int fd, enum nvme_feat_nswpcfg_state state,
-				    bool save, __u32 *result);
+				    bool save, __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_set_features_iocs_profile() -
  * @fd:		File descriptor of nvme device
  * @iocsi:	IO Command Set Combination Index
  * @save:	Save value across power states
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_set_features_iocs_profile(int fd, __u8 iocsi, bool save);
+int nvme_set_features_iocs_profile(int fd, __u8 iocsi, bool save,
+				   __u32 timeout_ms);
 
 /**
  * nvme_get_features() - Retrieve a feature attribute
@@ -1492,6 +1663,8 @@ int nvme_set_features_iocs_profile(int fd, __u8 iocsi, bool save);
  * @uuidx:	UUID Index for differentiating vendor specific encoding
  * @data_len:	Length of feature data, if applicable, in bytes
  * @data:	User address of feature data, if applicable
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -1499,48 +1672,58 @@ int nvme_set_features_iocs_profile(int fd, __u8 iocsi, bool save);
  */
 int nvme_get_features(int fd, enum nvme_features_id fid, __u32 nsid,
 		      enum nvme_get_features_sel sel, __u32 cdw11, __u8 uuidx,
-		      __u32 data_len, void *data, __u32 *result);
+		      __u32 data_len, void *data, __u32 timeout_ms,
+		      __u32 *result);
 
 static inline int nvme_get_features_data(int fd, enum nvme_features_id fid,
-			__u32 nsid, __u32 data_len, void *data, __u32 *result)
+					 __u32 nsid, __u32 data_len, void *data,
+					 __u32 timeout_ms,__u32 *result)
 {
 	return nvme_get_features(fd, fid, nsid, NVME_GET_FEATURES_SEL_CURRENT,
-				 0, 0, data_len, data, result);
+				 0, 0, data_len, data, timeout_ms, result);
 }
 static inline int nvme_get_features_simple(int fd, enum nvme_features_id fid,
-			__u32 nsid, __u32 *result)
+					   __u32 nsid, __u32 timeout_ms,
+					   __u32 *result)
 {
-	return nvme_get_features_data(fd, fid, nsid, 0, NULL, result);
+	return nvme_get_features_data(fd, fid, nsid, 0, NULL, timeout_ms,
+				      result);
 }
 
 /**
  * nvme_get_features_arbitration() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_arbitration(int fd, enum nvme_get_features_sel sel,
-				  __u32 *result);
+				  __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_power_mgmt() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_power_mgmt(int fd, enum nvme_get_features_sel sel,
-				 __u32 *result);
+				 __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_lba_range() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -1548,187 +1731,224 @@ int nvme_get_features_power_mgmt(int fd, enum nvme_get_features_sel sel,
  */
 int nvme_get_features_lba_range(int fd, enum nvme_get_features_sel sel,
 				struct nvme_lba_range_type *data,
-				__u32 *result);
+				__u32 timeout_ms, __u32 *result);
 /**
  * nvme_get_features_temp_thresh() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_temp_thresh(int fd, enum nvme_get_features_sel sel,
-				  __u32 *result);
+				  __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_err_recovery() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_err_recovery(int fd, enum nvme_get_features_sel sel,
-				   __u32 *result);
+				   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_volatile_wc() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_volatile_wc(int fd, enum nvme_get_features_sel sel,
-				  __u32 *result);
+				  __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_num_queues() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_num_queues(int fd, enum nvme_get_features_sel sel,
-				 __u32 *result);
+				 __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_irq_coalesce() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_irq_coalesce(int fd, enum nvme_get_features_sel sel,
-				   __u32 *result);
+				   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_irq_config() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_irq_config(int fd, enum nvme_get_features_sel sel,
-				 __u16 iv, __u32 *result);
+				 __u16 iv, __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_write_atomic() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_write_atomic(int fd, enum nvme_get_features_sel sel,
-				   __u32 *result);
+				   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_async_event() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_async_event(int fd, enum nvme_get_features_sel sel,
-				  __u32 *result);
+				  __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_auto_pst() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_auto_pst(int fd, enum nvme_get_features_sel sel,
-			       struct nvme_feat_auto_pst *apst, __u32 *result);
+			       struct nvme_feat_auto_pst *apst,
+			       __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_host_mem_buf() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_host_mem_buf(int fd, enum nvme_get_features_sel sel,
-				   __u32 *result);
+				   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_timestamp() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
- * @result:	The command completion result from CQE dword0
+ * @ts:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_timestamp(int fd, enum nvme_get_features_sel sel,
-				struct nvme_timestamp *ts);
+				struct nvme_timestamp *ts, __u32 timeout_ms);
 
 /**
  * nvme_get_features_kato() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_features_kato(int fd, enum nvme_get_features_sel sel, __u32 *result);
+int nvme_get_features_kato(int fd, enum nvme_get_features_sel sel,
+			   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_hctm() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_features_hctm(int fd, enum nvme_get_features_sel sel, __u32 *result);
+int nvme_get_features_hctm(int fd, enum nvme_get_features_sel sel,
+			   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_nopsc() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_features_nopsc(int fd, enum nvme_get_features_sel sel, __u32 *result);
+int nvme_get_features_nopsc(int fd, enum nvme_get_features_sel sel,
+			    __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_rrl() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_features_rrl(int fd, enum nvme_get_features_sel sel, __u32 *result);
+int nvme_get_features_rrl(int fd, enum nvme_get_features_sel sel,
+			  __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_plm_config() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -1736,36 +1956,43 @@ int nvme_get_features_rrl(int fd, enum nvme_get_features_sel sel, __u32 *result)
  */
 int nvme_get_features_plm_config(int fd, enum nvme_get_features_sel sel,
 				 __u16 nvmsetid, struct nvme_plm_config *data,
-				 __u32 *result);
+				 __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_plm_window() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_plm_window(int fd, enum nvme_get_features_sel sel,
-	__u16 nvmsetid, __u32 *result);
+				 __u16 nvmsetid, __u32 timeout_ms,
+				 __u32 *result);
 
 /**
  * nvme_get_features_lba_sts_interval() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_lba_sts_interval(int fd, enum nvme_get_features_sel sel,
-				       __u32 *result);
+				       __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_host_behavior() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -1773,85 +2000,103 @@ int nvme_get_features_lba_sts_interval(int fd, enum nvme_get_features_sel sel,
  */
 int nvme_get_features_host_behavior(int fd, enum nvme_get_features_sel sel,
 				    struct nvme_feat_host_behavior *data,
-				    __u32 *result);
+				    __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_sanitize() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_sanitize(int fd, enum nvme_get_features_sel sel,
-				__u32 *result);
+			       __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_endurance_event_cfg() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_endurance_event_cfg(int fd, enum nvme_get_features_sel sel,
-					  __u16 endgid, __u32 *result);
+					  __u16 endgid, __u32 timeout_ms,
+					  __u32 *result);
 
 /**
  * nvme_get_features_sw_progress() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_sw_progress(int fd, enum nvme_get_features_sel sel,
-				  __u32 *result);
+				  __u32 timeout_ms, _u32 *result);
 
 /**
  * nvme_get_features_host_id() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
- * @result:	The command completion result from CQE dword0
+ * @exhid:
+ * @len:
+ * @hostid:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_host_id(int fd, enum nvme_get_features_sel sel,
-			      bool exhid, __u32 len, __u8 *hostid);
+			      bool exhid, __u32 len, __u8 *hostid,
+			      __u32 timeout_ms);
 
 /**
  * nvme_get_features_resv_mask() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_resv_mask(int fd, enum nvme_get_features_sel sel,
-				__u32 *result);
+				__u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_resv_persist() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_resv_persist(int fd, enum nvme_get_features_sel sel,
-				   __u32 *result);
+				   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_write_protect() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -1859,19 +2104,21 @@ int nvme_get_features_resv_persist(int fd, enum nvme_get_features_sel sel,
  */
 int nvme_get_features_write_protect(int fd, __u32 nsid,
 				    enum nvme_get_features_sel sel,
-				    __u32 *result);
+				    __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_features_iocs_profile() -
  * @fd:		File descriptor of nvme device
  * @sel:	Select which type of attribute to return, see &enum nvme_get_features_sel
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_get_features_iocs_profile(int fd, enum nvme_get_features_sel sel,
-				   __u32 *result);
+				   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_format_nvm() - Format nvme namespace(s)
@@ -1882,8 +2129,8 @@ int nvme_get_features_iocs_profile(int fd, enum nvme_get_features_sel sel,
  * @pi:		Protection information type
  * @pil:	Protection information location (beginning or end), true if end
  * @ses:	Secure erase settings
- * @timeout:	Set to override default timeout to this value in milliseconds;
- * 		useful for long running formats. 0 will use system default.
+ * @timeout_ms:	Set to override default timeout to this value in milliseconds;
+ *		useful for long running formats. 0 will use system default.
  *
  * The Format NVM command low level formats the NVM media. This command is used
  * by the host to change the LBA data size and/or metadata size. A low level
@@ -1898,24 +2145,27 @@ int nvme_format_nvm(int fd, __u32 nsid, __u8 lbaf,
 		    enum nvme_cmd_format_pi pi,
 		    enum nvme_cmd_format_pil pil,
 		    enum nvme_cmd_format_ses ses,
-		    __u32 timeout);
+		    __u32 timeout_ms);
 
 /**
  * nvme_ns_mgmt() -
  * @fd:		File descriptor of nvme device
- * @csi:		Command Set Identifier
+ * @csi:	Command Set Identifier
+ * @timeout_ms:	Set to override default timeout to this value in milliseconds;
+ *		useful for long running formats. 0 will use system default.
  */
 int nvme_ns_mgmt(int fd, __u32 nsid, enum nvme_ns_mgmt_sel sel,
-		 struct nvme_id_ns *ns, __u32 *result, __u32 timeout, __u8 csi);
+		 struct nvme_id_ns *ns, __u32 *result, __u8 csi,
+		 __u32 timeout_ms);
 
 /**
  * nvme_ns_mgmt_create() -
  * @fd:		File descriptor of nvme device
  * @ns:		Namespace identification that defines ns creation parameters
- * @nsid:		On success, set to the namespace id that was created
- * @timeout:		Overide the default timeout to this value in milliseconds;
- * 			set to 0 to use the system default.
- * @csi:		Command Set Identifier
+ * @nsid:	On success, set to the namespace id that was created
+ * @csi:	Command Set Identifier
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * On successful creation, the namespace exists in the subsystem, but is not
  * attached to any controller. Use the &nvme_ns_attach_ctrls() to assign the
@@ -1925,12 +2175,14 @@ int nvme_ns_mgmt(int fd, __u32 nsid, enum nvme_ns_mgmt_sel sel,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_ns_mgmt_create(int fd, struct nvme_id_ns *ns, __u32 *nsid,
-			__u32 timeout, __u8 csi);
+			__u8 csi, __u32 timeout_ms);
 
 /**
  * nvme_ns_mgmt_delete() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace identifier to delete
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * It is recommended that a namespace being deleted is not attached to any
  * controller. Use the &nvme_ns_detach_ctrls() first if the namespace is still
@@ -1939,7 +2191,7 @@ int nvme_ns_mgmt_create(int fd, struct nvme_id_ns *ns, __u32 *nsid,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_ns_mgmt_delete(int fd, __u32 nsid);
+int nvme_ns_mgmt_delete(int fd, __u32 nsid, __u32 timeout_ms);
 
 /**
  * nvme_ns_attach() - Attach or detach namespace to controller(s)
@@ -1947,25 +2199,33 @@ int nvme_ns_mgmt_delete(int fd, __u32 nsid);
  * @nsid:	Namespace ID to execute attach selection
  * @sel:	Attachment selection, see &enum nvme_ns_attach_sel
  * @ctrlist:	Controller list to modify attachment state of nsid
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
 int nvme_ns_attach(int fd, __u32 nsid, enum nvme_ns_attach_sel sel,
-		   struct nvme_ctrl_list *ctrlist);
+		   struct nvme_ctrl_list *ctrlist, __u32 timeout_ms);
 
 /**
  * nvme_ns_attach_ctrls() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID to attach
  * @ctrlist:	Controller list to modify attachment state of nsid
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
-int nvme_ns_attach_ctrls(int fd, __u32 nsid, struct nvme_ctrl_list *ctrlist);
+int nvme_ns_attach_ctrls(int fd, __u32 nsid, struct nvme_ctrl_list *ctrlist,
+			 __u32 timeout_ms);
 
 /**
  * nvme_ns_detach_ctrls() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID to detach
  * @ctrlist:	Controller list to modify attachment state of nsid
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  */
-int nvme_ns_detach_ctrls(int fd, __u32 nsid, struct nvme_ctrl_list *ctrlist);
+int nvme_ns_detach_ctrls(int fd, __u32 nsid, struct nvme_ctrl_list *ctrlist,
+			 __u32 timeout_ms);
 
 /**
  * nvme_fw_download() - Download part or all of a firmware image to the
@@ -1974,6 +2234,8 @@ int nvme_ns_detach_ctrls(int fd, __u32 nsid, struct nvme_ctrl_list *ctrlist);
  * @offset:	Offset in the firmware data
  * @data_len:	Length of data in this command in bytes
  * @data:	Userspace address of the firmware data
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Firmware Image Download command downloads all or a portion of an image
  * for a future update to the controller. The Firmware Image Download command
@@ -1991,7 +2253,8 @@ int nvme_ns_detach_ctrls(int fd, __u32 nsid, struct nvme_ctrl_list *ctrlist);
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_fw_download(int fd, __u32 offset, __u32 data_len, void *data);
+int nvme_fw_download(int fd, __u32 offset, __u32 data_len, void *data,
+		     __u32 timeout_ms);
 
 /**
  * nvme_fw_commit() - Commit firmware using the specified action
@@ -1999,18 +2262,19 @@ int nvme_fw_download(int fd, __u32 offset, __u32 data_len, void *data);
  * @slot:	Firmware slot to commit the downloaded image
  * @action:	Action to use for the firmware image, see &enum nvme_fw_commit_ca
  * @bpid:	Set to true to select the boot partition id
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * The Firmware Commit command modifies the firmware image or Boot Partitions.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise. The command
- * 	   status
- * 	   response may specify additional
- * 	   reset actions required to complete the commit process.
+ * status response may specify additional reset actions required to complete
+ * the commit process.
  */
 int nvme_fw_commit(int fd, __u8 slot, enum nvme_fw_commit_ca action, bool bpid,
-		   __u32 *result);
+		   __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_security_send() -
@@ -2023,6 +2287,8 @@ int nvme_fw_commit(int fd, __u8 slot, enum nvme_fw_commit_ca action, bool bpid,
  * @tl:		Protocol specific transfer length
  * @data_len:	Data length of the payload in bytes
  * @data:	Security data payload to send
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * The Security Send command transfers security protocol data to the
@@ -2039,7 +2305,7 @@ int nvme_fw_commit(int fd, __u8 slot, enum nvme_fw_commit_ca action, bool bpid,
  */
 int nvme_security_send(int fd, __u32 nsid, __u8 nssf, __u8 spsp0, __u8 spsp1,
 		       __u8 secp, __u32 tl, __u32 data_len, void *data,
-		       __u32 *result);
+		       __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_security_receive() -
@@ -2052,6 +2318,8 @@ int nvme_security_send(int fd, __u32 nsid, __u8 nssf, __u8 spsp0, __u8 spsp1,
  * @al:		Protocol specific allocation length
  * @data_len:	Data length of the payload in bytes
  * @data:	Security data payload to send
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
@@ -2059,7 +2327,7 @@ int nvme_security_send(int fd, __u32 nsid, __u8 nssf, __u8 spsp0, __u8 spsp1,
  */
 int nvme_security_receive(int fd, __u32 nsid, __u8 nssf, __u8 spsp0,
 			  __u8 spsp1, __u8 secp, __u32 al, __u32 data_len,
-			  void *data, __u32 *result);
+			  void *data, __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_get_lba_status() - Retrieve information on possibly unrecoverable LBAs
@@ -2071,6 +2339,8 @@ int nvme_security_receive(int fd, __u32 nsid, __u8 nssf, __u8 spsp0,
  * 		return, see &enum nvme_lba_status_atype
  * @rl:		Range length from slba to perform the action
  * @lbas:	Data payload to return status descriptors
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Get LBA Status command requests information about Potentially
  * Unrecoverable LBAs. Refer to the specification for action type descriptions.
@@ -2080,7 +2350,8 @@ int nvme_security_receive(int fd, __u32 nsid, __u8 nssf, __u8 spsp0,
  */
 int nvme_get_lba_status(int fd, __u32 nsid, __u64 slba, __u32 mndw, __u16 rl,
 			enum nvme_lba_status_atype atype,
-			struct nvme_lba_status *lbas);
+			struct nvme_lba_status *lbas,
+			__u32 timeout_ms);
 
 /**
  * nvme_directive_send() - Send directive command
@@ -2092,6 +2363,8 @@ int nvme_get_lba_status(int fd, __u32 nsid, __u64 slba, __u32 mndw, __u16 rl,
  * @dw12:	Directive specific command dword12
  * @data_len:	Length of data payload in bytes
  * @data:	Usespace address of data payload
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	If successful, the CQE dword0 value
  *
  * Directives is a mechanism to enable host and NVM subsystem or controller
@@ -2106,40 +2379,50 @@ int nvme_get_lba_status(int fd, __u32 nsid, __u64 slba, __u32 mndw, __u16 rl,
 int nvme_directive_send(int fd, __u32 nsid, __u16 dspec,
 			enum nvme_directive_send_doper doper,
 			enum nvme_directive_dtype dtype, __u32 cdw12,
-			__u32 data_len, void *data, __u32 *result);
+			__u32 data_len, void *data, __u32 timeout_ms,
+			__u32 *result);
 
 /**
  * nvme_directive_send_id_endir() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_directive_send_id_endir(int fd, __u32 nsid, bool endir,
 				 enum nvme_directive_dtype dtype,
+				 __u32 timeout_ms,
 				 struct nvme_id_directives *id);
 
 /**
  * nvme_directive_send_stream_release_identifier() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_directive_send_stream_release_identifier(int fd, __u32 nsid,
-						  __u16 stream_id);
+						  __u16 stream_id,
+						  __u32 timeout_ms);
 
 /**
  * nvme_directive_send_stream_release_resource() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_directive_send_stream_release_resource(int fd, __u32 nsid);
+int nvme_directive_send_stream_release_resource(int fd, __u32 nsid,
+						__u32 timeout_ms);
 
 /**
  * nvme_directive_recv() - Receive directive specific data
@@ -2151,6 +2434,8 @@ int nvme_directive_send_stream_release_resource(int fd, __u32 nsid);
  * @dw12:	Directive specific command dword12
  * @data_len:	Length of data payload
  * @data:	Usespace address of data payload in bytes
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	If successful, the CQE dword0 value
  *
  * Return: The nvme command status if a response was received (see
@@ -2159,51 +2444,67 @@ int nvme_directive_send_stream_release_resource(int fd, __u32 nsid);
 int nvme_directive_recv(int fd, __u32 nsid, __u16 dspec,
 			enum nvme_directive_receive_doper doper,
 			enum nvme_directive_dtype dtype, __u32 cdw12,
-			__u32 data_len, void *data, __u32 *result);
+			__u32 data_len, void *data, __u32 timeout_ms,
+			__u32 *result);
 
 /**
  * nvme_directive_recv_identify_parameters() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
+ * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_directive_recv_identify_parameters(int fd, __u32 nsid,
-					    struct nvme_id_directives *id);
+					    struct nvme_id_directives *id,
+					    __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_directive_recv_stream_parameters() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
+ * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_directive_recv_stream_parameters(int fd, __u32 nsid,
-					  struct nvme_streams_directive_params *parms);
+					  struct nvme_streams_directive_params *parms,
+					  __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_directive_recv_stream_status() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
+ * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_directive_recv_stream_status(int fd, __u32 nsid, unsigned nr_entries,
-				      struct nvme_streams_directive_status *id);
+				      struct nvme_streams_directive_status *id,
+				      __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_directive_recv_stream_allocate() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
+ * @result:	The command completion result from CQE dword0
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_directive_recv_stream_allocate(int fd, __u32 nsid, __u16 nsr,
-					__u32 *result);
+					__u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_capacity_mgmt() -
@@ -2214,13 +2515,15 @@ int nvme_directive_recv_stream_allocate(int fd, __u32 nsid, __u16 nsr,
  *		Endurance Group or NVM Set to be created
  * @dw12:	Most significant 32 bits of the capacity in bytes of the
  *		Endurance Group or NVM Set to be created
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	If successful, the CQE dword0 value
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_capacity_mgmt(int fd, __u8 op, __u16 element_id, __u32 dw11, __u32 dw12,
-		       __u32 *result);
+		       __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_lockdown() - Issue lockdown command
@@ -2230,18 +2533,22 @@ int nvme_capacity_mgmt(int fd, __u8 op, __u16 element_id, __u32 dw11, __u32 dw12
  * @ifc:
  * @ofi:
  * @uuid:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_lockdown(int fd, __u8 scp, __u8 prhbt, __u8 ifc, __u8 ofi,
-		  __u8 uuid);
+		  __u8 uuid, __u32 timeout_ms);
 
 /**
  * nvme_set_property() - Set controller property
  * @fd:		File descriptor of nvme device
  * @offset:	Property offset from the base to set
  * @value:	The value to set the property
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This is an NVMe-over-Fabrics specific command, not applicable to PCIe. These
  * properties align to the PCI MMIO controller registers.
@@ -2249,13 +2556,15 @@ int nvme_lockdown(int fd, __u8 scp, __u8 prhbt, __u8 ifc, __u8 ofi,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_set_property(int fd, int offset, __u64 value);
+int nvme_set_property(int fd, int offset, __u64 value, __u32 timeout_ms);
 
 /**
  * nvme_get_property() - Get a controller property
  * @fd:		File descriptor of nvme device
  * @offset:	Property offset from the base to retrieve
  * @value:	Where the property's value will be stored on success
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * This is an NVMe-over-Fabrics specific command, not applicable to PCIe. These
  * properties align to the PCI MMIO controller registers.
@@ -2263,7 +2572,7 @@ int nvme_set_property(int fd, int offset, __u64 value);
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_property(int fd, int offset, __u64 *value);
+int nvme_get_property(int fd, int offset, __u64 *value, __u32 timeout_ms);
 
 /**
  * nvme_sanitize_nvm() - Start a sanitize operation
@@ -2274,6 +2583,8 @@ int nvme_get_property(int fd, int offset, __u64 *value);
  * @oipbp:	Set to overwrite invert pattern between passes
  * @nodas:	Set to not deallocate blocks after sanitizing
  * @ovrpat:	Overwrite pattern
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * A sanitize operation alters all user data in the NVM subsystem such that
  * recovery of any previous user data from any cache, the non-volatile media,
@@ -2289,13 +2600,16 @@ int nvme_get_property(int fd, int offset, __u64 *value);
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_sanitize_nvm(int fd, enum nvme_sanitize_sanact sanact, bool ause,
-		      __u8 owpass, bool oipbp, bool nodas, __u32 ovrpat);
+		      __u8 owpass, bool oipbp, bool nodas, __u32 ovrpat,
+		      __u32 timeout_ms);
 
 /**
  * nvme_dev_self_test() - Start or abort a self test
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID to test
  * @stc:	Self test code, see &enum nvme_dst_stc
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Device Self-test command starts a device self-test operation or abort a
  * device self-test operation. A device self-test operation is a diagnostic
@@ -2311,7 +2625,8 @@ int nvme_sanitize_nvm(int fd, enum nvme_sanitize_sanact sanact, bool ause,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_dev_self_test(int fd, __u32 nsid, enum nvme_dst_stc stc);
+int nvme_dev_self_test(int fd, __u32 nsid, enum nvme_dst_stc stc,
+		       __u32 timeout_ms);
 
 /**
  * nvme_virtual_mgmt() - Virtualization resource management
@@ -2320,6 +2635,8 @@ int nvme_dev_self_test(int fd, __u32 nsid, enum nvme_dst_stc stc);
  * @rt:		Resource type to modify, see &enum nvme_virt_mgmt_rt
  * @cntlid:	Controller id for which resources are bing modified
  * @nr:		Number of resources being allocated or assigned
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  * @result:	If successful, the CQE dword0
  *
  * The Virtualization Management command is supported by primary controllers
@@ -2335,12 +2652,14 @@ int nvme_dev_self_test(int fd, __u32 nsid, enum nvme_dst_stc stc);
  */
 int nvme_virtual_mgmt(int fd, enum nvme_virt_mgmt_act act,
 		      enum nvme_virt_mgmt_rt rt, __u16 cntlid, __u16 nr,
-		      __u32 *result);
+		      __u32 timeout_ms, __u32 *result);
 
 /**
  * nvme_flush() - Send an nvme flush command
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace identifier
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Flush command requests that the contents of volatile write cache be made
  * non-volatile.
@@ -2348,7 +2667,7 @@ int nvme_virtual_mgmt(int fd, enum nvme_virt_mgmt_act act,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_flush(int fd, __u32 nsid);
+int nvme_flush(int fd, __u32 nsid, __u32 timeout_ms);
 
 /**
  * nvme_read() - Submit an nvme user read command
@@ -2374,6 +2693,8 @@ int nvme_flush(int fd, __u32 nsid);
  * @data:	Pointer to user address of the data buffer
  * metadata_len:Length of user buffer, @metadata, in bytes
  * @metadata:	Pointer to user address of the metadata buffer
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
@@ -2381,7 +2702,7 @@ int nvme_flush(int fd, __u32 nsid);
 int nvme_read(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
 	      __u8 dsm, __u32 reftag, __u16 apptag, __u16 appmask,
 	      __u64 storage_tag, __u32 data_len, void *data,
-	      __u32 metadata_len, void *metadata);
+	      __u32 metadata_len, void *metadata, __u32 timeout_ms);
 
 /**
  * nvme_write() - Submit an nvme user write command
@@ -2408,6 +2729,8 @@ int nvme_read(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
  * @data:	Pointer to user address of the data buffer
  * metadata_len:Length of user buffer, @metadata, in bytes
  * @metadata:	Pointer to user address of the metadata buffer
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
@@ -2415,7 +2738,7 @@ int nvme_read(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
 int nvme_write(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
 	       __u8 dsm, __u16 dspec, __u32 reftag, __u16 apptag,
 	       __u16 appmask, __u64 storage_tag, __u32 data_len, void *data,
-	       __u32 metadata_len, void *metadata);
+	       __u32 metadata_len, void *metadata, __u32 timeout_ms);
 
 /**
  * nvme_compare() - Submit an nvme user compare command
@@ -2437,13 +2760,16 @@ int nvme_write(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
  * @data:	Pointer to user address of the data buffer
  * metadata_len:Length of user buffer, @metadata, in bytes
  * @metadata:	Pointer to user address of the metadata buffer
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_compare(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
 		 __u32 reftag, __u16 apptag, __u16 appmask, __u32 data_len,
-		 void *data, __u32 metadata_len, void *metadata);
+		 void *data, __u32 metadata_len, void *metadata,
+		 __u32 timeout_ms);
 
 /**
  * nvme_write_zeros() - Submit an nvme write zeroes command
@@ -2464,6 +2790,8 @@ int nvme_compare(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
  * @storage_tag: This filed specifies Variable Sized Expected Logical Block
  *		Storage Tag (ELBST) and Expected Logical Block Reference
  *		Tag (ELBRT)
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Write Zeroes command sets a range of logical blocks to zero.  After
  * successful completion of this command, the value returned by subsequent
@@ -2475,7 +2803,7 @@ int nvme_compare(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
  */
 int nvme_write_zeros(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
 		     __u32 reftag, __u16 apptag, __u16 appmask,
-		     __u64 storage_tag);
+		     __u64 storage_tag, __u32 timeout_ms);
 
 /**
  * nvme_write_uncorrectable() - Submit an nvme write uncorrectable command
@@ -2483,6 +2811,8 @@ int nvme_write_zeros(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
  * @nsid:	Namespace identifier
  * @slba:	Starting logical block
  * @nlb:	Number of logical blocks to invalidate (0's based value)
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Write Uncorrectable command marks a range of logical blocks as invalid.
  * When the specified logical block(s) are read after this operation, a failure
@@ -2492,7 +2822,8 @@ int nvme_write_zeros(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_write_uncorrectable(int fd, __u32 nsid, __u64 slba, __u16 nlb);
+int nvme_write_uncorrectable(int fd, __u32 nsid, __u64 slba, __u16 nlb,
+			     __u32 timeout_ms);
 
 /**
  * nvme_verify() - Send an nvme verify command
@@ -2513,6 +2844,8 @@ int nvme_write_uncorrectable(int fd, __u32 nsid, __u64 slba, __u16 nlb);
  * @storage_tag: This filed specifies Variable Sized Expected Logical Block
  *		Storage Tag (ELBST) and Expected Logical Block Reference
  *		Tag (ELBRT)
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Verify command verifies integrity of stored information by reading data
  * and metadata, if applicable, for the LBAs indicated without transferring any
@@ -2522,15 +2855,18 @@ int nvme_write_uncorrectable(int fd, __u32 nsid, __u64 slba, __u16 nlb);
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_verify(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
-		__u32 reftag, __u16 apptag, __u16 appmask, __u64 storage_tag);
+		__u32 reftag, __u16 apptag, __u16 appmask, __u64 storage_tag,
+		__u32 timeout_ms);
 
 /**
  * nvme_dsm() - Send an nvme data set management command
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace identifier
  * @attrs:	DSM attributes, see &enum nvme_dsm_attributes
- * &nr_ranges:	Number of block ranges in the data set management attributes
+ * @nr_ranges:	Number of block ranges in the data set management attributes
  * @dsm:	The data set management attributes
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Dataset Management command is used by the host to indicate attributes
  * for ranges of logical blocks. This includes attributes like frequency that
@@ -2542,10 +2878,27 @@ int nvme_verify(int fd, __u32 nsid, __u64 slba, __u16 nlb, __u16 control,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_dsm(int fd, __u32 nsid, __u32 attrs, __u16 nr_ranges,
-	     struct nvme_dsm_range *dsm);
+	     struct nvme_dsm_range *dsm, __u32 timeout_ms);
 
 /**
  * nvme_copy() -
+ * @fd:
+ * @nsid:
+ * @copy:
+ * @sdlba:
+ * @nr:
+ * @prinfor:
+ * @prinfow:
+ * @dtype:
+ * @dspec:
+ * @format:
+ * @lr:
+ * @fua:
+ * @ilbrt:
+ * @lbatm:
+ * @lbat:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
@@ -2553,7 +2906,7 @@ int nvme_dsm(int fd, __u32 nsid, __u32 attrs, __u16 nr_ranges,
 int nvme_copy(int fd, __u32 nsid, struct nvme_copy_range *copy, __u64 sdlba,
 		__u16 nr, __u8 prinfor, __u8 prinfow, __u8 dtype, __u16 dspec,
 		__u8 format, int lr, int fua, __u32 ilbrt, __u16 lbatm,
-		__u16 lbat);
+		__u16 lbat, __u32 timeout_ms);
 
 /**
  * nvme_resv_acquire() - Send an nvme reservation acquire
@@ -2565,6 +2918,8 @@ int nvme_copy(int fd, __u32 nsid, struct nvme_copy_range *copy, __u64 sdlba,
  * @crkey:	The current reservation key associated with the host
  * @nrkey:	The reservation key to be unregistered from the namespace if
  * 		the action is preempt
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Reservation Acquire command acquires a reservation on a namespace,
  * preempt a reservation held on a namespace, and abort a reservation held on a
@@ -2575,7 +2930,7 @@ int nvme_copy(int fd, __u32 nsid, struct nvme_copy_range *copy, __u64 sdlba,
  */
 int nvme_resv_acquire(int fd, __u32 nsid, enum nvme_resv_rtype rtype,
 		      enum nvme_resv_racqa racqa, bool iekey,
-		      __u64 crkey, __u64 nrkey);
+		      __u64 crkey, __u64 nrkey, __u32 timeout_ms);
 
 /**
  * nvme_resv_register() - Send an nvme reservation register
@@ -2587,6 +2942,8 @@ int nvme_resv_acquire(int fd, __u32 nsid, enum nvme_resv_rtype rtype,
  * @crkey:	The current reservation key associated with the host
  * @nrkey:	The new reservation key to be register if action is register or
  * 		replace
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * The Reservation Register command registers, unregisters, or replaces a
  * reservation key.
@@ -2596,7 +2953,7 @@ int nvme_resv_acquire(int fd, __u32 nsid, enum nvme_resv_rtype rtype,
  */
 int nvme_resv_register(int fd, __u32 nsid, enum nvme_resv_rrega rrega,
 		       enum nvme_resv_cptpl cptpl, bool iekey,
-		       __u64 crkey, __u64 nrkey);
+		       __u64 crkey, __u64 nrkey, __u32 timeout_ms);
 
 /**
  * nvme_resv_release() - Send an nvme reservation release
@@ -2606,13 +2963,15 @@ int nvme_resv_register(int fd, __u32 nsid, enum nvme_resv_rrega rrega,
  * @rrela:	Reservation releast action, see &enum nvme_resv_rrela
  * @iekey:	Set to ignore the existing key
  * @crkey:	The current reservation key to release
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_resv_release(int fd, __u32 nsid, enum nvme_resv_rtype rtype,
 		      enum nvme_resv_rrela rrela, bool iekey,
-		      __u64 crkey);
+		      __u64 crkey, __u32 timeout_ms);
 
 /**
  * nvme_resv_report() - Send an nvme reservation report
@@ -2621,6 +2980,8 @@ int nvme_resv_release(int fd, __u32 nsid, enum nvme_resv_rtype rtype,
  * @eds:	Request extended Data Structure
  * @len:	Number of bytes to request transfered with this command
  * @report:	The user space destination address to store the reservation report
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Returns a Reservation Status data structure to memory that describes the
  * registration and reservation status of a namespace. See the defintion for
@@ -2630,7 +2991,7 @@ int nvme_resv_release(int fd, __u32 nsid, enum nvme_resv_rtype rtype,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_resv_report(int fd, __u32 nsid, bool eds, __u32 len,
-		     struct nvme_resv_status *report);
+		     struct nvme_resv_status *report, __u32 timeout_ms);
 
 /**
  * nvme_zns_mgmt_send() -
@@ -2642,13 +3003,15 @@ int nvme_resv_report(int fd, __u32 nsid, bool eds, __u32 len,
  * @zsa:
  * @data_len:
  * @data:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_zns_mgmt_send(int fd, __u32 nsid, __u64 slba, bool select_all,
 		       __u32 timeout, enum nvme_zns_send_action zsa,
-		       __u32 data_len, void *data);
+		       __u32 data_len, void *data, __u32 timeout_ms);
 
 
 /**
@@ -2661,22 +3024,43 @@ int nvme_zns_mgmt_send(int fd, __u32 nsid, __u64 slba, bool select_all,
  * @zras_feat:
  * @data_len:
  * @data:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 int nvme_zns_mgmt_recv(int fd, __u32 nsid, __u64 slba,
 		       enum nvme_zns_recv_action zra, __u16 zrasf,
-		       bool zras_feat, __u32 data_len, void *data);
+		       bool zras_feat, __u32 data_len, void *data,
+		       __u32 timeout_ms);
 
+/**
+ * nvme_zns_report_zones() -
+ * @fd:
+ * @nsid:
+ * @slba:
+ * @extended:
+ * @opts:
+ * @partial:
+ * @data_len:
+ * @data:
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise.
+ */
 int nvme_zns_report_zones(int fd, __u32 nsid, __u64 slba, bool extended,
 			  enum nvme_zns_report_options opts, bool partial,
-			  __u32 data_len, void *data);
+			  __u32 data_len, void *data, __u32 timeout_ms);
 
 /**
  * nvme_zns_append() -
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace ID
+ * @timeout_ms:	Overide the default timeout to this value in milliseconds;
+ *		set to 0 to use the system default.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
@@ -2684,6 +3068,6 @@ int nvme_zns_report_zones(int fd, __u32 nsid, __u64 slba, bool extended,
 int nvme_zns_append(int fd, __u32 nsid, __u64 zslba, __u16 nlb, __u16 control,
 		    __u32 ilbrt, __u16 lbat, __u16 lbatm, __u32 data_len,
 		    void *data, __u32 metadata_len, void *metadata,
-		    __u64 *result);
+		    __u64 *result, __u32 timeout_ms);
 
 #endif /* _LIBNVME_IOCTL_H */
