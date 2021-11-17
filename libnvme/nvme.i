@@ -502,6 +502,10 @@ struct nvme_ns {
     nvme_free_ctrl($self);
   }
 
+  void discovery_ctrl_set(bool discovery) {
+      nvme_ctrl_set_discovery_ctrl($self, discovery);
+  }
+
   bool init(struct nvme_host *h, int instance) {
       return nvme_init_ctrl(h, $self, instance) == 0;
   }
