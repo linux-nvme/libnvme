@@ -403,22 +403,29 @@ static bool run_test(const char *cmd, struct test *test)
 		size_t len;
 		const char *deps = test->depends;
 		char *dep;
+		char *s;
 
 		/* Space-separated dependencies, could be ! for inverse. */
 		while ((len = strcspn(deps, " "))) {
 			bool positive = true;
 			if (deps[len]) {
-				dep = strdup(deps);
-				dep[len] = '\0';
+				s = strdup(deps);
+				s[len] = '\0';
 			} else {
-				dep = (char *)deps;
+				s = strdup((char *)deps);
 			}
+
+			dep = s;
 
 			if (dep[0] == '!') {
 				dep++;
 				positive = false;
 			}
-			if (run_test(cmd, find_test(dep)) != positive) {
+
+			bool result = run_test(cmd, find_test(dep));
+			free(s);
+
+			if (result != positive) {
 				test->answer = false;
 				test->done = true;
 				return test->answer;
@@ -464,17 +471,20 @@ static bool run_test(const char *cmd, struct test *test)
 	if (verbose > 1)
 		if (system("cat " INPUT_FILE) == -1);
 
+	char *newcmd = NULL;
 	if (test->link) {
-		char *newcmd;
-		newcmd = malloc(strlen(cmd) + strlen(" ")
-				+ strlen(test->link) + 1);
-		sprintf(newcmd, "%s %s", cmd, test->link);
+		int rc = asprintf(&newcmd, "%s %s", cmd, test->link);
+		if (rc == -1)
+			printf("asprintf failed\n");
 		if (verbose > 1)
-			printf("Extra link line: %s", newcmd);
+			printf("Extra link line: %s\n", newcmd);
 		cmd = newcmd;
 	}
 
 	output = run(cmd, &status);
+
+	if (newcmd) free(newcmd);
+
 	if (status != 0 || strstr(output, "warning")) {
 		if (verbose)
 			printf("Compile %s for %s, status %i: %s\n",
@@ -543,6 +553,8 @@ int main(int argc, const char *argv[])
 	for (i = 0; i < sizeof(tests)/sizeof(tests[0]); i++)
 		run_test(cmd, &tests[i]);
 
+	free(cmd);
+
 	unlink(OUTPUT_FILE);
 	unlink(INPUT_FILE);
 
@@ -553,7 +565,9 @@ int main(int argc, const char *argv[])
 	printf("#define _GNU_SOURCE /* Always use GNU extensions. */\n");
 	printf("#endif\n");
 	printf("#define CCAN_COMPILER \"%s\"\n", argv[1]);
-	printf("#define CCAN_CFLAGS \"%s\"\n\n", connect_args(argv+1, ""));
+	cmd = connect_args(argv+1, "");
+	printf("#define CCAN_CFLAGS \"%s\"\n\n", cmd);
+	free(cmd);
 	/* This one implies "#include <ccan/..." works, eg. for tdb2.h */
 	printf("#define HAVE_CCAN 1\n");
 	for (i = 0; i < sizeof(tests)/sizeof(tests[0]); i++)
