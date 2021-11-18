@@ -1154,7 +1154,9 @@ int nvme_init_ctrl(nvme_host_t h, nvme_ctrl_t c, int instance)
 	}
 
 	c->address = nvme_get_attr(path, "address");
-	if (!c->address) {
+	if (!c->address && (!c->transport ||
+	    (strncmp(c->transport, "loop", 4) &&
+	     strncmp(c->transport, "pcie", 4)))) {
 		errno = ENXIO;
 		ret = -1;
 		goto out_free_name;
