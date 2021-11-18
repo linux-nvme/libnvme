@@ -207,7 +207,7 @@ static int add_int_argument(char **argstr, char *tok, int arg, bool allow_zero)
 {
 	char *nstr;
 
-	if (arg < 0 || (!arg && !allow_zero))
+	if (!arg && !allow_zero)
 		return 0;
 	if (asprintf(&nstr, "%s,%s=%d", *argstr, tok, arg) < 0) {
 		errno = ENOMEM;
@@ -412,9 +412,6 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 			errno = EINVAL;
 			return -1;
 		}
-		/* Use the default ctrl loss timeout if unset */
-                if (cfg->ctrl_loss_tmo == -1)
-			cfg->ctrl_loss_tmo = NVMF_DEF_CTRL_LOSS_TMO;
 	}
 
 	/* always specify nqn as first arg - this will init the string */
@@ -473,6 +470,7 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 	     add_int_argument(argstr, "fast_io_fail_tmo",
 			      cfg->fast_io_fail_tmo, false)) ||
 	    (strcmp(transport, "loop") &&
+	     cfg->tos != -1 &&
 	     add_int_argument(argstr, "tos", cfg->tos, true)) ||
 	    add_bool_argument(argstr, "duplicate_connect",
 			      cfg->duplicate_connect) ||
