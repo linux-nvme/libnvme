@@ -143,7 +143,6 @@ incdir = include_directories(['.', 'ccan', 'src'])
 
 ################################################################################
 sources = []
-subdir('ccan')
 subdir('src')
 subdir('libnvme')
 subdir('test')
