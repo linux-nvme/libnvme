@@ -10,7 +10,7 @@ configure_file(
     configuration: conf
 )
 
-sources += [
+sources = [
     'nvme/cleanup.c',
     'nvme/fabrics.c',
     'nvme/filters.c',
