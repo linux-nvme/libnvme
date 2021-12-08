@@ -10,6 +10,7 @@
 #define _LIBNVME_LINUX_H
 
 #include "types.h"
+#include <stddef.h>
 
 /**
  * nvme_fw_download_seq() -
