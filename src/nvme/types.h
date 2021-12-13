@@ -3547,6 +3547,55 @@ enum nvme_apst_entry {
 };
 
 /**
+ * struct nvme_host_metadata_element_desc -
+ * @type:
+ * @rev:
+ * @len:
+ * @val:
+ */
+struct nvme_host_metadata_element_desc {
+	__u8			type;	/* Element Type */
+	__u8			rev;	/* Element Revision */
+	__u16			len;	/* Element Length */
+	__u8			val[0];	/* Element Value (UTF-8) */
+};
+
+/**
+ * struct nvme_host_metadata -
+ * @ndesc:
+ * @rsvd1:
+ * @descs:
+ */
+struct nvme_host_metadata {
+	__u8						ndesc;
+	__u8						rsvd1;
+	union {
+		struct nvme_host_metadata_element_desc descs[0];
+		__u8 descs_buf[4094];
+	};
+};
+
+/**
+ * enum nvme_mi_ctrl_metadata_type -
+ */
+enum nvme_mi_ctrl_metadata_type {
+	NVME_MI_CTRL_METADATA_OS_CTRL_NAME 		= 0x01,
+	NVME_MI_CTRL_METADATA_OS_DRIVER_NAME 		= 0x02,
+	NVME_MI_CTRL_METADATA_OS_DRIVER_VER 		= 0x03,
+	NVME_MI_CTRL_METADATA_PRE_BOOT_CTRL_NAME 	= 0x04,
+	NVME_MI_CTRL_METADATA_PRE_BOOT_DRIVER_NAME 	= 0x05,
+	NVME_MI_CTRL_METADATA_PRE_BOOT_DRIVER_VER 	= 0x06,
+};
+
+/**
+ * enum nvme_mi_ns_metadata_type -
+ */
+enum nvme_mi_ns_metadata_type {
+	NVME_MI_NS_METADATA_OS_NS_NAME 		= 0x01,
+	NVME_MI_NS_METADATA_PRE_BOOT_NS_NAME 	= 0x02,
+};
+
+/**
  * struct nvme_timestamp -
  * timestamp:
  * @attr:
@@ -5305,6 +5354,9 @@ enum nvme_features_id {
 	NVME_FEAT_FID_RESV_MASK					= 0x82,
 	NVME_FEAT_FID_RESV_PERSIST				= 0x83,
 	NVME_FEAT_FID_WRITE_PROTECT				= 0x84,
+
+	NVME_MI_FEAT_CTRL_METADATA	= 0x7E,
+	NVME_MI_FEAT_NS_METADATA	= 0x7F,
 };
 
 /**
