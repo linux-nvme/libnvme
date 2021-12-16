@@ -1413,34 +1413,46 @@ int nvme_set_features_iocs_profile(int fd, __u8 iocsi, bool save)
 				   save, NULL);
 }
 
-int nvme_get_features(int fd, enum nvme_features_id fid, __u32 nsid,
-		      enum nvme_get_features_sel sel, __u32 cdw11, __u8 uuidx,
-		      __u32 data_len, void *data, __u32 timeout, __u32 *result)
+int nvme_get_features(struct nvme_get_features_args *args)
 {
-	__u32 cdw10 = NVME_SET(fid, FEATURES_CDW10_FID) |
-			NVME_SET(sel, GET_FEATURES_CDW10_SEL);
-	__u32 cdw14 = NVME_SET(uuidx, FEATURES_CDW14_UUID);
+	__u32 cdw10 = NVME_SET(args->fid, FEATURES_CDW10_FID) |
+			NVME_SET(args->sel, GET_FEATURES_CDW10_SEL);
+	__u32 cdw14 = NVME_SET(args->uuidx, FEATURES_CDW14_UUID);
 
 	struct nvme_passthru_cmd cmd = {
 		.opcode		= nvme_admin_get_features,
-		.nsid		= nsid,
-		.addr		= (__u64)(uintptr_t)data,
-		.data_len	= data_len,
+		.nsid		= args->nsid,
+		.addr		= (__u64)(uintptr_t)args->data,
+		.data_len	= args->data_len,
 		.cdw10		= cdw10,
-		.cdw11		= cdw11,
+		.cdw11		= args->cdw11,
 		.cdw14		= cdw14,
-		.timeout_ms	= timeout,
+		.timeout_ms	= args->timeout,
 	};
 
-	return nvme_submit_admin_passthru(fd, &cmd, result);
+	if (args->args_size > sizeof(*args))
+		return -EINVAL;
+	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
 }
 
 static int __nvme_get_features(int fd, enum nvme_features_id fid,
 			       enum nvme_get_features_sel sel, __u32 *result)
 {
-	return nvme_get_features(fd, fid, NVME_NSID_NONE, sel, 0,
-				 NVME_UUID_NONE, 0, NULL,
-				 NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = fid,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = 0,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = 0,
+		.data = NULL,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_arbitration(int fd, enum nvme_get_features_sel sel,
@@ -1459,9 +1471,21 @@ int nvme_get_features_lba_range(int fd, enum nvme_get_features_sel sel,
 				struct nvme_lba_range_type *data,
 				__u32 *result)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_LBA_RANGE, NVME_NSID_NONE,
-				 sel, 0, NVME_UUID_NONE, 0, NULL,
-				 NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_LBA_RANGE,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = 0,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = 0,
+		.data = NULL,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_temp_thresh(int fd, enum nvme_get_features_sel sel,
@@ -1499,9 +1523,21 @@ int nvme_get_features_irq_coalesce(int fd, enum nvme_get_features_sel sel,
 int nvme_get_features_irq_config(int fd, enum nvme_get_features_sel sel,
 				__u16 iv, __u32 *result)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_IRQ_CONFIG, NVME_NSID_NONE,
-				 sel, iv, NVME_UUID_NONE, 0, NULL,
-				 NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_LBA_RANGE,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = iv,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = 0,
+		.data = NULL,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_write_atomic(int fd, enum nvme_get_features_sel sel,
@@ -1520,9 +1556,21 @@ int nvme_get_features_async_event(int fd, enum nvme_get_features_sel sel,
 int nvme_get_features_auto_pst(int fd, enum nvme_get_features_sel sel,
 			       struct nvme_feat_auto_pst *apst, __u32 *result)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_AUTO_PST, NVME_NSID_NONE,
-				 sel, 0, NVME_UUID_NONE, 0, NULL,
-				 NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_LBA_RANGE,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = 0,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = 0,
+		.data = NULL,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_host_mem_buf(int fd, enum nvme_get_features_sel sel,
@@ -1534,9 +1582,21 @@ int nvme_get_features_host_mem_buf(int fd, enum nvme_get_features_sel sel,
 int nvme_get_features_timestamp(int fd,
 	enum nvme_get_features_sel sel, struct nvme_timestamp *ts)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_TIMESTAMP, NVME_NSID_NONE,
-				 sel, 0, NVME_UUID_NONE, 0, NULL,
-				 NVME_DEFAULT_IOCTL_TIMEOUT, NULL);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_TIMESTAMP,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = 0,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = sizeof(*ts),
+		.data = ts,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_kato(int fd, enum nvme_get_features_sel sel, __u32 *result)
@@ -1562,17 +1622,41 @@ int nvme_get_features_rrl(int fd, enum nvme_get_features_sel sel, __u32 *result)
 int nvme_get_features_plm_config(int fd, enum nvme_get_features_sel sel,
 	__u16 nvmsetid, struct nvme_plm_config *data, __u32 *result)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_PLM_CONFIG, NVME_NSID_NONE,
-				 sel, nvmsetid, NVME_UUID_NONE, 0, NULL,
-				 NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_PLM_CONFIG,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = nvmsetid,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = 0,
+		.data = NULL,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_plm_window(int fd, enum nvme_get_features_sel sel,
 	__u16 nvmsetid, __u32 *result)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_PLM_WINDOW, NVME_NSID_NONE,
-				 sel, nvmsetid, NVME_UUID_NONE, 0, NULL,
-				 NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_PLM_WINDOW,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = nvmsetid,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = 0,
+		.data = NULL,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_lba_sts_interval(int fd, enum nvme_get_features_sel sel,
@@ -1586,9 +1670,21 @@ int nvme_get_features_host_behavior(int fd, enum nvme_get_features_sel sel,
 				    struct nvme_feat_host_behavior *data,
 				    __u32 *result)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_HOST_BEHAVIOR,
-				 NVME_NSID_NONE, sel, 0, NVME_UUID_NONE, 0,
-				 NULL, NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_HOST_BEHAVIOR,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = 0,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = 0,
+		.data = NULL,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_sanitize(int fd, enum nvme_get_features_sel sel,
@@ -1600,9 +1696,21 @@ int nvme_get_features_sanitize(int fd, enum nvme_get_features_sel sel,
 int nvme_get_features_endurance_event_cfg(int fd, enum nvme_get_features_sel sel,
 					  __u16 endgid, __u32 *result)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_ENDURANCE_EVT_CFG,
-				 NVME_NSID_NONE, sel, 0, NVME_UUID_NONE, 0,
-				 NULL, NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_ENDURANCE_EVT_CFG,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = 0,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = 0,
+		.data = NULL,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_sw_progress(int fd, enum nvme_get_features_sel sel,
@@ -1614,9 +1722,21 @@ int nvme_get_features_sw_progress(int fd, enum nvme_get_features_sel sel,
 int nvme_get_features_host_id(int fd, enum nvme_get_features_sel sel,
 			      bool exhid, __u32 len, __u8 *hostid)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_HOST_ID, NVME_NSID_NONE, sel,
-				 !!exhid, NVME_UUID_NONE, len, hostid,
-				 NVME_DEFAULT_IOCTL_TIMEOUT, NULL);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_HOST_ID,
+		.nsid = NVME_NSID_NONE,
+		.sel = sel,
+		.cdw11 = !!exhid,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = len,
+		.data = hostid,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_resv_mask(int fd, enum nvme_get_features_sel sel,
@@ -1635,9 +1755,21 @@ int nvme_get_features_write_protect(int fd, __u32 nsid,
 				    enum nvme_get_features_sel sel,
 				    __u32 *result)
 {
-	return nvme_get_features(fd, NVME_FEAT_FID_WRITE_PROTECT, nsid, sel, 0,
-				 NVME_UUID_NONE, 0, NULL,
-				 NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_get_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = NVME_FEAT_FID_WRITE_PROTECT,
+		.nsid = nsid,
+		.sel = sel,
+		.cdw11 = 0,
+		.uuidx = NVME_UUID_NONE,
+		.data_len = 0,
+		.data = NULL,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+
+	return nvme_get_features(&args);
 }
 
 int nvme_get_features_iocs_profile(int fd, enum nvme_get_features_sel sel,
