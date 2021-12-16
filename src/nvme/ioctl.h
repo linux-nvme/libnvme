@@ -1169,7 +1169,7 @@ int nvme_get_log_persistent_event(int fd, enum nvme_pevent_log_action action,
 				  __u32 size, void *pevent_log);
 
 /**
- * nvme_set_features() - Set a feature attribute
+ * nvme_set_features_args - Arguments for the NVMe Admin Set Feature command
  * @fd:		File descriptor of nvme device
  * @fid:	Feature identifier
  * @nsid:	Namespace ID, if applicable
@@ -1182,20 +1182,53 @@ int nvme_get_log_persistent_event(int fd, enum nvme_pevent_log_action action,
  * @data:	User address of feature data, if applicable
  * @timeout:	Timeout in ms
  * @result:	The command completion result from CQE dword0
+ */
+
+struct nvme_set_features_args {
+	int args_size;
+	int fd;
+	__u8 fid;
+	__u32 nsid;
+	__u32 cdw11;
+	__u32 cdw12;
+	bool save;
+	__u8 uuidx;
+	__u32 cdw15;
+	__u32 data_len;
+	void *data;
+	__u32 timeout;
+	__u32 *result;
+};
+
+/**
+ * nvme_set_features_args() - Set a feature attribute
+ * @args:	&struct nvme_set_features_args argument structure
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_set_features(int fd, __u8 fid, __u32 nsid, __u32 cdw11, __u32 cdw12,
-		      bool save, __u8 uuidx, __u32 cdw15, __u32 data_len,
-		      void *data, __u32 timeout, __u32 *result);
+int nvme_set_features(struct nvme_set_features_args *args);
 
 static inline int nvme_set_features_data(int fd, __u8 fid, __u32 nsid,
 			__u32 cdw11, bool save, __u32 data_len, void *data,
 		 	__u32 *result)
 {
-	return nvme_set_features(fd, fid, nsid, cdw11, 0, save, 0, 0, data_len,
-				 data, NVME_DEFAULT_IOCTL_TIMEOUT, result);
+	struct nvme_set_features_args args = {
+		.args_size = sizeof(args),
+		.fd = fd,
+		.fid = fid,
+		.nsid = nsid,
+		.cdw11 = cdw11,
+		.cdw12 = 0,
+		.save = save,
+		.uuidx = 0,
+		.cdw15 = 0,
+		.data_len = data_len,
+		.data = data,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
+	};
+	return nvme_set_features(&args);
 }
 
 static inline int nvme_set_features_simple(int fd, __u8 fid, __u32 nsid,
