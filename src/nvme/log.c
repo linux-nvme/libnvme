@@ -33,8 +33,8 @@
 #endif
 
 int nvme_log_level = DEFAULT_LOGLEVEL;
-bool nvme_log_timestamp;
-bool nvme_log_pid;
+bool nvme_log_timestamp = false;
+bool nvme_log_pid = false;
 __thread char nvme_log_message[NVME_LOG_MESSAGE_LEN] = {'\0'};
 
 void __attribute__((format(printf, 3, 4)))

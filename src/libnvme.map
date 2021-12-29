@@ -172,6 +172,8 @@ LIBNVME_1_0 {
 		nvme_lockdown;
 		nvme_log_level;
 		nvme_log_message;
+		nvme_log_pid;
+		nvme_log_timestamp;
 		nvme_lookup_host;
 		nvme_lookup_subsystem;
 		nvme_namespace_attach_ctrls;
