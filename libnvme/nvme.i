@@ -98,7 +98,7 @@ static int discover_err = 0;
   if (connect_err == 1) {
     SWIG_exception(SWIG_AttributeError, "Existing controller connection");
   } else if (connect_err) {
-    if (nvme_log_message)
+    if (nvme_log_message[0])
       SWIG_exception(SWIG_RuntimeError, nvme_log_message);
     else
       SWIG_exception(SWIG_RuntimeError, "Connect failed");
