@@ -4015,6 +4015,8 @@ int nvme_resv_report(struct nvme_resv_report_args *args);
 /**
  * nvme_zns_mgmt_send_args - Arguments for the NVMe ZNS Management Send command
  * @fd:		File descriptor of nvme device
+ * @timeout:	timeout in ms
+ * @result:	The command completion result from CQE dword0
  * @nsid:	Namespace ID
  * @slba:	Starting logical block address
  * @zsa:	Zone send action
@@ -4022,21 +4024,23 @@ int nvme_resv_report(struct nvme_resv_report_args *args);
  * @zsaso:	Zone Send Action Specific Option
  * @data_len:	Length of @data
  * @data:	Userspace address of the data
- * @timeout:	timeout in ms
- * @result:	The command completion result from CQE dword0
  */
 struct nvme_zns_mgmt_send_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u32 nsid;
+	__u32 rsvd28;
 	__u64 slba;
 	enum nvme_zns_send_action zsa;
 	bool select_all;
 	__u8 zsaso;
+	__u16 rsvd46;
 	__u32 data_len;
+	__u32 rsvd52;
 	void *data;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
