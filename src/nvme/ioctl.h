@@ -2681,27 +2681,29 @@ int nvme_get_features_iocs_profile(int fd, enum nvme_get_features_sel sel,
 /**
  * nvme_format_nvm_args - Arguments for the Format Nvme Namespace command
  * @fd:		File descriptor of nvme device
+ * @timeout:	Set to override default timeout to this value in milliseconds;
+ *		useful for long running formats. 0 will use system default.
+ * @result:	The command completion result from CQE dword0
  * @nsid:	Namespace ID to format
  * @lbaf:	Logical block address format
  * @mset:	Metadata settings (extended or separated), true if extended
  * @pi:		Protection information type
  * @pil:	Protection information location (beginning or end), true if end
  * @ses:	Secure erase settings
- * @timeout:	Set to override default timeout to this value in milliseconds;
- * 		useful for long running formats. 0 will use system default.
- * @result:	The command completion result from CQE dword0
  */
 struct nvme_format_nvm_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u32 nsid;
 	__u8 lbaf;
+	__u8 rsvd29[3];
 	enum nvme_cmd_format_mset mset;
 	enum nvme_cmd_format_pi pi;
 	enum nvme_cmd_format_pil pil;
 	enum nvme_cmd_format_ses ses;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
