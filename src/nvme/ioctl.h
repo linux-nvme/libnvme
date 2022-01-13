@@ -1116,6 +1116,8 @@ static inline int nvme_zns_identify_ctrl(int fd, struct nvme_zns_id_ctrl *id)
  * nvme_get_log_args - Arguments for the NVMe Admin Get Log command
  * @args_size:	Length of the structure
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	The command completion result from CQE dword0
  * @lid:	Log page identifier, see &enum nvme_cmd_get_log_lid for known
  * 		values
  * @nsid: 	Namespace identifier, if applicable
@@ -1126,8 +1128,6 @@ static inline int nvme_zns_identify_ctrl(int fd, struct nvme_zns_id_ctrl *id)
  * @uuidx:	UUID selection, if supported
  * @len:	Length of provided user buffer to hold the log data in bytes
  * @log:	User space destination address to transfer the data
- * @timeout:	Timeout in ms
- * @result:	The command completion result from CQE dword0
  * @csi:	Command set identifier, see &enum nvme_csi for known values
  * @ot:		Offset Type; if set @lpo specifies the index into the list
  *		of data structures, otherwise @lpo specifies the byte offset
@@ -1137,17 +1137,21 @@ static inline int nvme_zns_identify_ctrl(int fd, struct nvme_zns_id_ctrl *id)
 struct nvme_get_log_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	enum nvme_cmd_get_log_lid lid;
 	__u32 nsid;
 	__u64 lpo;
 	__u8 lsp;
+	__u8 rsvd41;
 	__u16 lsi;
 	bool rae;
 	__u8 uuidx;
+	__u16 rsvd46;
 	__u32 len;
+	__u32 rsvd52;
 	void *log;
-	__u32 timeout;
-	__u32 *result;
 	enum nvme_csi csi;
 	bool ot;
 };
@@ -1168,6 +1172,8 @@ static inline int nvme_get_nsid_log(int fd, bool rae,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = lid,
 		.nsid = nsid,
 		.lpo = 0,
@@ -1177,8 +1183,6 @@ static inline int nvme_get_nsid_log(int fd, bool rae,
 		.uuidx = NVME_UUID_NONE,
 		.len = len,
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1313,6 +1317,8 @@ static inline int nvme_get_log_cmd_effects(int fd, enum nvme_csi csi,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_CMD_EFFECTS,
 		.nsid = NVME_NSID_ALL,
 		.lpo = 0,
@@ -1322,8 +1328,6 @@ static inline int nvme_get_log_cmd_effects(int fd, enum nvme_csi csi,
 		.uuidx = NVME_UUID_NONE,
 		.len = sizeof(*log),
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = csi,
 		.ot = false,
 	};
@@ -1360,6 +1364,8 @@ static inline int nvme_get_log_create_telemetry_host(int fd,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_TELEMETRY_HOST,
 		.nsid = NVME_NSID_NONE,
 		.lpo = 0,
@@ -1369,8 +1375,6 @@ static inline int nvme_get_log_create_telemetry_host(int fd,
 		.uuidx = NVME_UUID_NONE,
 		.len = sizeof(*log),
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1397,6 +1401,8 @@ static inline int nvme_get_log_telemetry_host(int fd, __u64 offset,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_TELEMETRY_HOST,
 		.nsid = NVME_NSID_NONE,
 		.lpo = 0,
@@ -1406,8 +1412,6 @@ static inline int nvme_get_log_telemetry_host(int fd, __u64 offset,
 		.uuidx = NVME_UUID_NONE,
 		.len = len,
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1428,6 +1432,8 @@ static inline int nvme_get_log_telemetry_ctrl(int fd, bool rae,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_TELEMETRY_CTRL,
 		.nsid = NVME_NSID_NONE,
 		.lpo = offset,
@@ -1437,8 +1443,6 @@ static inline int nvme_get_log_telemetry_ctrl(int fd, bool rae,
 		.uuidx = NVME_UUID_NONE,
 		.len = len,
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1467,6 +1471,8 @@ static inline int nvme_get_log_endurance_group(int fd, __u16 endgid,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_ENDURANCE_GROUP,
 		.nsid = NVME_NSID_NONE,
 		.lpo = 0,
@@ -1476,8 +1482,6 @@ static inline int nvme_get_log_endurance_group(int fd, __u16 endgid,
 		.uuidx = NVME_UUID_NONE,
 		.len = sizeof(*log),
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1498,6 +1502,8 @@ static inline int nvme_get_log_predictable_lat_nvmset(int fd, __u16 nvmsetid,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_PREDICTABLE_LAT_NVMSET,
 		.nsid = NVME_NSID_NONE,
 		.lpo = 0,
@@ -1507,8 +1513,6 @@ static inline int nvme_get_log_predictable_lat_nvmset(int fd, __u16 nvmsetid,
 		.uuidx = NVME_UUID_NONE,
 		.len = sizeof(*log),
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1526,6 +1530,8 @@ static inline int nvme_get_log_predictable_lat_event(int fd, bool rae,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_PREDICTABLE_LAT_AGG,
 		.nsid = NVME_NSID_NONE,
 		.lpo = offset,
@@ -1535,8 +1541,6 @@ static inline int nvme_get_log_predictable_lat_event(int fd, bool rae,
 		.uuidx = NVME_UUID_NONE,
 		.len = len,
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1566,6 +1570,8 @@ static int nvme_get_log_ana(int fd, enum nvme_log_ana_lsp lsp, bool rae,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_ANA,
 		.nsid = NVME_NSID_NONE,
 		.lpo = offset,
@@ -1575,8 +1581,6 @@ static int nvme_get_log_ana(int fd, enum nvme_log_ana_lsp lsp, bool rae,
 		.uuidx = NVME_UUID_NONE,
 		.len = len,
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1610,6 +1614,8 @@ static inline int nvme_get_log_lba_status(int fd, bool rae,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_LBA_STATUS,
 		.nsid = NVME_NSID_NONE,
 		.lpo = offset,
@@ -1619,8 +1625,6 @@ static inline int nvme_get_log_lba_status(int fd, bool rae,
 		.uuidx = NVME_UUID_NONE,
 		.len = len,
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1638,6 +1642,8 @@ static inline int nvme_get_log_endurance_grp_evt(int fd, bool rae,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_ENDURANCE_GRP_EVT,
 		.nsid = NVME_NSID_NONE,
 		.lpo = offset,
@@ -1647,8 +1653,6 @@ static inline int nvme_get_log_endurance_grp_evt(int fd, bool rae,
 		.uuidx = NVME_UUID_NONE,
 		.len = len,
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1689,6 +1693,8 @@ static inline int nvme_get_log_boot_partition(int fd, bool rae,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_BOOT_PARTITION,
 		.nsid = NVME_NSID_NONE,
 		.lpo = 0,
@@ -1698,8 +1704,6 @@ static inline int nvme_get_log_boot_partition(int fd, bool rae,
 		.uuidx = NVME_UUID_NONE,
 		.len = len,
 		.log = part,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1727,6 +1731,8 @@ static inline int nvme_get_log_discovery(int fd, bool rae,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_DISCOVER,
 		.nsid = NVME_NSID_NONE,
 		.lpo = offset,
@@ -1736,8 +1742,6 @@ static inline int nvme_get_log_discovery(int fd, bool rae,
 		.uuidx = NVME_UUID_NONE,
 		.len = len,
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
@@ -1796,6 +1800,8 @@ static inline int nvme_get_log_zns_changed_zones(int fd, __u32 nsid, bool rae,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_ZNS_CHANGED_ZONES,
 		.nsid = nsid,
 		.lpo = 0,
@@ -1805,8 +1811,6 @@ static inline int nvme_get_log_zns_changed_zones(int fd, __u32 nsid, bool rae,
 		.uuidx = NVME_UUID_NONE,
 		.len = sizeof(*log),
 		.log = log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_ZNS,
 		.ot = false,
 	};
@@ -1828,6 +1832,8 @@ static inline int nvme_get_log_persistent_event(int fd,
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
 		.lid = NVME_LOG_LID_PERSISTENT_EVENT,
 		.nsid = NVME_NSID_ALL,
 		.lpo = 0,
@@ -1837,8 +1843,6 @@ static inline int nvme_get_log_persistent_event(int fd,
 		.uuidx = NVME_UUID_NONE,
 		.len = size,
 		.log = pevent_log,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
 		.csi = NVME_CSI_NVM,
 		.ot = false,
 	};
