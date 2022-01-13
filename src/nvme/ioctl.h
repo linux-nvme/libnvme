@@ -3903,26 +3903,29 @@ int nvme_resv_acquire(struct nvme_resv_acquire_args *args);
 /**
  * nvme_resv_register_args - Arguments for the NVMe Reservation Register command
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	The command completion result from CQE dword0
  * @nsid:	Namespace identifier
  * @rrega:	The registration action, see &enum nvme_resv_rrega
  * @cptpl:	Change persist through power loss, see &enum nvme_resv_cptpl
  * @iekey:	Set to ignore the existing key
  * @crkey:	The current reservation key associated with the host
  * @nrkey:	The new reservation key to be register if action is register or
- * 		replace
- * @timeout:	Timeout in ms
+ *		replace
  */
 struct nvme_resv_register_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u32 nsid;
 	enum nvme_resv_rrega rrega;
 	enum nvme_resv_cptpl cptpl;
 	bool iekey;
+	__u8 rsvd37[3];
 	__u64 crkey;
 	__u64 nrkey;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
