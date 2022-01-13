@@ -3523,18 +3523,19 @@ int nvme_sanitize_nvm(struct nvme_sanitize_nvm_args *args);
 /**
  * nvme_dev_self_test_args - Arguments for the NVMe Device Self Test command
  * @fd:		File descriptor of nvme device
- * @nsid:	Namespace ID to test
- * @stc:	Self test code, see &enum nvme_dst_stc
  * @timeout:	Timeout in ms
  * @result:	The command completion result from CQE dword0
+ * @nsid:	Namespace ID to test
+ * @stc:	Self test code, see &enum nvme_dst_stc
  */
 struct nvme_dev_self_test_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u32 nsid;
 	enum nvme_dst_stc stc;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
