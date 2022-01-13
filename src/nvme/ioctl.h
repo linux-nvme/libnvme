@@ -3478,26 +3478,27 @@ int nvme_get_property(struct nvme_get_property_args *args);
 /**
  * nvme_sanitize_nvm_args - Arguments for the NVMe Sanitize NVM command
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	The command completion result from CQE dword0
  * @sanact:	Sanitize action, see &enum nvme_sanitize_sanact
  * @ause:	Set to allow unrestriced sanitize exit
  * @owpass:	Overwrite pass count
  * @oipbp:	Set to overwrite invert pattern between passes
  * @nodas:	Set to not deallocate blocks after sanitizing
  * @ovrpat:	Overwrite pattern
- * @timeout:	Timeout in ms
- * @result:	The command completion result from CQE dword0
  */
 struct nvme_sanitize_nvm_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	enum nvme_sanitize_sanact sanact;
 	bool ause;
 	__u8 owpass;
 	bool oipbp;
 	bool nodas;
 	__u32 ovrpat;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
