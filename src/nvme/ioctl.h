@@ -3045,27 +3045,31 @@ int nvme_security_receive(struct nvme_security_receive_args *args);
 /**
  * nvme_get_lba_status_args - Arguments for the NVMe Get LBA Status command
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	The command completion result from CQE dword0
  * @nsid:	Namespace ID to retrieve LBA status
  * @slba:	Starting logical block address to check statuses
  * @mndw:	Maximum number of dwords to return
  * @atype:	Action type mechanism to determine LBA status desctriptors to
  * 		return, see &enum nvme_lba_status_atype
  * @rl:		Range length from slba to perform the action
- * @timeout:	Timeout in ms
  * @lbas:	Data payload to return status descriptors
- * @result:	The command completion result from CQE dword0
  */
 struct nvme_get_lba_status_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u32 nsid;
+	__u32 rsvd28;
 	__u64 slba;
 	__u32 mndw;
 	__u16 rl;
+	__u16 rsvd46;
 	enum nvme_lba_status_atype atype;
-	__u32 timeout;
+	__u32 rsvd52;
 	struct nvme_lba_status *lbas;
-	__u32 *result;
 };
 
 /**
