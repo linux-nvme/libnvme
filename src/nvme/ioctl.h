@@ -3943,24 +3943,26 @@ int nvme_resv_register(struct nvme_resv_register_args *args);
 /**
  * nvme_resv_release_args - Arguments for the NVMe Reservation Release Command
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	The command completion result from CQE dword0
  * @nsid:	Namespace identifier
  * @rtype:	The type of reservation to be create, see &enum nvme_resv_rtype
  * @rrela:	Reservation releast action, see &enum nvme_resv_rrela
  * @iekey:	Set to ignore the existing key
  * @crkey:	The current reservation key to release
- * @timeout:	Timeout in ms
- * @result:	The command completion result from CQE dword0
  */
 struct nvme_resv_release_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u32 nsid;
 	enum nvme_resv_rtype rtype;
 	enum nvme_resv_rrela rrela;
 	bool iekey;
+	__u8 rsvd37[3];
 	__u64 crkey;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
