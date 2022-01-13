@@ -1869,17 +1869,21 @@ static inline int nvme_get_log_persistent_event(int fd,
 struct nvme_set_features_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u8 fid;
+	__u8 rsvd25[3];
 	__u32 nsid;
 	__u32 cdw11;
 	__u32 cdw12;
 	bool save;
 	__u8 uuidx;
+	__u16 rsvd42;
 	__u32 cdw15;
 	__u32 data_len;
+	__u32 rsvd52;
 	void *data;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
@@ -1898,6 +1902,8 @@ static inline int nvme_set_features_data(int fd, __u8 fid, __u32 nsid,
 	struct nvme_set_features_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
 		.fid = fid,
 		.nsid = nsid,
 		.cdw11 = cdw11,
@@ -1907,8 +1913,6 @@ static inline int nvme_set_features_data(int fd, __u8 fid, __u32 nsid,
 		.cdw15 = 0,
 		.data_len = data_len,
 		.data = data,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = result,
 	};
 	return nvme_set_features(&args);
 }
