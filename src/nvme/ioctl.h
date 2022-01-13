@@ -2723,21 +2723,22 @@ int nvme_format_nvm(struct nvme_format_nvm_args *args);
 /**
  * nvme_ns_mgmt_args - Arguments for NVMe Namespace Management command
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	NVMe command result
  * @nsid:	Namespace identifier
  * @sel:	Type of management operation to perform
  * @ns:		Namespace identication descriptors
- * @result:	NVMe command result
- * @timeout:	Timeout in ms
  * @csi:	Command Set Identifier
  */
 struct nvme_ns_mgmt_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u32 nsid;
 	enum nvme_ns_mgmt_sel sel;
 	struct nvme_id_ns *ns;
-	__u32 *result;
-	__u32 timeout;
 	__u8 csi;
 };
 
@@ -2769,11 +2770,11 @@ static inline int nvme_ns_mgmt_create(int fd, struct nvme_id_ns *ns,
 	struct nvme_ns_mgmt_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = timeout,
+		.result = nsid,
 		.nsid = NVME_NSID_NONE,
 		.sel = NVME_NS_MGMT_SEL_CREATE,
 		.ns = ns,
-		.result = nsid,
-		.timeout = timeout,
 		.csi = csi,
 	};
 
@@ -2797,11 +2798,11 @@ static inline int nvme_ns_mgmt_delete(int fd, __u32 nsid)
 	struct nvme_ns_mgmt_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = 0,
+		.result = NULL,
 		.nsid = nsid,
 		.sel = NVME_NS_MGMT_SEL_DELETE,
 		.ns = NULL,
-		.result = NULL,
-		.timeout = 0,
 		.csi = 0,
 	};
 
