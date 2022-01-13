@@ -3006,6 +3006,8 @@ int nvme_security_send(struct nvme_security_send_args *args);
 /**
  * nvme_security_receive_args - Arguments for the NVMe Security Receive command
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	The command completion result from CQE dword0
  * @nsid:	Namespace ID to issue security command on
  * @nssf:	NVMe Security Specific field
  * @spsp0:	Security Protocol Specific field
@@ -3014,12 +3016,13 @@ int nvme_security_send(struct nvme_security_send_args *args);
  * @al:		Protocol specific allocation length
  * @data_len:	Data length of the payload in bytes
  * @data:	Security data payload to send
- * @timeout:	Timeout in ms
- * @result:	The command completion result from CQE dword0
  */
 struct nvme_security_receive_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u32 nsid;
 	__u8 nssf;
 	__u8 spsp0;
@@ -3028,8 +3031,6 @@ struct nvme_security_receive_args {
 	__u32 al;
 	__u32 data_len;
 	void *data;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
