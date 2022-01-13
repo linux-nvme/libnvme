@@ -3450,16 +3450,17 @@ int nvme_set_property(struct nvme_set_property_args *args);
 /**
  * nvme_get_property_args - Arguments for NVMe Get Property command
  * @fd:		File descriptor of nvme device
- * @offset:	Property offset from the base to retrieve
- * @value:	Where the property's value will be stored on success
  * @timeout:	Timeout in ms
+ * @value:	Where the property's value will be stored on success
+ * @offset:	Property offset from the base to retrieve
  */
 struct nvme_get_property_args {
 	int args_size;
 	int fd;
-	int offset;
-	__u64 *value;
 	__u32 timeout;
+	__u32 rsvd12;
+	__u64 *value;
+	int offset;
 };
 
 /**
