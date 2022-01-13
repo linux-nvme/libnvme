@@ -3352,24 +3352,26 @@ static inline int nvme_directive_recv_stream_allocate(int fd, __u32 nsid,
 /**
  * nvme_capacity_mgmt_args - Arguments for the NVMe Capacity Management command
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	If successful, the CQE dword0 value
  * @op:		Operation to be performed by the controller
  * @element_id:	Value specific to the value of the Operation field
  * @dw11:	Least significant 32 bits of the capacity in bytes of the
  *		Endurance Group or NVM Set to be created
  * @dw12:	Most significant 32 bits of the capacity in bytes of the
  *		Endurance Group or NVM Set to be created
- * @timeout:	Timeout in ms
- * @result:	If successful, the CQE dword0 value
  */
 struct nvme_capacity_mgmt_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u8 op;
+	__u8 rsvd25;
 	__u16 element_id;
 	__u32 cdw11;
 	__u32 cdw12;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
