@@ -3621,6 +3621,8 @@ static inline int nvme_flush(int fd, __u32 nsid) {
 /**
  * nvme_io_args - Arguments for NVMe I/O commands
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	If successful, the CQE dword0
  * @nsid:	Namespace ID
  * @slba:	Starting logical block
  * @nblocks:	Number of logical blocks to send (0's based value)
@@ -3642,27 +3644,31 @@ static inline int nvme_flush(int fd, __u32 nsid) {
  * @data:	Pointer to user address of the data buffer
  * @metadata_len:Length of user buffer, @metadata, in bytes
  * @metadata:	Pointer to user address of the metadata buffer
- * @timeout:	Timeout in ms
  */
 struct nvme_io_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u32 nsid;
+	__u32 rsvd28;
 	__u64 slba;
 	__u16 nlb;
 	__u16 control;
 	__u8 dsm;
 	__u8 dspec;
+	__u16 rsvd46;
 	__u32 reftag;
 	__u16 apptag;
 	__u16 appmask;
 	__u64 storage_tag;
 	__u32 data_len;
+	__u32 rsvd68;
 	void *data;
 	__u32 metadata_len;
+	__u32 rsvd84;
 	void *metadata;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
