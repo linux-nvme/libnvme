@@ -3419,18 +3419,20 @@ int nvme_lockdown(struct nvme_lockdown_args *args);
 /**
  * nvme_set_property_args - Arguments for NVMe Set Property command
  * @fd:		File descriptor of nvme device
- * @offset:	Property offset from the base to set
- * @value:	The value to set the property
  * @timeout:	Timeout in ms
  * @result:	The command completion result from CQE dword0
+ * @offset:	Property offset from the base to set
+ * @value:	The value to set the property
  */
 struct nvme_set_property_args {
 	int args_size;
 	int fd;
-	int offset;
-	__u64 value;
 	__u32 timeout;
+	__u32 rsvd12;
 	__u32 *result;
+	int offset;
+	__u32 rsvd28;
+	__u64 value;
 };
 
 /**
