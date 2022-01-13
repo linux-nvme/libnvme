@@ -2256,6 +2256,8 @@ int nvme_set_features_iocs_profile(int fd, __u8 iocsi, bool save);
 /**
  * nvme_get_features_args - Arguments for the NVMe Admin Get Feature command
  * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @result:	The command completion result from CQE dword0
  * @fid:	Feature identifier, see &enum nvme_features_id
  * @nsid:	Namespace ID, if applicable
  * @sel:	Select which type of attribute to return,
@@ -2264,21 +2266,22 @@ int nvme_set_features_iocs_profile(int fd, __u8 iocsi, bool save);
  * @uuidx:	UUID Index for differentiating vendor specific encoding
  * @data_len:	Length of feature data, if applicable, in bytes
  * @data:	User address of feature data, if applicable
- * @timeout:	Timeout in ms
- * @result:	The command completion result from CQE dword0
  */
 struct nvme_get_features_args {
 	int args_size;
 	int fd;
+	__u32 timeout;
+	__u32 rsvd12;
+	__u32 *result;
 	__u8 fid;
+	__u8 rsvd25[3];
 	__u32 nsid;
 	enum nvme_get_features_sel sel;
 	__u32 cdw11;
 	__u8 uuidx;
+	__u8 rsvd41[3];
 	__u32 data_len;
 	void *data;
-	__u32 timeout;
-	__u32 *result;
 };
 
 /**
@@ -2296,6 +2299,8 @@ static inline int nvme_get_features_data(int fd, enum nvme_features_id fid,
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
 		.fd = fd,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = result,
 		.fid = fid,
 		.nsid = nsid,
 		.sel = NVME_GET_FEATURES_SEL_CURRENT,
@@ -2303,8 +2308,6 @@ static inline int nvme_get_features_data(int fd, enum nvme_features_id fid,
 		.uuidx = NVME_UUID_NONE,
 		.data_len = data_len,
 		.data = data,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = result,
 	};
 
 	return nvme_get_features(&args);
