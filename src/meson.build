@@ -5,7 +5,9 @@
 #
 # Authors: Martin Belanger <Martin.Belanger@dell.com>
 #
-sources += [
+source_dir = meson.current_source_dir()
+
+sources = [
     'nvme/cleanup.c',
     'nvme/fabrics.c',
     'nvme/filters.c',
@@ -14,10 +16,18 @@ sources += [
     'nvme/log.c',
     'nvme/tree.c',
     'nvme/util.c',
+    join_paths(source_dir, '../ccan/ccan/list/list.c'),
+    join_paths(source_dir, '../ccan/ccan/str/debug.c'),
+    join_paths(source_dir, '../ccan/ccan/str/str.c'),
 ]
 
 if conf.get('CONFIG_JSONC')
     sources += 'nvme/json.c'
+endif
+
+if get_option('buildtype') == 'debug'
+    add_project_arguments('-DCCAN_LIST_DEBUG=1',  language : ['c', 'cpp'])
+    add_project_arguments('-DCCAN_STR_DEBUG=1',  language : ['c', 'cpp'])
 endif
 
 deps = [
@@ -26,7 +36,6 @@ deps = [
     openssl_dep,
 ]
 
-source_dir = meson.current_source_dir()
 mapfile = 'libnvme.map'
 version_script_arg = join_paths(source_dir, mapfile)
 
