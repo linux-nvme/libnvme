@@ -5998,8 +5998,8 @@ The nvme command status if a response was received (see
 ``NVME_CNTLID_NONE``
   Use to omit the cntlid command parameter
 
-``NVME_NVMSETID_NONE``
-  Use to omit the nvmsetid command parameter
+``NVME_CNSSPECID_NONE``
+  Use to omit the cns_specific_id command parameter
 
 ``NVME_LOG_LSP_NONE``
   Use to omit the log lsp command parameter
