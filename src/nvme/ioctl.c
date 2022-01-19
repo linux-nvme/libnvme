@@ -70,9 +70,14 @@ int nvme_ns_rescan(int fd)
 
 int nvme_get_nsid(int fd, __u32 *nsid)
 {
+	int __nsid;
+
 	errno = 0;
-	*nsid = ioctl(fd, NVME_IOCTL_ID);
-	return -1 * (errno != 0);
+	__nsid = ioctl(fd, NVME_IOCTL_ID);
+	if (__nsid < 0)
+		return -errno;
+	*nsid = __nsid;
+	return 0;
 }
 
 static int nvme_submit_passthru64(int fd, unsigned long ioctl_cmd,
