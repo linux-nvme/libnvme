@@ -1693,15 +1693,16 @@ static int nvme_ns_init(struct nvme_ns *n)
 static void nvme_ns_set_generic_name(struct nvme_ns *n, const char *name)
 {
 	char generic_name[PATH_MAX];
-	int instance, head_instance;
+	int instance, nsid;
 	int ret;
 
-	ret = sscanf(name, "nvme%dn%d", &instance, &head_instance);
+	ret = sscanf(name, "nvme%dn%d", &instance, &nsid);
 	if (ret != 2)
 		return;
 
-	sprintf(generic_name, "ng%dn%d", instance, head_instance);
+	sprintf(generic_name, "ng%dn%d", instance, nsid);
 	n->generic_name = strdup(generic_name);
+	n->nsid = nsid;
 }
 
 static nvme_ns_t nvme_ns_open(const char *name)
@@ -1715,29 +1716,24 @@ static nvme_ns_t nvme_ns_open(const char *name)
 	}
 
 	n->name = strdup(name);
-	n->fd = nvme_open(n->name);
-	if (n->fd < 0)
-		goto free_ns;
-
 	nvme_ns_set_generic_name(n, name);
 
-	if (nvme_get_nsid(n->fd, &n->nsid) < 0)
-		goto close_fd;
+	n->fd = nvme_open(n->name);
+	if (n->fd >= 0) {
+		int err;
 
-	if (nvme_ns_init(n) != 0)
-		goto close_fd;
-
+		err = nvme_get_nsid(n->fd, &n->nsid);
+		if (!err)
+			err = nvme_ns_init(n);
+		if (err) {
+			close(n->fd);
+			n->fd = -1;
+		}
+	}
 	list_head_init(&n->paths);
 	list_node_init(&n->entry);
 
 	return n;
-
-close_fd:
-	close(n->fd);
-free_ns:
-	free(n->name);
-	free(n);
-	return NULL;
 }
 
 static struct nvme_ns *__nvme_scan_namespace(const char *sysfs_dir, const char *name)
