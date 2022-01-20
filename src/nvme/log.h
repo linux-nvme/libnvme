@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <syslog.h>
 
+#include "private.h"	// This cannot be here, need to use opaque type ...
+
 #ifndef MAX_LOGLEVEL
 #  define MAX_LOGLEVEL LOG_DEBUG
 #endif
@@ -36,4 +38,16 @@ __nvme_msg(int lvl, const char *func, const char *format, ...);
 				   format, ##__VA_ARGS__);		\
 	} while (0)
 
+
+#define nvme_msg_n(root_ctx, lvl, format, ...)					\
+	do {									\
+		if ((lvl) <= MAX_LOGLEVEL) {					\
+			if (root_ctx && root_ctx->log_fn)			\
+			    root_ctx->log_fn(lvl, __nvme_log_func,		\
+					format, ##__VA_ARGS__);			\
+			else							\
+			    __nvme_msg(lvl, __nvme_log_func,			\
+				   format, ##__VA_ARGS__);			\
+		}								\
+	} while (0)
 #endif /* _LOG_H */

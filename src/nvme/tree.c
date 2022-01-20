@@ -76,7 +76,7 @@ static int nvme_scan_topology(struct nvme_root *r, nvme_scan_filter_t f)
 
 	num_ctrls = nvme_scan_ctrls(&ctrls);
 	if (num_ctrls < 0) {
-		nvme_msg(LOG_DEBUG, "failed to scan ctrls: %s\n",
+		nvme_msg_n(r, LOG_DEBUG, "failed to scan ctrls: %s\n",
 			 strerror(errno));
 		return num_ctrls;
 	}
@@ -84,7 +84,7 @@ static int nvme_scan_topology(struct nvme_root *r, nvme_scan_filter_t f)
 	for (i = 0; i < num_ctrls; i++) {
 		nvme_ctrl_t c = nvme_scan_ctrl(r, ctrls[i]->d_name);
 		if (!c) {
-			nvme_msg(LOG_DEBUG, "failed to scan ctrl %s: %s\n",
+			nvme_msg_n(r, LOG_DEBUG, "failed to scan ctrl %s: %s\n",
 				 ctrls[i]->d_name, strerror(errno));
 			continue;
 		}
@@ -97,7 +97,7 @@ static int nvme_scan_topology(struct nvme_root *r, nvme_scan_filter_t f)
 
 	num_subsys = nvme_scan_subsystems(&subsys);
 	if (num_subsys < 0) {
-		nvme_msg(LOG_DEBUG, "failed to scan subsystems: %s\n",
+		nvme_msg_n(r, LOG_DEBUG, "failed to scan subsystems: %s\n",
 			 strerror(errno));
 		return num_subsys;
 	}
@@ -105,7 +105,7 @@ static int nvme_scan_topology(struct nvme_root *r, nvme_scan_filter_t f)
 	for (i = 0; i < num_subsys; i++) {
 		ret = nvme_scan_subsystem(r, subsys[i]->d_name, f);
 		if (ret < 0) {
-			nvme_msg(LOG_DEBUG, "failed to scan subsystem %s: %s\n",
+			nvme_msg_n(r, LOG_DEBUG, "failed to scan subsystem %s: %s\n",
 				 subsys[i]->d_name, strerror(errno));
 		}
 	}
@@ -415,6 +415,13 @@ struct nvme_host *nvme_lookup_host(nvme_root_t r, const char *hostnqn,
 	return h;
 }
 
+void nvme_set_log_fn(nvme_root_t r,
+	void (*log_fn)(int lvl, const char *func,
+			const char *format, ...))
+{
+	r->log_fn = log_fn;
+}
+
 static int nvme_subsystem_scan_namespaces(struct nvme_subsystem *s)
 {
 	struct dirent **namespaces;
@@ -422,7 +429,7 @@ static int nvme_subsystem_scan_namespaces(struct nvme_subsystem *s)
 
 	num_ns = nvme_scan_subsystem_namespaces(s, &namespaces);
 	if (num_ns < 0) {
-		nvme_msg(LOG_DEBUG,
+		nvme_msg_n(s->h->r, LOG_DEBUG,
 			 "failed to scan namespaces for subsys %s: %s\n",
 			 s->subsysnqn, strerror(errno));
 		return num_ns;
@@ -431,7 +438,7 @@ static int nvme_subsystem_scan_namespaces(struct nvme_subsystem *s)
 	for (i = 0; i < num_ns; i++) {
 		ret = nvme_subsystem_scan_namespace(s, namespaces[i]->d_name);
 		if (ret < 0)
-			nvme_msg(LOG_DEBUG,
+			nvme_msg_n(s->h->r, LOG_DEBUG,
 				 "failed to scan namespace %s: %s\n",
 				 namespaces[i]->d_name, strerror(errno));
 	}
@@ -832,11 +839,11 @@ int nvme_disconnect_ctrl(nvme_ctrl_t c)
 	ret = nvme_set_attr(nvme_ctrl_get_sysfs_dir(c),
 			    "delete_controller", "1");
 	if (ret < 0) {
-		nvme_msg(LOG_ERR, "%s: failed to disconnect, error %d\n",
+		nvme_msg_n(c->s->h->r, LOG_ERR, "%s: failed to disconnect, error %d\n",
 			 c->name, errno);
 		return ret;
 	}
-	nvme_msg(LOG_INFO, "%s: disconnected\n", c->name);
+	nvme_msg_n(c->s->h->r, LOG_INFO, "%s: disconnected\n", c->name);
 	nvme_deconfigure_ctrl(c);
 	return 0;
 }

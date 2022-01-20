@@ -121,6 +121,7 @@ struct nvme_root {
 	char *config_file;
 	struct list_head hosts;
 	bool modified;
+	void (*log_fn)(int lvl, const char *func, const char *format, ...);
 };
 
 int nvme_set_attr(const char *dir, const char *attr, const char *value);

@@ -89,6 +89,10 @@ nvme_root_t nvme_host_get_root(nvme_host_t h);
 nvme_host_t nvme_lookup_host(nvme_root_t r, const char *hostnqn,
 			     const char *hostid);
 
+void nvme_set_log_fn(nvme_root_t r,
+	void (*log_fn)(int lvl, const char *func,
+		const char *format, ...));
+
 /**
  * nvme_host_get_hostnqn() -
  * @h:
