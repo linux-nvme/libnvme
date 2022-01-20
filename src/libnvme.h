@@ -21,7 +21,6 @@ extern "C" {
 #include "nvme/filters.h"
 #include "nvme/tree.h"
 #include "nvme/util.h"
-#include "nvme/log.h"
 
 #ifdef __cplusplus
 }
