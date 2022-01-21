@@ -1705,9 +1705,10 @@ static void nvme_ns_set_generic_name(struct nvme_ns *n, const char *name)
 	n->nsid = nsid;
 }
 
-static nvme_ns_t nvme_ns_open(const char *name)
+static nvme_ns_t nvme_ns_open(const char *name, char *path)
 {
 	struct nvme_ns *n;
+	char *lba_value, *eptr;
 
 	n = calloc(1, sizeof(*n));
 	if (!n) {
@@ -1716,7 +1717,19 @@ static nvme_ns_t nvme_ns_open(const char *name)
 	}
 
 	n->name = strdup(name);
+	n->sysfs_dir = path;
 	nvme_ns_set_generic_name(n, name);
+
+	lba_value = nvme_get_ns_attr(n, "size");
+	if (!lba_value) {
+		free(n);
+		errno = ENODEV;
+		return NULL;
+	}
+	n->lba_count = strtoul(lba_value, &eptr, 10);
+	if (lba_value == eptr)
+		n->lba_count = 0;
+	free(lba_value);
 
 	n->fd = nvme_open(n->name);
 	if (n->fd >= 0) {
@@ -1748,14 +1761,10 @@ static struct nvme_ns *__nvme_scan_namespace(const char *sysfs_dir, const char *
 		return NULL;
 	}
 
-	n = nvme_ns_open(name);
-	if (!n)
-		goto free_path;
+	n = nvme_ns_open(name, path);
+	if (n)
+		return n;
 
-	n->sysfs_dir = path;
-	return n;
-
-free_path:
 	free(path);
 	return NULL;
 }
