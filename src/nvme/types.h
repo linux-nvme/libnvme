@@ -1041,31 +1041,71 @@ struct nvme_id_ctrl {
 
 /**
  * enum nvme_id_ctrl_cmic - Controller Multipath IO and Namespace Sharing
- * 			    Capabilities of the controller and NVM subsystem.
- * @NVME_CTRL_CMIC_MULTI_PORT:          If set, then the NVM subsystem may contain
- * 				        more than one NVM subsystem port, otherwise
- * 				        the NVM subsystem contains only a single
- * 				        NVM subsystem port.
- * @NVME_CTRL_CMIC_MULTI_CTRL:          If set, then the NVM subsystem may contain
- * 				        two or more controllers, otherwise the
- * 				        NVM subsystem contains only a single
- * 				        controller. An NVM subsystem that contains
- * 				        multiple controllers may be used by
- * 				        multiple hosts, or may provide multiple
- * 				        paths for a single host.
- * @NVME_CTRL_CMIC_MULTI_SRIOV:         If set, then the controller is associated
- * 				        with an SR-IOV Virtual Function, otherwise
- * 				        it is associated with a PCI Function
- * 				        or a Fabrics connection.
- * @NVME_CTRL_CMIC_MULTI_ANA_REPORTING: If set, then the NVM subsystem supports
- * 				        Asymmetric Namespace Access Reporting.
+ *			    Capabilities of the controller and NVM subsystem.
+ * @NVME_CTRL_CMIC_PORT_SHIFT:	Shift amount to get the port value
+ * @NVME_CTRL_CMIC_CTRL_SHIFT:	Shift amount to get the ctrl value
+ * @NVME_CTRL_CMIC_SRIOV_SHIFT:	Shift amount to get the SR-IOV value
+ * @NVME_CTRL_CMIC_ANA_SHIFT	Shift amount to get the ANA value
+ * @NVME_CTRL_CMIC_PORT_MASK:	Mask to get the port value
+ * @NVME_CTRL_CMIC_CTRL_MASK:	Mask to get the ctrl value
+ * @NVME_CTRL_CMIC_SRIOV_MASK:	Mask to get the SR-IOV value
+ * @NVME_CTRL_CMIC_ANA_MASK:	Mask to get the ANA value
+ *
  */
 enum nvme_id_ctrl_cmic {
-	NVME_CTRL_CMIC_MULTI_PORT		= 1 << 0,
-	NVME_CTRL_CMIC_MULTI_CTRL		= 1 << 1,
-	NVME_CTRL_CMIC_MULTI_SRIOV		= 1 << 2,
-	NVME_CTRL_CMIC_MULTI_ANA_REPORTING	= 1 << 3,
+	NVME_CTRL_CMIC_PORT_SHIFT		= 0,
+	NVME_CTRL_CMIC_CTRL_SHIFT		= 1,
+	NVME_CTRL_CMIC_SRIOV_SHIFT		= 2,
+	NVME_CTRL_CMIC_ANA_SHIFT		= 3,
+	NVME_CTRL_CMIC_PORT_MASK		= 0x1,
+	NVME_CTRL_CMIC_CTRL_MASK		= 0x1,
+	NVME_CTRL_CMIC_SRIOV_MASK		= 0x1,
+	NVME_CTRL_CMIC_ANA_MASK			= 0x1,
 };
+
+/**
+ * NVME_CTRL_CMIC_PORT: macro to read port value
+ *
+ * @cmic:	The %cmic member from @struct nvme_id_ctrl
+ *
+ * If set, then the NVM subsystem may contain more than one NVM
+ * subsystem port, otherwise the NVM subsystem contains only a single
+ * NVM subsystem port.
+ */
+#define NVME_CTRL_CMIC_PORT(cmic)	NVME_GET(cmic, CTRL_CMIC_PORT)
+
+/**
+ * NVME_CTRL_CMIC_CTRL: macro to read ctrl value
+ *
+ * @cmic:	The %cmic member from @struct nvme_id_ctrl
+ *
+ * If set, then the NVM subsystem may contain two or more controllers,
+ * otherwise the NVM subsystem contains only a single controller. An
+ * NVM subsystem that contains multiple controllers may be used by
+ * multiple hosts, or may provide multiple paths for a single host.
+ */
+#define NVME_CTRL_CMIC_CTRL(cmic)	NVME_GET(cmic, CTRL_CMIC_CTRL)
+
+/**
+ * NVME_CTRL_CMIC_MULTI_SRIOV: macro to read SR-IOV value
+ *
+ * @cmic:	The %cmic member from @struct nvme_id_ctrl
+ *
+ * If set, then the controller is associated with an SR-IOV Virtual
+ * Function, otherwise it is associated with a PCI Function or a
+ * Fabrics connection.
+ */
+#define NVME_CTRL_CMIC_SRIOV(cmic)	NVME_GET(cmic, CTRL_CMIC_SRIOV)
+
+/**
+ * NVME_CTRL_CMIC_ANA: macro to read ANA reporting value
+ *
+ * @cmic:	The %cmic member from @struct nvme_id_ctrl
+ *
+ * If set, then the NVM subsystem supports Asymmetric Namespace Access
+ * Reporting.
+ */
+#define NVME_CTRL_CMIC_ANA(cmic)	NVME_GET(cmic, CTRL_CMIC_ANA)
 
 /**
  * enum nvme_id_ctrl_oaes - The typical latency in microseconds to enter Runtime D3
