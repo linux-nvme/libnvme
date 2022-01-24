@@ -809,73 +809,73 @@ struct nvme_id_psd {
  * 	       condition during which controller operation continues.
  * @cctemp:    Critical Composite Temperature Threshold, field indicates the
  * 	       minimum Composite Temperature field value (see &struct
-* 	       nvme_smart_log.critical_comp_time) that indicates a critical
- * 	       overheating condition.
+ *	       nvme_smart_log.critical_comp_time) that indicates a critical
+ *	       overheating condition.
  * @mtfa:      Maximum Time for Firmware Activation indicates the maximum time
- * 	       the controller temporarily stops processing commands to activate
- * 	       the firmware image, specified in 100 millisecond units. This
- * 	       field is always valid if the controller supports firmware
- * 	       activation without a reset.
+ *	       the controller temporarily stops processing commands to activate
+ *	       the firmware image, specified in 100 millisecond units. This
+ *	       field is always valid if the controller supports firmware
+ *	       activation without a reset.
  * @hmpre:     Host Memory Buffer Preferred Size indicates the preferred size
- * 	       that the host is requested to allocate for the Host Memory
- * 	       Buffer feature in 4 KiB units.
+ *	       that the host is requested to allocate for the Host Memory
+ *	       Buffer feature in 4 KiB units.
  * @hmmin:     Host Memory Buffer Minimum Size indicates the minimum size that
- * 	       the host is requested to allocate for the Host Memory Buffer
- * 	       feature in 4 KiB units.
+ *	       the host is requested to allocate for the Host Memory Buffer
+ *	       feature in 4 KiB units.
  * @tnvmcap:   Total NVM Capacity, the total NVM capacity in the NVM subsystem.
- * 	       The value is in bytes.
+ *	       The value is in bytes.
  * @unvmcap:   Unallocated NVM Capacity, the unallocated NVM capacity in the
- * 	       NVM subsystem. The value is in bytes.
+ *	       NVM subsystem. The value is in bytes.
  * @rpmbs      Replay Protected Memory Block Support, see
- * 	       &enum nvme_id_ctrl_rpmbs.
+ *	       &enum nvme_id_ctrl_rpmbs.
  * @edstt      Extended Device Self-test Time, if Device Self-test command is
- * 	       supported (see &struct nvme_id_ctrl.oacs, %NVME_CTRL_OACS_SELF_TEST),
- * 	       then this field indicates the nominal amount of time in one
- * 	       minute units that the controller takes to complete an extended
- * 	       device self-test operation when in power state 0.
+ *	       supported (see &struct nvme_id_ctrl.oacs, %NVME_CTRL_OACS_SELF_TEST),
+ *	       then this field indicates the nominal amount of time in one
+ *	       minute units that the controller takes to complete an extended
+ *	       device self-test operation when in power state 0.
  * @dsto:      Device Self-test Options, see &enum nvme_id_ctrl_dsto.
  * @fwug:      Firmware Update Granularity indicates the granularity and
- * 	       alignment requirement of the firmware image being updated by the
- * 	       Firmware Image Download command. The value is reported in 4 KiB
- * 	       units. A value of 0h indicates no information on granularity is
- * 	       provided. A value of FFh indicates no restriction
+ *	       alignment requirement of the firmware image being updated by the
+ *	       Firmware Image Download command. The value is reported in 4 KiB
+ *	       units. A value of 0h indicates no information on granularity is
+ *	       provided. A value of FFh indicates no restriction
  * @kas:       Keep Alive Support indicates the granularity of the Keep Alive
- * 	       Timer in 100 millisecond units.
+ *	       Timer in 100 millisecond units.
  * @hctma:     Host Controlled Thermal Management Attributes, see &enum nvme_id_ctrl_hctm.
  * @mntmt:     Minimum Thermal Management Temperature indicates the minimum
- * 	       temperature, in degrees Kelvin, that the host may request in the
- * 	       Thermal Management Temperature 1 field and Thermal Management
- * 	       Temperature 2 field of a Set Features command with the Feature
- * 	       Identifier field set to %NVME_FEAT_FID_HCTM.
+ *	       temperature, in degrees Kelvin, that the host may request in the
+ *	       Thermal Management Temperature 1 field and Thermal Management
+ *	       Temperature 2 field of a Set Features command with the Feature
+ *	       Identifier field set to %NVME_FEAT_FID_HCTM.
  * @mxtmt:     Maximum Thermal Management Temperature indicates the maximum
- * 	       temperature, in degrees Kelvin, that the host may request in the
- * 	       Thermal Management Temperature 1 field and Thermal Management
- * 	       Temperature 2 field of the Set Features command with the Feature
- * 	       Identifier set to %NVME_FEAT_FID_HCTM.
+ *	       temperature, in degrees Kelvin, that the host may request in the
+ *	       Thermal Management Temperature 1 field and Thermal Management
+ *	       Temperature 2 field of the Set Features command with the Feature
+ *	       Identifier set to %NVME_FEAT_FID_HCTM.
  * @sanicap:   Sanitize Capabilities, see &enum nvme_id_ctrl_sanicap
  * @hmminds:   Host Memory Buffer Minimum Descriptor Entry Size indicates the
- * 	       minimum usable size of a Host Memory Buffer Descriptor Entry in
- * 	       4 KiB units.
+ *	       minimum usable size of a Host Memory Buffer Descriptor Entry in
+ *	       4 KiB units.
  * @hmmaxd:    Host Memory Maximum Descriptors Entries indicates the number of
- * 	       usable Host Memory Buffer Descriptor Entries.
+ *	       usable Host Memory Buffer Descriptor Entries.
  * @nsetidmax: NVM Set Identifier Maximum, defines the maximum value of a valid
- * 	       NVM Set Identifier for any controller in the NVM subsystem.
+ *	       NVM Set Identifier for any controller in the NVM subsystem.
  * @endgidmax: Endurance Group Identifier Maximum, defines the maximum value of
- * 	       a valid Endurance Group Identifier for any controller in the NVM
- * 	       subsystem.
+ *	       a valid Endurance Group Identifier for any controller in the NVM
+ *	       subsystem.
  * @anatt:     ANA Transition Time indicates the maximum amount of time, in
- * 	       seconds, for a transition between ANA states or the maximum
- * 	       amount of time, in seconds, that the controller reports the ANA
- * 	       change state.
+ *	       seconds, for a transition between ANA states or the maximum
+ *	       amount of time, in seconds, that the controller reports the ANA
+ *	       change state.
  * @anacap:    Asymmetric Namespace Access Capabilities, see
- * 	       &enum nvme_id_ctrl_anacap.
+ *	       &enum nvme_id_ctrl_anacap.
  * @anagrpmax: ANA Group Identifier Maximum indicates the maximum value of a
- * 	       valid ANA Group Identifier for any controller in the NVM
- * 	       subsystem.
+ *	       valid ANA Group Identifier for any controller in the NVM
+ *	       subsystem.
  * @nanagrpid: Number of ANA Group Identifiers indicates the number of ANA
- * 	       groups supported by this controller.
+ *	       groups supported by this controller.
  * @pels:      Persistent Event Log Size indicates the maximum reportable size
- * 	       for the Persistent Event Log.
+ *	       for the Persistent Event Log.
  * @domainid:  Domain Identifier indicates the identifier of the domain
  *             that contains this controller.
  * @megcap:    Max Endurance Group Capacity indicates the maximum capacity
@@ -884,7 +884,7 @@ struct nvme_id_psd {
  * @cqes:      Completion Queue Entry Size, see &enum nvme_id_ctrl_cqes.
  * @maxcmd:    Maximum Outstanding Commands indicates the maximum number of
  * 	       commands that the controller processes at one time for a
- * 	       particular queue.
+ *	       particular queue.
  * @nn:	       Number of Namespaces indicates the maximum value of a valid
  *	       nsid for the NVM subsystem. If the MNAN (&struct nvme_id_ctrl.mnan
  *	       field is cleared to 0h, then this field also indicates the
@@ -894,29 +894,29 @@ struct nvme_id_psd {
  * @fna:       Format NVM Attributes, see &enum nvme_id_ctrl_fna.
  * @vwc:       Volatile Write Cache, see &enum nvme_id_ctrl_vwc.
  * @awun:      Atomic Write Unit Normal indicates the size of the write
- * 	       operation guaranteed to be written atomically to the NVM across
- * 	       all namespaces with any supported namespace format during normal
- * 	       operation. This field is specified in logical blocks and is a
- * 	       0's based value.
+ *	       operation guaranteed to be written atomically to the NVM across
+ *	       all namespaces with any supported namespace format during normal
+ *	       operation. This field is specified in logical blocks and is a
+ *	       0's based value.
  * @awupf:     Atomic Write Unit Power Fail indicates the size of the write
- * 	       operation guaranteed to be written atomically to the NVM across
- * 	       all namespaces with any supported namespace format during a
- * 	       power fail or error condition. This field is specified in
- * 	       logical blocks and is a 0’s based value.
+ *	       operation guaranteed to be written atomically to the NVM across
+ *	       all namespaces with any supported namespace format during a
+ *	       power fail or error condition. This field is specified in
+ *	       logical blocks and is a 0’s based value.
  * @icsvscc:   NVM Vendor Specific Command Configuration, see
- * 	       &enum nvme_id_ctrl_nvscc.
+ *	       &enum nvme_id_ctrl_nvscc.
  * @nwpc:      Namespace Write Protection Capabilities, see
- * 	       &enum nvme_id_ctrl_nwpc.
+ *	       &enum nvme_id_ctrl_nwpc.
  * @acwu:      Atomic Compare & Write Unit indicates the size of the write
- * 	       operation guaranteed to be written atomically to the NVM across
- * 	       all namespaces with any supported namespace format for a Compare
- * 	       and Write fused operation. This field is specified in logical
- * 	       blocks and is a 0’s based value.
+ *	       operation guaranteed to be written atomically to the NVM across
+ *	       all namespaces with any supported namespace format for a Compare
+ *	       and Write fused operation. This field is specified in logical
+ *	       blocks and is a 0’s based value.
  * @ocfs:      Optional Copy Formats Supported, each bit n means controller
- *         supports Copy Format n.
+ *	       supports Copy Format n.
  * @sgls:      SGL Support, see &enum nvme_id_ctrl_sgls
  * @mnan:      Maximum Number of Allowed Namespaces indicates the maximum
- * 	       number of namespaces supported by the NVM subsystem.
+ *	       number of namespaces supported by the NVM subsystem.
  * @maxdna:    Maximum Domain Namespace Attachments indicates the maximum
  *             of the sum of the numver of namespaces attached to each I/O
  *             controller in the Domain.
@@ -925,16 +925,16 @@ struct nvme_id_psd {
  *             this I/O controller.
  * @subnqn:    NVM Subsystem NVMe Qualified Name, UTF-8 null terminated string
  * @ioccsz:    I/O Queue Command Capsule Supported Size, defines the maximum
- * 	       I/O command capsule size in 16 byte units.
+ *	       I/O command capsule size in 16 byte units.
  * @iorcsz:    I/O Queue Response Capsule Supported Size, defines the maximum
- * 	       I/O response capsule size in 16 byte units.
+ *	       I/O response capsule size in 16 byte units.
  * @icdoff:    In Capsule Data Offset, defines the offset where data starts
- * 	       within a capsule. This value is applicable to I/O Queues only.
+ *	       within a capsule. This value is applicable to I/O Queues only.
  * @fcatt:     Fabrics Controller Attributes, see &enum nvme_id_ctrl_fcatt.
  * @msdbd:     Maximum SGL Data Block Descriptors indicates the maximum
- * 	       number of SGL Data Block or Keyed SGL Data Block descriptors
- * 	       that a host is allowed to place in a capsule. A value of 0h
- * 	       indicates no limit.
+ *	       number of SGL Data Block or Keyed SGL Data Block descriptors
+ *	       that a host is allowed to place in a capsule. A value of 0h
+ *	       indicates no limit.
  * @ofcs:      Optional Fabric Commands Support, see &enum nvme_id_ctrl_ofcs.
  * @psd:       Power State Descriptors, see &struct nvme_id_psd.
  * @vs:	       Vendor Specific
