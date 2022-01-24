@@ -572,53 +572,93 @@ static const __u64 NVME_PMRMSC_CBA_MASK = 0xfffffffffffffull;
 
 /**
  * enum nvme_psd_flags - Possible flag values in nvme power state descriptor
- * @NVME_PSD_FLAGS_MXPS: Indicates the scale for the Maximum Power
- * 			 field. If this bit is cleared, then the scale of the
- * 			 Maximum Power field is in 0.01 Watts. If this bit is
- * 			 set, then the scale of the Maximum Power field is in
- * 			 0.0001 Watts.
- * @NVME_PSD_FLAGS_NOPS: Indicates whether the controller processes I/O
- * 			 commands in this power state. If this bit is cleared,
- * 			 then the controller processes I/O commands in this
- * 			 power state. If this bit is set, then the controller
- * 			 does not process I/O commands in this power state.
+ * @NVME_PSD_FLAGS_MXPS_SHIFT:		Shift amount to get the MXPS value
+ * @NVME_PSD_FLAGS_NOPS_SHIFT:		Shift amount to get the NOPS value
+ * @NVME_PSD_FLAGS_MXPS_MASK:		Mask to get the MXPS value
+ * @NVME_PSD_FLAGS_NOPS_MASK:		Mask to get the NOPS value
  */
 enum nvme_psd_flags {
-	 NVME_PSD_FLAGS_MXPS		= 1 << 0,
-	 NVME_PSD_FLAGS_NOPS		= 1 << 1,
+	 NVME_PSD_FLAGS_MXPS_SHIFT		= 1 << 0,
+	 NVME_PSD_FLAGS_NOPS_SHIFT		= 1 << 1,
+	 NVME_PSD_FLAGS_MXPS_MASK		= 0x1,
+	 NVME_PSD_FLAGS_NOPS_MASK		= 0x1,
 };
 
 /**
+ * NVME_PSD_FLAGS_MXPS: macro to read Max Power Scale
+ *
+ * @flags:	The %flags member from @struct nvme_id_psd
+ *
+ * Indicates the scale for the Maximum Power field. If this bit is
+ * cleared, then the scale of the Maximum Power field is in 0.01
+ * Watts. If this bit is set, then the scale of the Maximum Power
+ * field is in 0.0001 Watts.
+ */
+#define NVME_PSD_FLAGS_MXPS(flags)	NVME_GET(flags, PSD_FLAGS_MXPS)
+
+/**
+ * NVME_PSD_FLAGS_NOPS: macro to read Non-Operational State
+ *
+ * @flags:	The %flags member from @struct nvme_id_psd
+ *
+ * Indicates whether the controller processes I/O commands in this
+ * power state. If this bit is cleared, then the controller processes
+ * I/O commands in this power state. If this bit is set, then the
+ * controller does not process I/O commands in this power state.
+ */
+#define NVME_PSD_FLAGS_NOPS(flags)	NVME_GET(flags, PSD_FLAGS_NOPS)
+
+/**
  * enum nvme_psd_ps - Known values for &struct nvme_psd %ips and %aps. Use with
- * 		      nvme_psd_power_scale() to extract the power scale field
- * 		      to match this enum.
- * NVME_PSD_IPS_100_MICRO_WATT:	0.0001 watt scale
- * NVME_PSD_IPS_10_MILLI_WATT:	0.01 watt scale
+ *		      nvme_psd_power_scale() to extract the power scale field
+ *		      to match this enum.
+ * @NVME_PSD_PS_SHIFT:		Shift amount to get the APS/IPS value
+ * @NVME_PSD_PS_MASK:		Mask to get the APS/IPS value
+ * @NVME_PSD_PS_100_MICRO_WATT:	0.0001 watt scale
+ * @NVME_PSD_PS_10_MILLI_WATT:	0.01 watt scale
  */
 enum nvme_psd_ps {
-	 NVME_PSD_PS_100_MICRO_WATT	= 1,
-	 NVME_PSD_PS_10_MILLI_WATT	= 2,
+	NVME_PSD_PS_SHIFT		= 6,
+	NVME_PSD_PS_MASK		= 0x3,
+	NVME_PSD_PS_100_MICRO_WATT	= 1,
+	NVME_PSD_PS_10_MILLI_WATT	= 2,
 };
+
+/**
+ * NVME_PSD_FLAGS_APS: macro to read Adle Power Scale
+ *
+ * @ips:	The %ips member from @struct nvme_id_psd
+ */
+#define NVME_PSD_APS(aps)	NVME_GET(aps, PSD_PS)
+
+/**
+ * NVME_PSD_FLAGS_IPS: macro to read Idle Power Scale
+ *
+ * @ips:	The %ips member from @struct nvme_id_psd
+ */
+#define NVME_PSD_IPS(ips)	NVME_GET(ips, PSD_PS)
 
 /**
  * nvme_psd_power_scale() - power scale occupies the upper 3 bits
  */
 static inline unsigned nvme_psd_power_scale(__u8 ps)
 {
-	return ps >> 6;
+	return NVME_GET(ps, PSD_PS);
 }
 
 /**
  * enum nvme_psd_workload - Specifies a workload hint in the Power Management
- * 			    Feature (see &struct nvme_psd.apw) to inform the
- * 			    NVM subsystem or indicate the conditions for the
- * 			    active power level.
+ *			    Feature (see &struct nvme_psd.apw) to inform the
+ *			    NVM subsystem or indicate the conditions for the
+ *			    active power level.
+ * @NVME_PSD_WORKLOAD_SHIFT: Shift amount to get the workload value
+ * @NVME_PSD_WORKLOAD_MASK: Mask to get the workload value
  * @NVME_PSD_WORKLOAD_1: Extended Idle Period with a Burst of Random Write
- * 			 consists of five minutes of idle followed by
- * 			 thirty-two random write commands of size 1 MiB
- * 			 submitted to a single controller while all other
- * 			 controllers in the NVM subsystem are idle, and then
- * 			 thirty (30) seconds of idle.
+ *			 consists of five minutes of idle followed by
+ *			 thirty-two random write commands of size 1 MiB
+ *			 submitted to a single controller while all other
+ *			 controllers in the NVM subsystem are idle, and then
+ *			 thirty (30) seconds of idle.
  * @NVME_PSD_WORKLOAD_2: Heavy Sequential Writes consists of 80,000
  *			 sequential write commands of size 128 KiB submitted to
  *			 a single controller while all other controllers in the
@@ -628,48 +668,57 @@ static inline unsigned nvme_psd_power_scale(__u8 ps)
  *			 times during the workload.
  */
 enum nvme_psd_workload {
-	 NVME_PSD_WORKLOAD_1	= 1,
-	 NVME_PSD_WORKLOAD_2	= 2,
+	NVME_PSD_WORKLOAD_SHIFT	= 0,
+	NVME_PSD_WORKLOAD_MASK	= 0x3,
+	NVME_PSD_WORKLOAD_1	= 1,
+	NVME_PSD_WORKLOAD_2	= 2,
 };
+
+/**
+ * NVME_PSD_WORKLOAD: macro to read Workload
+ *
+ * @apw:	The @apws member from @struct nvme_id_ps
+ */
+#define NVME_PSD_WORKLOAD(apw)	NVME_GET(apw, PSD_WORKLOAD)
 
 /**
  * struct nvme_id_psd -
  * @mp:	   Maximum Power indicates the sustained maximum power consumed by the
- * 	   NVM subsystem in this power state. The power in Watts is equal to
- * 	   the value in this field multiplied by the scale specified in the Max
- * 	   Power Scale bit (see &enum nvme_psd_flags). A value of 0 indicates
- * 	   Maximum Power is not reported.
+ *	   NVM subsystem in this power state. The power in Watts is equal to
+ *	   the value in this field multiplied by the scale specified in the Max
+ *	   Power Scale bit (see &enum nvme_psd_flags). A value of 0 indicates
+ *	   Maximum Power is not reported.
  * @flags: Additional decoding flags, see &enum nvme_psd_flags.
  * @enlat: Entry Latency indicates the maximum latency in microseconds
- * 	   associated with entering this power state. A value of 0 indicates
- * 	   Entry Latency is not reported.
+ *	   associated with entering this power state. A value of 0 indicates
+ *	   Entry Latency is not reported.
  * @exlat: Exit Latency indicates the maximum latency in microseconds
- * 	   associated with exiting this power state. A value of 0 indicates
- * 	   Exit Latency is not reported.
+ *	   associated with exiting this power state. A value of 0 indicates
+ *	   Exit Latency is not reported.
  * @rrt:   Relative Read Throughput indicates the read throughput rank
- * 	   associated with this power state relative to others. The value in
- * 	   this is less than the number of supported power states.
+ *	   associated with this power state relative to others. The value in
+ *	   this is less than the number of supported power states.
  * @rrl:   Relative Reade Latency indicates the read latency rank associated
- * 	   with this power state relative to others. The value in this field is
- * 	   less than the number of supported power states.
+ *	   with this power state relative to others. The value in this field is
+ *	   less than the number of supported power states.
  * @rwt:   Relative Write Throughput indicates write throughput rank associated
- * 	   with this power state relative to others. The value in this field is
- * 	   less than the number of supported power states
+ *	   with this power state relative to others. The value in this field is
+ *	   less than the number of supported power states
  * @rwl:   Relative Write Latency indicates the write latency rank associated
- * 	   with this power state relative to others. The value in this field is
- * 	   less than the number of supported power states
+ *	   with this power state relative to others. The value in this field is
+ *	   less than the number of supported power states
  * @idlp:  Idle Power indicates the typical power consumed by the NVM
- * 	   subsystem over 30 seconds in this power state when idle.
+ *	   subsystem over 30 seconds in this power state when idle.
  * @ips:   Idle Power Scale indicates the scale for &struct nvme_id_psd.idlp,
- * 	   see &enum nvme_psd_ps for decoding this field.
+ *	   see &enum nvme_psd_ps for decoding this field.
  * @actp:  Active Power indicates the largest average power consumed by the
- * 	   NVM subsystem over a 10 second period in this power state with
- * 	   the workload indicated in the Active Power Workload field.
+ *	   NVM subsystem over a 10 second period in this power state with
+ *	   the workload indicated in the Active Power Workload field.
  * @apws:  Bits 7-6: Active Power Scale(APS) indicates the scale for the &struct
- * 	   nvme_id_psd.actp, see &enum nvme_psd_ps for decoding this value.
- *     Bits 2-0: Active Power Workload(APW) indicates the workload
- * 	   used to calculate maximum power for this power state.
- *     See &enum nvme_psd_workload for decoding this field.
+ *	   nvme_id_psd.actp, see &enum nvme_psd_ps for decoding this value.
+ *	   Bits 2-0: Active Power Workload(APW) indicates the workload
+ *	   used to calculate maximum power for this power state.
+ *	   See &enum nvme_psd_workload for decoding this field.
  */
 struct nvme_id_psd {
 	__le16			mp;
