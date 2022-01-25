@@ -310,6 +310,7 @@ struct nvme_ctrl {
   %immutable sqsize;
   %immutable persistent;
   %immutable discovery_ctrl;
+  %immutable explicit_registration;
   char *transport;
   char *subsysnqn;
   char *traddr;
@@ -324,6 +325,7 @@ struct nvme_ctrl {
   char *sqsize;
   bool persistent;
   bool discovery_ctrl;
+  bool explicit_registration;
 };
 
 struct nvme_ns {
@@ -516,6 +518,10 @@ struct nvme_ns {
   }
   ~nvme_ctrl() {
     nvme_free_ctrl($self);
+  }
+
+  void explicit_registration_set(bool explicit_registration) {
+      nvme_ctrl_set_explicit_registration($self, explicit_registration);
   }
 
   void discovery_ctrl_set(bool discovery) {

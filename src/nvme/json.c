@@ -70,6 +70,9 @@ static void json_update_attributes(nvme_ctrl_t c,
 		if (!strcmp("discovery", key_str) &&
 		    !nvme_ctrl_is_discovery_ctrl(c))
 			nvme_ctrl_set_discovery_ctrl(c, true);
+		if (!strcmp("register", key_str) &&
+		    !nvme_ctrl_is_explicit_registration(c))
+			nvme_ctrl_set_explicit_registration(c, true);
 	}
 }
 
@@ -147,6 +150,9 @@ static void json_parse_host(nvme_root_t r, struct json_object *host_obj)
 	attr_obj = json_object_object_get(host_obj, "dhchap_key");
 	if (attr_obj)
 		nvme_host_set_dhchap_key(h, json_object_get_string(attr_obj));
+	attr_obj = json_object_object_get(host_obj, "hostsymname");
+	if (attr_obj)
+		nvme_host_set_symname(h, json_object_get_string(attr_obj), false);
 	subsys_array = json_object_object_get(host_obj, "subsystems");
 	if (!subsys_array)
 		return;
@@ -227,6 +233,8 @@ static void json_update_port(struct json_object *ctrl_array, nvme_ctrl_t c)
 		json_object_add_value_bool(port_obj, "persistent", true);
 	if (nvme_ctrl_is_discovery_ctrl(c))
 		json_object_add_value_bool(port_obj, "discovery", true);
+	if (nvme_ctrl_is_explicit_registration(c))
+		json_object_add_value_bool(port_obj, "register", true);
 	json_object_array_add(ctrl_array, port_obj);
 }
 
@@ -265,7 +273,7 @@ int json_update_config(nvme_root_t r, const char *config_file)
 	json_root = json_object_new_array();
 	nvme_for_each_host(r, h) {
 		nvme_subsystem_t s;
-		const char *hostid, *dhchap_key;
+		const char *hostid, *dhchap_key, *hostsymname;
 
 		host_obj = json_object_new_object();
 		json_object_add_value_string(host_obj, "hostnqn",
@@ -278,6 +286,10 @@ int json_update_config(nvme_root_t r, const char *config_file)
 		if (dhchap_key)
 			json_object_add_value_string(host_obj, "dhchap_key",
 						     dhchap_key);
+		hostsymname = nvme_host_get_symname(h);
+		if (hostsymname)
+			json_object_add_value_string(host_obj, "hostsymname",
+						     hostsymname);
 		subsys_array = json_object_new_array();
 		nvme_for_each_subsystem(h, s) {
 			json_update_subsys(subsys_array, s);

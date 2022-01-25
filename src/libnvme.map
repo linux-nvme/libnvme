@@ -34,11 +34,13 @@ LIBNVME_1_0 {
 		nvme_ctrl_get_trsvcid;
 		nvme_ctrl_identify;
 		nvme_ctrl_is_discovery_ctrl;
+		nvme_ctrl_is_explicit_registration;
 		nvme_ctrl_next_ns;
 		nvme_ctrl_next_path;
 		nvme_ctrl_reset;
 		nvme_ctrl_set_dhchap_key;
 		nvme_ctrl_set_discovery_ctrl;
+		nvme_ctrl_set_explicit_registration;
 		nvme_ctrl_set_persistent;
 		nvme_ctrls_filter;
 		nvme_default_host;
@@ -146,7 +148,9 @@ LIBNVME_1_0 {
 		nvme_host_get_hostid;
 		nvme_host_get_hostnqn;
 		nvme_host_get_root;
+		nvme_host_get_symname;
 		nvme_host_set_dhchap_key;
+		nvme_host_set_symname;
 		nvme_identify;
 		nvme_identify_active_ns_list;
 		nvme_identify_allocated_ns;

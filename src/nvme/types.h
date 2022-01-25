@@ -689,6 +689,12 @@ struct nvme_id_psd {
 	__u8			rsvd23[9];
 };
 
+enum nvme_dctype {
+	NVME_DCTYPE_NOT_REPORTED = 0,
+	NVME_DCTYPE_DDC = 1,
+	NVME_DCTYPE_CDC = 2,
+};
+
 /**
  * struct nvme_id_ctrl - Identify Controller data structure
  * @vid:       PCI Vendor ID, the company vendor identifier that is assigned by
@@ -887,6 +893,9 @@ struct nvme_id_psd {
  * 	       that a host is allowed to place in a capsule. A value of 0h
  * 	       indicates no limit.
  * @ofcs:      Optional Fabric Commands Support, see &enum nvme_id_ctrl_ofcs.
+ * @dctype:    Discovery Controller Type (DCTYPE). This field indicates what
+ *             type of Discovery controller the controller is (see enum
+ *             nvme_dctype)
  * @psd:       Power State Descriptors, see &struct nvme_id_psd.
  * @vs:	       Vendor Specific
  */
@@ -984,7 +993,8 @@ struct nvme_id_ctrl {
 	__u8			fcatt;
 	__u8			msdbd;
 	__le16			ofcs;
-	__u8			rsvd1806[242];
+	__u8			dctype;
+	__u8			rsvd1807[241];
 
 	struct nvme_id_psd	psd[32];
 	__u8			vs[1024];
@@ -5163,6 +5173,14 @@ enum nvme_status_field {
 	NVME_SC_INVALID_IOCS			= 0x2c,
 	NVME_SC_ID_UNAVAILABLE			= 0x2d,
 
+	NVME_SC_NS_DISPERSED			= 0x2e,
+	NVME_SC_INVALID_DISCOVERY_INFO		= 0x2f,
+	NVME_SC_ZONING_DATA_STRUCT_LOCKED	= 0x30,
+	NVME_SC_ZONING_DATA_STRUCT_NOT_FOUND	= 0x31,
+	NVME_SC_INSUFFICIENT_DISC_RESOURCES	= 0x32,
+	NVME_SC_REQUESTED_FUNCTION_DISABLED	= 0x33,
+	NVME_SC_ZONEGRP_ORIGINATOR_INVALID	= 0x34,
+
 	/*
 	 * I/O Command Set Specific - NVM commands:
 	 */
@@ -5316,6 +5334,7 @@ enum nvme_admin_opcode {
 	nvme_admin_security_recv	= 0x82,
 	nvme_admin_sanitize_nvm		= 0x84,
 	nvme_admin_get_lba_status	= 0x86,
+	nvme_admin_discovery_info_mgmt	= 0x21,
 };
 
 /**

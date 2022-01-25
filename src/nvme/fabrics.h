@@ -212,6 +212,16 @@ char *nvmf_hostnqn_from_file();
 char *nvmf_hostid_from_file();
 
 /**
+ * nvmf_hostsymname_from_file() - Read the host symbolic name from the
+ * config default location in /etc/nvme.
+ *
+ * Return: The symbolic name or NULL if no symbolic name has been
+ * configured. The caller is responsible fro freeing the memory allocated
+ * by this function (if any).
+ */
+char * nvmf_hostsymname_from_file();
+
+/**
  * nvmf_connect_disc_entry() - Connect controller based on the discovery log page entry
  * @h: Host to which the controller should be connected
  * @e: Discovery log page entry

@@ -62,6 +62,9 @@ nvme_host_t nvme_default_host(nvme_root_t r)
 	hostid = nvmf_hostid_from_file();
 
 	h = nvme_lookup_host(r, hostnqn, hostid);
+
+	nvme_host_set_symname(h, nvmf_hostsymname_from_file(), true);
+
 	default_host = h;
 	free(hostnqn);
 	if (hostid)
@@ -187,6 +190,21 @@ const char *nvme_host_get_hostnqn(nvme_host_t h)
 const char *nvme_host_get_hostid(nvme_host_t h)
 {
 	return h->hostid;
+}
+
+const char *nvme_host_get_symname(nvme_host_t h)
+{
+	return h->symname;
+}
+
+void nvme_host_set_symname(nvme_host_t h, const char *symname, bool steal)
+{
+	if (h->symname) {
+		free(h->symname);
+		h->symname = NULL;
+	}
+	if (symname)
+		h->symname = steal ? (char *)symname : strdup(symname);
 }
 
 const char *nvme_host_get_dhchap_key(nvme_host_t h)
@@ -376,6 +394,7 @@ static void __nvme_free_host(struct nvme_host *h)
 		free(h->hostid);
 	if (h->dhchap_key)
 		free(h->dhchap_key);
+	nvme_host_set_symname(h, NULL, true);
 	h->r->modified = true;
 	free(h);
 }
@@ -489,6 +508,8 @@ static int nvme_scan_subsystem(struct nvme_root *r, const char *name,
 			if (h->dhchap_key)
 				free(h->dhchap_key);
 			h->dhchap_key = nvme_get_attr(path, "dhchap_secret");
+
+			nvme_host_set_symname(h, nvme_get_attr(path, "hostsymname"), true);
 		}
 	}
 	if (!h)
@@ -777,6 +798,16 @@ void nvme_ctrl_set_discovery_ctrl(nvme_ctrl_t c, bool discovery)
 bool nvme_ctrl_is_discovery_ctrl(nvme_ctrl_t c)
 {
 	return c->discovery_ctrl;
+}
+
+void nvme_ctrl_set_explicit_registration(nvme_ctrl_t c, bool explicit_registration)
+{
+	c->explicit_registration = explicit_registration;
+}
+
+bool nvme_ctrl_is_explicit_registration(nvme_ctrl_t c)
+{
+	return c->explicit_registration;
 }
 
 int nvme_ctrl_identify(nvme_ctrl_t c, struct nvme_id_ctrl *id)
@@ -1299,6 +1330,8 @@ nvme_ctrl_t nvme_scan_ctrl(nvme_root_t r, const char *name)
 		if (h->dhchap_key)
 			free(h->dhchap_key);
 		h->dhchap_key = nvme_get_attr(path, "dhchap_secret");
+
+		nvme_host_set_symname(h, nvme_get_attr(path, "hostsymname"), true);
 	}
 	if (!h) {
 		h = nvme_default_host(r);

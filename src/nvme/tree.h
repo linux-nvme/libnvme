@@ -874,6 +874,41 @@ void nvme_ctrl_set_discovery_ctrl(nvme_ctrl_t c, bool discovery);
 bool nvme_ctrl_is_discovery_ctrl(nvme_ctrl_t c);
 
 /**
+ * nvme_ctrl_set_explicit_registration() - Set the 'explicit_registration'
+ * flag
+ *
+ * @c: Controller to be modified
+ * @explicit_registration: value of the explicit_registration flag
+ *
+ * Sets the 'explicit_registration' flag in @c to specify whether
+ * @c should perform explicit registration (DIM PDU) when it connects to a
+ *    discovery controller.
+ *
+ */
+void nvme_ctrl_set_explicit_registration(nvme_ctrl_t c, bool explicit_registration);
+
+/**
+ * nvme_ctrl_is_explicit_registration() - Check the 'explicit_registration'
+ * flag
+ *
+ * @c: Controller to be checked
+ *
+ * Returns the value of the 'explicit_registration' flag which specifies
+ * whether performs explicit registration (DIM PDU) when connecting to a
+ * discovery controller.
+ */
+bool nvme_ctrl_is_explicit_registration(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_disable_sqflow() -
+ * @c:
+ * @disable_sqflow:
+ *
+ * Return:
+ */
+void nvme_ctrl_disable_sqflow(nvme_ctrl_t c, bool disable_sqflow);
+
+/**
  * nvme_ctrl_identify() -
  * @c:
  * @id:
@@ -997,6 +1032,25 @@ nvme_host_t nvme_default_host(nvme_root_t r);
  * @r:
  */
 void nvme_free_host(nvme_host_t h);
+
+/**
+ * nvme_host_get_symname() - Get the host's symbolic name
+ *
+ * @h: Host for which the symbolic name should be returned.
+ *
+ * Return: The symbolic name or NULL if a symbolic name hasn't been
+ * configure.
+ */
+const char *nvme_host_get_symname(nvme_host_t h);
+
+/**
+ * nvme_host_set_symname() - Set the host's symbolic name
+ *
+ * @h: Host for which the symbolic name should be set.
+ * @symname: Symbolic name
+ * @steal: Whether @h can steal the reference to symname.
+ */
+void nvme_host_set_symname(nvme_host_t h, const char *symname, bool steal);
 
 /**
  * nvme_scan() -

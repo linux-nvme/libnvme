@@ -37,12 +37,15 @@
 #include "log.h"
 #include "private.h"
 
+#define NVMF_HOSTSYMNAME_SIZE	256
+
 #define NVMF_HOSTID_SIZE	37
 #define UUID_SIZE		37  /* 1b4e28ba-2fa1-11d2-883f-0016d3cca427 + \0 */
 
 const char *nvmf_dev = "/dev/nvme-fabrics";
 const char *nvmf_hostnqn_file = "/etc/nvme/hostnqn";
 const char *nvmf_hostid_file = "/etc/nvme/hostid";
+const char *nvmf_hostsymname_file = "/etc/nvme/hostsymname";
 
 const char *arg_str(const char * const *strings,
 		size_t array_size, size_t idx)
@@ -418,7 +421,7 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 {
 	struct nvme_fabrics_config *cfg = nvme_ctrl_get_config(c);
 	const char *transport = nvme_ctrl_get_transport(c);
-	const char *hostnqn, *hostid, *hostkey, *ctrlkey;
+	const char *hostnqn, *hostid, *hostkey, *ctrlkey, *hostsymname;
 	bool discover = false, discovery_nqn = false;
 
 	if (!transport) {
@@ -447,6 +450,7 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 	hostnqn = nvme_host_get_hostnqn(h);
 	hostid = nvme_host_get_hostid(h);
 	hostkey = nvme_host_get_dhchap_key(h);
+	hostsymname = nvme_host_get_symname(h);
 	ctrlkey = nvme_ctrl_get_dhchap_key(c);
 	if (add_argument(argstr, "transport", transport) ||
 	    add_argument(argstr, "traddr",
@@ -459,8 +463,11 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 			 nvme_ctrl_get_trsvcid(c)) ||
 	    (hostnqn && add_argument(argstr, "hostnqn", hostnqn)) ||
 	    (hostid && add_argument(argstr, "hostid", hostid)) ||
+	    (hostsymname && add_argument(argstr, "hostsymname", hostsymname)) ||
 	    (discover && !discovery_nqn &&
 	     add_bool_argument(argstr, "discovery", true)) ||
+	    (discover && nvme_ctrl_is_explicit_registration(c) &&
+	     add_bool_argument(argstr, "register", true)) ||
 	    (!discover && hostkey &&
 	     add_argument(argstr, "dhchap_secret", hostkey)) ||
 	    (!discover && ctrlkey &&
@@ -991,4 +998,9 @@ char *nvmf_hostnqn_from_file()
 char *nvmf_hostid_from_file()
 {
 	return nvmf_read_file(nvmf_hostid_file, NVMF_HOSTID_SIZE);
+}
+
+char *nvmf_hostsymname_from_file()
+{
+	return nvmf_read_file(nvmf_hostsymname_file, NVMF_HOSTSYMNAME_SIZE);
 }

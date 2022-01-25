@@ -89,6 +89,7 @@ struct nvme_ctrl {
 	bool discovery_ctrl;
 	bool discovered;
 	bool persistent;
+	bool explicit_registration;
 	struct nvme_fabrics_config cfg;
 };
 
@@ -115,6 +116,7 @@ struct nvme_host {
 	char *hostnqn;
 	char *hostid;
 	char *dhchap_key;
+	char *symname;
 };
 
 struct nvme_root {
