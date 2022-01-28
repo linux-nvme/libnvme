@@ -15,6 +15,7 @@ project(
         'warning_level=1',
         'buildtype=release',
         'prefix=/usr',
+        'default_library=static',
     ]
 )
 
