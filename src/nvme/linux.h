@@ -32,40 +32,49 @@ int nvme_fw_download_seq(int fd, __u32 size, __u32 xfer, __u32 offset,
  * @fd:	   File descriptor of nvme device
  * @rae:   Retain asynchronous events
  * @log:   On success, set to the value of the allocated and retreived log.
+ * @da:    log page data area, valid values: 1, 2, 3, and 4
+ * @size:  Ptr to the telemetry log size, so it can be returned
  *
  * The total size allocated can be calculated as:
- *   (&struct nvme_telemetry_log.dalb3 + 1) * %NVME_LOG_TELEM_BLOCK_SIZE.
+ *   (nvme_telemetry_log da size  + 1) * NVME_LOG_TELEM_BLOCK_SIZE.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_ctrl_telemetry(int fd, bool rae, struct nvme_telemetry_log **log);
+int nvme_get_ctrl_telemetry(int fd, bool rae, struct nvme_telemetry_log **log,
+		int da, size_t *size);
 
 /**
  * nvme_get_host_telemetry() -
- * @fd:	 File descriptor of nvme device
- * @log: On success, set to the value of the allocated and retreived log.
+ * @fd:	  File descriptor of nvme device
+ * @log:  On success, set to the value of the allocated and retreived log.
+ * @da:   log page data area, valid values: 1, 2, 3, and 4
+ * @size: Ptr to the telemetry log size, so it can be returned
  *
  * The total size allocated can be calculated as:
- *   (&struct nvme_telemetry_log.dalb3 + 1) * %NVME_LOG_TELEM_BLOCK_SIZE.
+ *   (nvme_telemetry_log da size  + 1) * NVME_LOG_TELEM_BLOCK_SIZE.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_host_telemetry(int fd,  struct nvme_telemetry_log **log);
+int nvme_get_host_telemetry(int fd,  struct nvme_telemetry_log **log,
+		int da, size_t *size);
 
 /**
  * nvme_get_new_host_telemetry() -
- * @fd:  File descriptor of nvme device
- * @log: On success, set to the value of the allocated and retreived log.
+ * @fd:   File descriptor of nvme device
+ * @log:  On success, set to the value of the allocated and retreived log.
+ * @da:   log page data area, valid values: 1, 2, 3, and 4
+ * @size: Ptr to the telemetry log size, so it can be returned
  *
  * The total size allocated can be calculated as:
- *   (&struct nvme_telemetry_log.dalb3 + 1) * %NVME_LOG_TELEM_BLOCK_SIZE.
+ *   (nvme_telemetry_log da size  + 1) * NVME_LOG_TELEM_BLOCK_SIZE.
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_new_host_telemetry(int fd,  struct nvme_telemetry_log **log);
+int nvme_get_new_host_telemetry(int fd,  struct nvme_telemetry_log **log,
+		int da, size_t *size);
 
 /**
  * __nvme_get_log_page() -
