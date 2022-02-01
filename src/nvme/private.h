@@ -120,6 +120,10 @@ struct nvme_host {
 struct nvme_root {
 	char *config_file;
 	struct list_head hosts;
+	FILE *fp;
+	int log_level;
+	bool log_pid;
+	bool log_timestamp;
 	bool modified;
 };
 
@@ -128,5 +132,21 @@ int nvme_set_attr(const char *dir, const char *attr, const char *value);
 void json_read_config(nvme_root_t r, const char *config_file);
 
 int json_update_config(nvme_root_t r, const char *config_file);
+
+#if (LOG_FUNCNAME == 1)
+#define __nvme_log_func __func__
+#else
+#define __nvme_log_func NULL
+#endif
+
+void __attribute__((format(printf, 4, 5)))
+__nvme_msg(nvme_root_t r, int lvl, const char *func, const char *format, ...);
+
+#define nvme_msg(r, lvl, format, ...)					\
+	do {								\
+		if ((lvl) <= MAX_LOGLEVEL)				\
+			__nvme_msg(r, lvl, __nvme_log_func,		\
+				   format, ##__VA_ARGS__);		\
+	} while (0)
 
 #endif /* _LIBNVME_PRIVATE_H */
