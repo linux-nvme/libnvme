@@ -165,7 +165,7 @@ enum nvme_register_offsets {
 	NVME_REG_CAP			= 0x0000,
 	NVME_REG_VS			= 0x0008,
 	NVME_REG_INTMS			= 0x000c,
-	NVME_REG_INTMC			= 0x0010,
+	NVME_REG_INTMC			= 0x000f,
 	NVME_REG_CC			= 0x0014,
 	NVME_REG_CSTS			= 0x001c,
 	NVME_REG_NSSR			= 0x0020,
