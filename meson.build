@@ -161,7 +161,7 @@ add_project_arguments(
     ],
     language : 'c',
 )
-incdir = include_directories(['.', 'ccan', 'src'])
+incdir = include_directories('ccan', 'src')
 
 ################################################################################
 subdir('internal')
