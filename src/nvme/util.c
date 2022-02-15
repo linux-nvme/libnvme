@@ -11,6 +11,9 @@
 #include <string.h>
 #include <errno.h>
 
+#include <limits.h>
+#include <unistd.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -241,6 +244,12 @@ static const char * const cmd_spec_status[] = {
 	[NVME_SC_IOCS_COMBINATION_REJECTED]	  = "The I/O command set combination is rejected",
 	[NVME_SC_INVALID_IOCS]			  = "The I/O command set is invalid",
 	[NVME_SC_ID_UNAVAILABLE]		  = "Identifier Unavailable: The number of Endurance Groups or NVM Sets supported has been exceeded",
+	[NVME_SC_INVALID_DISCOVERY_INFO]	  = "Discovery Info Entry not applicable to selected entity",
+	[NVME_SC_ZONING_DATA_STRUCT_LOCKED]       = "The requested Zoning data structure is locked on the CDC",
+	[NVME_SC_ZONING_DATA_STRUCT_NOTFND]       = "The requested Zoning data structure does not exist on the CDC",
+	[NVME_SC_INSUFFICIENT_DISC_RES] 	  = "Discovery Info entries exceed Discovery Controller's capacity",
+	[NVME_SC_REQSTD_FUNCTION_DISABLED]        = "Fabric Zoning is not enabled on the CDC",
+	[NVME_SC_ZONEGRP_ORIGINATOR_INVLD]        = "The NQN contained in the ZoneGroup Originator field does not match the Host NQN used by the DDC to connect to the CDC",
 };
 
 static const char * const nvm_status[] = {
@@ -306,7 +315,7 @@ static const char *arg_str(const char * const *strings,
 
 const char *nvme_status_to_string(int status, bool fabrics)
 {
-	const char *s = "Unknown status";
+	static const char *s = "Unknown status";
 	__u16 sc, sct;
 
 	if (status < 0)
@@ -549,4 +558,155 @@ char *hostname2traddr(struct nvme_root *r, const char *traddr)
 free_addrinfo:
 	freeaddrinfo(host_info);
 	return ret_traddr;
+}
+
+char* startswith(const char *s, const char *prefix)
+{
+	size_t l = strlen(prefix);
+	if (strncmp(s, prefix, l) == 0)
+		return (char *)s + l;
+
+	return NULL;
+}
+
+char* kv_strip(char *kv)
+{
+	kv[strcspn(kv, "\n\r")] = '\0';
+
+	kv += strspn(kv, " \t\n\r");     /* Remove leading newline and spaces */
+	if (*kv == '#' || *kv == '\0') { /* Skip comments and empty lines */
+		*kv = '\0';
+		return kv;
+	}
+	kv[strcspn(kv, "\n\r")] = '\0';  /* Remove trailing newline chars */
+
+	/* Delete trailing comments (including spaces/tabs that precede the #)*/
+	char *s = &kv[strcspn(kv, "#")];
+	*s-- = '\0';
+	while ((s >= kv) && ((*s == ' ') || (*s == '\t'))) {
+		*s-- = '\0';
+	}
+
+	return kv;
+}
+
+char* kv_keymatch(const char *kv, const char *key)
+{
+	char *value = startswith(kv, key);
+	if (NULL != value) {
+		switch (*value) {
+		case ' ':  /* Make sure */
+		case '\t': /* key is a whole word. */
+		case '=':  /* I.e. it should be followed by spaces, tabs, or a equal sign. */
+			value += strspn(value, " \t="); /* Skip leading spaces, tabs, and equal sign (=) */
+			return value;
+		default: ;
+		}
+	}
+
+	return NULL;
+}
+
+size_t read_file(const char * fname, char *buffer, size_t *bufsz)
+{
+	FILE *file = fopen(fname, "re");
+	if (file) {
+		char *p = fgets(buffer, *bufsz, file);
+		fclose(file);
+		if (p) {
+			size_t len = strcspn(buffer, " \t\n\r"); /* Strip unwanted trailing chars */
+			*bufsz -= len;
+			return len;
+		}
+	}
+
+	return 0;
+}
+
+static size_t copy_value(char * buf, size_t buflen, const char * value)
+{
+	size_t val_len;
+	memset(buf, 0, buflen);
+	if (value[0] == '"') value++;   /* Remove leading " */
+	val_len = strcspn(value, "\""); /* Remove trailing " */
+	memcpy(buf, value, MIN(val_len, buflen-1));
+	return val_len;
+}
+
+size_t getEntityName(char *buffer, size_t bufsz)
+{
+	size_t len = !gethostname(buffer, bufsz) ? strlen(buffer) : 0;
+
+	/* Fill the rest of buffer with zeros */
+	memset(&buffer[len], '\0', bufsz-len);
+
+	return len;
+}
+
+size_t getEntityVersion(char *buffer, size_t bufsz)
+{
+	FILE    *file;
+	size_t  num_bytes = 0;
+
+	/* /proc/sys/kernel/ostype typically contains the string "Linux" */
+	num_bytes += read_file("/proc/sys/kernel/ostype", &buffer[num_bytes], &bufsz);
+
+	/* /proc/sys/kernel/osrelease contains the Linux
+	 * version (e.g. 5.8.0-63-generic)
+	 */
+	buffer[num_bytes++] = ' '; /* Append a space */
+	num_bytes += read_file("/proc/sys/kernel/osrelease", &buffer[num_bytes], &bufsz);
+
+	/* /etc/os-release contains Key-Value pairs. We only care about the key
+	 * PRETTY_NAME, which contains the Distro's version. For example:
+	 * "SUSE Linux Enterprise Server 15 SP4", "Ubuntu 20.04.3 LTS", or
+	 * "Fedora Linux 35 (Server Edition)"
+	 */
+	file = fopen("/etc/os-release", "re");
+	if (file) {
+		char    name[64] = {0};
+		size_t  name_len = 0;
+		char    ver_id[64] = {0};
+		size_t  ver_id_len = 0;
+		char    line[LINE_MAX];
+		char    *p;
+		char    *s;
+		/* Read key-value pairs one line at a time */
+		while ((!name_len || !ver_id_len) && (p = fgets(line, sizeof(line), file)) != NULL) {
+			/* Clean up string by removing leading/trailing blanks
+			 * and new line characters. Also eliminate trailing
+			 * comments, if any.
+			 */
+			p = kv_strip(p);
+			if (*p == '\0') continue; /* Empty string? */
+
+			if ((s = kv_keymatch(p, "NAME")) != NULL)
+				name_len = copy_value(name, sizeof(name), s);
+
+			if ((s = kv_keymatch(p, "VERSION_ID")) != NULL)
+				ver_id_len = copy_value(ver_id, sizeof(ver_id), s);
+		}
+		fclose(file);
+
+		if (name_len) {
+			buffer[num_bytes++] = ' '; /* Append a space */
+			name_len = MIN(name_len, bufsz);
+			memcpy(&buffer[num_bytes], name, name_len);
+			bufsz -= name_len;
+			num_bytes += name_len;
+		}
+
+		if (ver_id_len) {
+			buffer[num_bytes++] = ' '; /* Append a space */
+			ver_id_len = MIN(ver_id_len, bufsz);
+			memcpy(&buffer[num_bytes], ver_id, ver_id_len);
+			bufsz -= ver_id_len;
+			num_bytes += ver_id_len;
+		}
+	}
+
+	/* Fill the rest of buffer with zeros */
+	memset(&buffer[num_bytes], '\0', bufsz);
+
+	return num_bytes;
 }

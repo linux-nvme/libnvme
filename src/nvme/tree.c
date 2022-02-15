@@ -64,6 +64,9 @@ nvme_host_t nvme_default_host(nvme_root_t r)
 	hostid = nvmf_hostid_from_file();
 
 	h = nvme_lookup_host(r, hostnqn, hostid);
+
+	nvme_host_set_hostsymname(h, NULL);
+
 	default_host = h;
 	free(hostnqn);
 	if (hostid)
@@ -209,6 +212,27 @@ const char *nvme_host_get_hostnqn(nvme_host_t h)
 const char *nvme_host_get_hostid(nvme_host_t h)
 {
 	return h->hostid;
+}
+
+const char *nvme_host_get_hostsymname(nvme_host_t h)
+{
+	return h->hostsymname;
+}
+
+/**
+ * nvme_host_set_hostsymname - Set the host's symbolic name
+ *
+ * @h - The host
+ * @hostsymname - The Symbolic Name
+ */
+void nvme_host_set_hostsymname(nvme_host_t h, const char *hostsymname)
+{
+	if (h->hostsymname) {
+		free(h->hostsymname);
+		h->hostsymname = NULL;
+	}
+	if (hostsymname)
+		h->hostsymname = strdup(hostsymname);
 }
 
 const char *nvme_host_get_dhchap_key(nvme_host_t h)
@@ -390,6 +414,7 @@ static void __nvme_free_host(struct nvme_host *h)
 		free(h->hostid);
 	if (h->dhchap_key)
 		free(h->dhchap_key);
+	nvme_host_set_hostsymname(h, NULL);
 	h->r->modified = true;
 	free(h);
 }
@@ -841,6 +866,8 @@ void nvme_deconfigure_ctrl(nvme_ctrl_t c)
 	FREE_CTRL_ATTR(c->serial);
 	FREE_CTRL_ATTR(c->sqsize);
 	FREE_CTRL_ATTR(c->address);
+	FREE_CTRL_ATTR(c->dctype);
+	FREE_CTRL_ATTR(c->cntrltype);
 }
 
 int nvme_disconnect_ctrl(nvme_ctrl_t c)
@@ -1081,6 +1108,49 @@ static char *nvme_ctrl_lookup_subsystem_name(nvme_root_t r,
 	return subsys_name;
 }
 
+/**
+ * nvme_fetch_attrs_from_id() - On legacy kernels the cntrltype and dctype
+ * are not exposed through the sysfs. We must get them directly from the
+ * controller by performing an identify command.
+ *
+ * @c The controller
+ */
+static void nvme_fetch_attrs_from_id(nvme_ctrl_t c)
+{
+	struct nvme_id_ctrl id = { 0 };
+	int ret;
+	ret = nvme_ctrl_identify(c, &id);
+	if (ret == 0) {
+		/* These string definitions must match with the kernel */
+		static const char *cntrltype_str[] = {
+			[NVME_CTRL_CNTRLTYPE_IO] = "io",
+			[NVME_CTRL_CNTRLTYPE_DISCOVERY] = "discovery",
+			[NVME_CTRL_CNTRLTYPE_ADMIN] = "admin",
+		};
+		static const char *dctype_str[] = {
+			[NVME_CTRL_DCTYPE_NOT_REPORTED] = "none",
+			[NVME_CTRL_DCTYPE_DDC] = "ddc",
+			[NVME_CTRL_DCTYPE_CDC] = "cdc",
+		};
+
+		if (!c->cntrltype)
+		{
+			if (id.cntrltype > NVME_CTRL_CNTRLTYPE_ADMIN || !cntrltype_str[id.cntrltype])
+				c->cntrltype = strdup("reserved");
+			else
+				c->cntrltype = strdup(cntrltype_str[id.cntrltype]);
+		}
+
+		if (!c->dctype)
+		{
+			if (id.dctype > NVME_CTRL_DCTYPE_CDC || !dctype_str[id.dctype])
+				c->dctype = strdup("reserved");
+			else
+				c->dctype = strdup(dctype_str[id.dctype]);
+		}
+	}
+}
+
 static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 			       const char *name)
 {
@@ -1110,6 +1180,12 @@ static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 		free(c->dhchap_key);
 		c->dhchap_key = NULL;
 	}
+
+	c->cntrltype = nvme_get_ctrl_attr(c, "cntrltype");
+	c->dctype = nvme_get_ctrl_attr(c, "dctype");
+	if (!c->cntrltype || !c->dctype)
+		nvme_fetch_attrs_from_id(c);
+
 	return 0;
 }
 
