@@ -1186,5 +1186,17 @@ const char *nvme_host_get_hostsymname(nvme_host_t h);
  */
 void nvme_host_set_hostsymname(nvme_host_t h, const char *hostsymname);
 
+/**
+ * nvme_fetch_attrs_from_id() - Retrieve the cntrltype and dctype from
+ * identify command response.
+ *
+ * On legacy kernels the cntrltype and dctype are not exposed through the
+ * sysfs. We must get them directly from the controller by performing an
+ * identify command.
+ *
+ * @c The controller
+ */
+void nvme_fetch_cntrltype_dctype_from_id(nvme_ctrl_t c);
+
 
 #endif /* _LIBNVME_TREE_H */

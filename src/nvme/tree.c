@@ -866,6 +866,8 @@ void nvme_deconfigure_ctrl(nvme_ctrl_t c)
 	FREE_CTRL_ATTR(c->serial);
 	FREE_CTRL_ATTR(c->sqsize);
 	FREE_CTRL_ATTR(c->address);
+	FREE_CTRL_ATTR(c->dctype);
+	FREE_CTRL_ATTR(c->cntrltype);
 }
 
 int nvme_disconnect_ctrl(nvme_ctrl_t c)
@@ -1135,7 +1137,46 @@ static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 		free(c->dhchap_key);
 		c->dhchap_key = NULL;
 	}
+	c->cntrltype = nvme_get_ctrl_attr(c, "cntrltype");
+	c->dctype = nvme_get_ctrl_attr(c, "dctype");
+
 	return 0;
+}
+
+void nvme_fetch_cntrltype_dctype_from_id(nvme_ctrl_t c)
+{
+	struct nvme_id_ctrl id = { 0 };
+	int ret;
+	ret = nvme_ctrl_identify(c, &id);
+	if (ret == 0) {
+		/* These string definitions must match with the kernel */
+		static const char *cntrltype_str[] = {
+			[NVME_CTRL_CNTRLTYPE_IO] = "io",
+			[NVME_CTRL_CNTRLTYPE_DISCOVERY] = "discovery",
+			[NVME_CTRL_CNTRLTYPE_ADMIN] = "admin",
+		};
+		static const char *dctype_str[] = {
+			[NVME_CTRL_DCTYPE_NOT_REPORTED] = "none",
+			[NVME_CTRL_DCTYPE_DDC] = "ddc",
+			[NVME_CTRL_DCTYPE_CDC] = "cdc",
+		};
+
+		if (!c->cntrltype)
+		{
+			if (id.cntrltype > NVME_CTRL_CNTRLTYPE_ADMIN || !cntrltype_str[id.cntrltype])
+				c->cntrltype = strdup("reserved");
+			else
+				c->cntrltype = strdup(cntrltype_str[id.cntrltype]);
+		}
+
+		if (!c->dctype)
+		{
+			if (id.dctype > NVME_CTRL_DCTYPE_CDC || !dctype_str[id.dctype])
+				c->dctype = strdup("reserved");
+			else
+				c->dctype = strdup(dctype_str[id.dctype]);
+		}
+	}
 }
 
 int nvme_init_ctrl(nvme_host_t h, nvme_ctrl_t c, int instance)
