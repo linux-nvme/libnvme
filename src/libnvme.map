@@ -331,6 +331,8 @@ LIBNVME_1_0 {
 		nvmf_subtype_str;
 		nvmf_treq_str;
 		nvmf_trtype_str;
+		nvmf_registration_ctl;
+		nvmf_is_registration_supported;
 	local:
 		*;
 };

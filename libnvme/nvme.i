@@ -6,7 +6,8 @@
  * Authors: Hannes Reinecke <hare@suse.de>
  */
 
-%module nvme
+%module(docstring="Python bindings for libnvme") nvme
+%feature("autodoc", "1");
 
 %include "exception.i"
 
@@ -375,6 +376,9 @@ struct nvme_ns {
   void update_config() {
     nvme_update_config($self);
   }
+  void dump_config() {
+    nvme_dump_config($self);
+  }
 }
 
 %extend host_iter {
@@ -569,6 +573,29 @@ struct nvme_ns {
   }
   void disconnect() {
     nvme_disconnect_ctrl($self);
+  }
+
+  %feature("autodoc", "@return: True if controller supports explicit registration. False otherwise.") is_registration_supported;
+  bool is_registration_supported() {
+    return nvmf_is_registration_supported($self);
+  }
+
+  %feature("autodoc", "@return None on success or Error string on error.") registration_ctl;
+  PyObject *registration_ctl(enum nvmf_dim_tas tas) {
+    __u32 result;
+    int   status;
+
+    status = nvmf_registration_ctl($self, NVME_TAS_REGISTER, &result);
+    if (status != NVME_SC_SUCCESS) {
+      /* On error, return an error message */
+      if (status < 0)
+        return PyUnicode_FromFormat("Status:0x%04x - %s", status, nvme_status_to_string(status, false));
+      else
+        return PyUnicode_FromFormat("Result:0x%04x, Status:0x%04x - %s", result, status, nvme_status_to_string(status, false));
+    }
+
+    /* On success, return None */
+    Py_RETURN_NONE;
   }
 
   %newobject discover;

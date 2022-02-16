@@ -4346,4 +4346,37 @@ struct nvme_zns_append_args {
  */
 int nvme_zns_append(struct nvme_zns_append_args *args);
 
+/**
+ * nvme_dim_args - Arguments for the Discovery Information Management (DIM)
+ * command
+ *
+ * @args_size:	Length of the structure
+ * @fd:		File descriptor of nvme device
+ * @result:	Set on completion to the command's CQE DWORD 0 controller response.
+ * @timeout:	Timeout in ms
+ * @data_len:	Length of @data
+ * @data:	Pointer to the DIM data
+ * @tas:	Task field of the Command Dword 10 (cdw10)
+ */
+struct nvme_dim_args {
+	int	args_size;
+	int	fd;
+	__u32	*result;
+	__u32	timeout;
+	__u32	data_len;
+	void	*data;
+	__u8	tas;
+} __attribute__((packed, aligned(__alignof__(__u32*))));
+
+/**
+ * nvme_send_dim_command - Send a Discovery Information Management (DIM)
+ * command.
+ *
+ * @args:	&struct nvme_dim_args argument structure
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise.
+ */
+int nvme_send_dim_command(struct nvme_dim_args *args);
+
 #endif /* _LIBNVME_IOCTL_H */

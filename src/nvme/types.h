@@ -4495,6 +4495,38 @@ enum nvmf_disc_eflags {
 };
 
 /**
+ * union nvmf_tsas - Transport Specific Address Subtype
+ * @common:  Common transport specific attributes
+ * @rdma:    RDMA transport specific attribute settings
+ * @qptype:  RDMA QP Service Type (RDMA_QPTYPE): Specifies the type of RDMA
+ * 	     Queue Pair. See &enum nvmf_rdma_qptype.
+ * @prtype:  RDMA Provider Type (RDMA_PRTYPE): Specifies the type of RDMA
+ * 	     provider. See &enum nvmf_rdma_prtype.
+ * @cms:     RDMA Connection Management Service (RDMA_CMS): Specifies the type
+ * 	     of RDMA IP Connection Management Service. See &enum nvmf_rdma_cms.
+ * @pkey:    RDMA_PKEY: Specifies the Partition Key when AF_IB (InfiniBand)
+ * 	     address family type is used.
+ * @tcp:     TCP transport specific attribute settings
+ * @sectype: Security Type (SECTYPE): Specifies the type of security used by the
+ * 	     NVMe/TCP port. If SECTYPE is a value of 0h (No Security), then the
+ * 	     host shall set up a normal TCP connection. See &enum nvmf_tcp_sectype.
+ */
+union nvmf_tsas {
+	char		common[NVMF_TSAS_SIZE];
+	struct rdma {
+		__u8	qptype;
+		__u8	prtype;
+		__u8	cms;
+		__u8	rsvd3[5];
+		__u16	pkey;
+		__u8	rsvd10[246];
+	} rdma;
+	struct tcp {
+		__u8	sectype;
+	} tcp;
+};
+
+/**
  * struct nvmf_disc_log_entry - Discovery Log Page entry
  * @trtype:  Transport Type (TRTYPE): Specifies the NVMe Transport type.
  * 	     See &enum nvmf_trtype.
@@ -4539,20 +4571,6 @@ enum nvmf_disc_eflags {
  * 	     that may be used for a Connect command as an ASCII string. The
  * 	     Address Family field describes the reference for parsing this field.
  * @tsas:    Transport specific attribute settings
- * @common:  Common transport specific attributes
- * @rdma:    RDMA transport specific attribute settings
- * @qptype:  RDMA QP Service Type (RDMA_QPTYPE): Specifies the type of RDMA
- * 	     Queue Pair. See &enum nvmf_rdma_qptype.
- * @prtype:  RDMA Provider Type (RDMA_PRTYPE): Specifies the type of RDMA
- * 	     provider. See &enum nvmf_rdma_prtype.
- * @cms:     RDMA Connection Management Service (RDMA_CMS): Specifies the type
- * 	     of RDMA IP Connection Management Service. See &enum nvmf_rdma_cms.
- * @pkey:    RDMA_PKEY: Specifies the Partition Key when AF_IB (InfiniBand)
- * 	     address family type is used.
- * @tcp:     TCP transport specific attribute settings
- * @sectype: Security Type (SECTYPE): Specifies the type of security used by the
- * 	     NVMe/TCP port. If SECTYPE is a value of 0h (No Security), then the
- * 	     host shall set up a normal TCP connection. See &enum nvmf_tcp_sectype.
  */
 struct nvmf_disc_log_entry {
 	__u8		trtype;
@@ -4568,20 +4586,7 @@ struct nvmf_disc_log_entry {
 	__u8		rsvd64[192];
 	char		subnqn[NVME_NQN_LENGTH];
 	char		traddr[NVMF_TRADDR_SIZE];
-	union tsas {
-		char		common[NVMF_TSAS_SIZE];
-		struct rdma {
-			__u8	qptype;
-			__u8	prtype;
-			__u8	cms;
-			__u8	rsvd3[5];
-			__u16	pkey;
-			__u8	rsvd10[246];
-		} rdma;
-		struct tcp {
-			__u8	sectype;
-		} tcp;
-	} tsas;
+	union nvmf_tsas	tsas;
 };
 
 /**
@@ -4711,6 +4716,162 @@ struct nvmf_discovery_log {
 	__u8		rsvd14[1006];
 	struct nvmf_disc_log_entry entries[];
 };
+
+/**
+ * Discovery Information Management (DIM) command. This is sent by a
+ * host to a Discovery Controller (DC) to perform explicit registration.
+ */
+#define NVMF_ENAME_LEN       256
+#define NVMF_EVER_LEN        64
+
+enum nvmf_dim_tas {
+	NVME_TAS_REGISTER   = 0x00,
+	NVME_TAS_DEREGISTER = 0x01,
+	NVME_TAS_UPDATE     = 0x02,
+};
+
+enum nvmf_disc_info_entfmt
+{
+	NVME_ENTFMT_BASIC    = 0x01,
+	NVME_ENTFMT_EXTENDED = 0x02,
+};
+
+enum nvmf_disc_info_etype
+{
+	NVME_REGISTRATION_HOST = 0x01,
+	NVME_REGISTRATION_DDC  = 0x02,
+	NVME_REGISTRATION_CDC  = 0x03,
+};
+
+enum nvmf_exattype
+{
+	NVME_EXATTYPE_HOSTID   = 0x01, /* Host Identifier */
+	NVME_EXATTYPE_SYMNAME  = 0x02, /* Symbolic Name */
+};
+
+/**
+ * struct nvmf_ext_attr - Extended Attribute (EXAT)
+ *
+ *              Bytes           Description
+ *   @type      01:00           Extended Attribute Type (EXATTYPE) - see enum nvmf_exattype
+ *   @len       03:02           Extended Attribute Length (EXATLEN)
+ *   @val       (EXATLEN-1)     Extended Attribute Value (EXATVAL) - size allocated for array must be a multiple of 4 bytes
+ *              +4:04
+ */
+struct nvmf_ext_attr
+{                                                           /* Bytes */
+	__le16			type;                       /* 01:00 */
+	__le16			len;                        /* 03:02 */
+	__u8			val[];                      /* (EXATLEN-1)+4:04 */
+};
+#define SIZEOF_EXT_EXAT_WO_VAL offsetof(struct nvmf_ext_attr, val)
+
+/**
+ * struct nvmf_ext_die - Extended Discovery Information Entry (DIE)
+ *
+ *              Bytes           Description
+ *   @trtype    00              Transport Type (enum nvme_trtype)
+ *   @adrfam    01              Address Family (enum nvmf_addr_familiy)
+ *   @subtype   02              Subsystem Type (enum nvme_subsys_type)
+ *   @treq      03              Transport Requirements (enum nvmf_treq)
+ *   @portid    05:04           Port ID
+ *   @cntlid    07:06           Controller ID
+ *   @asqsz     09:08           Admin Max SQ Size
+ *              31:10           Reserved
+ *   @trsvcid   63:32           Transport Service Identifier
+ *              255:64          Reserved
+ *   @nqn       511:256         NVM Qualified Name
+ *   @traddr    767:512         Transport Address
+ *   @tsas      1023:768        Transport Specific Address Subtype
+ *   @tel       1027:1024       Total Entry Length
+ *   @numexat   1029:1028       Number of Extended Attributes
+ *              1031:1030       Reserved
+ *   @exat[0]   ((EXATLEN-1)+   Extented Attributes 0 (see @numexat)
+ *              4)+1032:1032    Cannot access as an array because each EXAT
+ *                              entry has an undetermined size.
+ *   @exat[N]   TEL-1:TEL-      Extented Attributes N (w/ N = NUMEXAT-1)
+ *              (EXATLEN+4)
+ */
+struct nvmf_ext_die
+{                                                           /* Bytes */
+	__u8			trtype;                     /* 00 */
+	__u8			adrfam;                     /* 01 */
+	__u8			subtype;                    /* 02 */
+	__u8			treq;                       /* 03 */
+	__le16			portid;                     /* 05:04 */
+	__le16			cntlid;                     /* 07:06 */
+	__le16			asqsz;                      /* 09:08 */
+	__u8			resv10[22];                 /* 31:10 */
+	char			trsvcid[NVMF_TRSVCID_SIZE]; /* 63:32 */
+	__u8			resv64[192];                /* 255:64 */
+	char			nqn[NVME_NQN_LENGTH];       /* 511:256 */
+	char			traddr[NVMF_TRADDR_SIZE];   /* 767:512 */
+	union nvmf_tsas		tsas;                       /* 1023:768 */
+	__le32			tel;                        /* 1027:1024 */
+	__le16			numexat;                    /* 1029:1028 */
+	__u16			resv1030;                   /* 1031:1030 */
+	struct nvmf_ext_attr	exat;                       /* TEL-1:1032 */
+};
+
+#define SIZEOF_EXT_DIE_WO_EXAT offsetof(struct nvmf_ext_die, exat)
+
+/**
+ * union nvmf_disc_info_entry - Discovery Information Entry (DIE)
+ *
+ * Depending on the ENTFMT specified in the DIM, DIEs can be entered with
+ * the Basic or Extended formats. For Basic format, each entry has a fixed
+ * length. Therefore, the "basic" field defined below can be accessed as a
+ * C array. For the Extended format, however, each entry is of variable
+ * length (TEL). Therefore, the "extended" field defined below cannot be
+ * accessed as a C array. Instead, the "extended" field is akin to a
+ * linked-list, where one can "walk" through the list. To move to the next
+ * entry, one simply adds the current entry's length (TEL) to the "walk"
+ * pointer. The number of entries in the list is specified by NUMENT.
+ * Although extended entries are of a variable lengths (TEL), TEL is
+ * always a mutiple of 4 bytes.
+ */
+union nvmf_die
+{
+	struct nvmf_disc_log_entry	basic[0];
+	struct nvmf_ext_die		extended;
+};
+
+/**
+ * struct nvmf_dim_data - Discovery Information Management (DIM) - Data
+ *
+ *              Bytes           Description
+ *   @tdl       03:00           Total Data Length
+ *              07:04           Reserved
+ *   @nument    15:08           Number of entries
+ *   @entfmt    17:16           Entry Format (enum nvmf_disc_info_entfmt)
+ *   @etype     19:18           Entity Type (enum nvmf_disc_info_etype)
+ *   @portlcL   20              Port Local
+ *              21              Reserved
+ *   @ektype    23:22           Entry Key Type
+ *   @eid       279:24          Entity Identifier (e.g. Host NQN)
+ *   @ename     535:280         Entity Name (e.g. hostname)
+ *   @ever      599:536         Entity Version (e.g. OS Name/Version)
+ *              1023:600        Reserved
+ *   @die       TDL-1:1024      Discovery Information Entry (see @nument above)
+ */
+struct nvmf_dim_data
+{                                                           /* Bytes */
+	__le32			tdl;                        /* 03:00 */
+	__u32			rsvd4;                      /* 07:04 */
+	__le64			nument;                     /* 15:08 */
+	__le16			entfmt;                     /* 17:16 */
+	__le16			etype;                      /* 19:18 */
+	__u8			portlcl;                    /* 20 */
+	__u8			rsvd21;                     /* 21 */
+	__le16			ektype;                     /* 23:22 */
+	char			eid[NVME_NQN_LENGTH];       /* 279:24 */
+	char			ename[NVMF_ENAME_LEN];      /* 535:280 */
+	char			ever[NVMF_EVER_LEN];        /* 599:536 */
+	__u8			rsvd600[424];               /* 1023:600 */
+	union nvmf_die		die;                        /* TDL-1:1024 */
+};
+
+#define SIZEOF_DIM_WO_DIE offsetof(struct nvmf_dim_data, die)
 
 /**
  * struct nvmf_connect_data - Data payload for the 'connect' command
@@ -5411,6 +5572,34 @@ struct nvme_mi_vpd_hdr {
  * @NVME_SC_IOCS_COMBINATION_REJECTED:	I/O Command Set Combination Rejected
  * @NVME_SC_INVALID_IOCS:	      Invalid I/O Command Set
  * @NVME_SC_ID_UNAVAILABLE:	      Identifier Unavailable
+ *
+ * @NVME_SC_INVALID_DISCOVERY_INFO    The discovery information provided in
+ *      			      one or more extended discovery
+ *      			      information entries is not applicable
+ *      			      for the type of entity selected in
+ *      			      the Entity Type (ETYPE) field of the
+ *      			      Discovery Information Management
+ *      			      command data portion’s header.
+ * @NVME_SC_ZONING_DATA_STRUCT_LOCKED The requested Zoning data structure
+ *      			      is locked on the CDC.
+ * @NVME_SC_ZONING_DATA_STRUCT_NOTFND The requested Zoning data structure
+ *      			      does not exist on the CDC.
+ * @NVME_SC_INSUFFICIENT_DISC_RES     The number of discover information
+ *      			      entries provided in the data portion
+ *      			      of the Discovery Information
+ *      			      Management command for a registration
+ *      			      task (i.e., TAS field cleared to 0h)
+ *      			      exceeds the available capacity for
+ *      			      new discovery information entries on
+ *      			      the CDC or DDC. This may be a
+ *      			      transient condition.
+ * @NVME_SC_REQSTD_FUNCTION_DISABLED  Fabric Zoning is not enabled on the
+ *      			      CDC
+ * @NVME_SC_ZONEGRP_ORIGINATOR_INVLD  The NQN contained in the ZoneGroup
+ *      			      Originator field does not match the
+ *      			      Host NQN used by the DDC to connect
+ *      			      to the CDC.
+ *
  * @NVME_SC_BAD_ATTRIBUTES:	      Conflicting Dataset Management Attributes
  * @NVME_SC_INVALID_PI:		      Invalid Protection Information
  * @NVME_SC_READ_ONLY:		      Attempted Write to Read Only Range
@@ -5639,6 +5828,13 @@ enum nvme_status_field {
 	NVME_SC_INVALID_IOCS			= 0x2c,
 	NVME_SC_ID_UNAVAILABLE			= 0x2d,
 
+	NVME_SC_INVALID_DISCOVERY_INFO		= 0x2f,
+	NVME_SC_ZONING_DATA_STRUCT_LOCKED	= 0x30,
+	NVME_SC_ZONING_DATA_STRUCT_NOTFND	= 0x31,
+	NVME_SC_INSUFFICIENT_DISC_RES		= 0x32,
+	NVME_SC_REQSTD_FUNCTION_DISABLED	= 0x33,
+	NVME_SC_ZONEGRP_ORIGINATOR_INVLD	= 0x34,
+
 	/*
 	 * I/O Command Set Specific - NVM commands:
 	 */
@@ -5760,6 +5956,7 @@ static inline __u16 nvme_status_code(__u16 status_field)
  * @nvme_admin_security_recv:
  * @nvme_admin_sanitize_nvm:
  * @nvme_admin_get_lba_status:
+ * @nvme_admin_discovery_info_mgmt: Discovery Information Management (DIM)
  */
 enum nvme_admin_opcode {
 	nvme_admin_delete_sq		= 0x00,
@@ -5793,6 +5990,7 @@ enum nvme_admin_opcode {
 	nvme_admin_security_recv	= 0x82,
 	nvme_admin_sanitize_nvm		= 0x84,
 	nvme_admin_get_lba_status	= 0x86,
+	nvme_admin_discovery_info_mgmt	= 0x21,
 };
 
 /**
