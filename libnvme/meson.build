@@ -17,24 +17,18 @@ else
 endif
 
 if have_python_support
-    pymod_swig = custom_target(
-        'nvme.py',
-        input:   ['nvme.i'],
-        output:  ['nvme.py', 'nvme_wrap.c'],
-        command: [swig, '-python', '-py3', '-o', '@OUTPUT1@', '@INPUT0@'],
-        install: true,
-        install_dir: [python3.get_install_dir(pure: false, subdir: 'libnvme'), false],
-    )
-
     pynvme_clib = python3.extension_module(
         '_nvme',
-        pymod_swig[1],
         dependencies : py3_dep,
         include_directories: [incdir, internal_incdir],
         link_with: [libnvme, libccan],
         install: true,
         subdir: 'libnvme',
     )
+
+    # python distutils not include the SWIG generated module
+    # build_py (which copies python sources to the build directory) comes before build_ext
+    python3.install_sources(['nvme.py', ], pure:false, subdir:'libnvme')
 
     # Little hack to copy file __init__.py to the build directory. 
     # This is needed to create the proper directory layout to run the tests.

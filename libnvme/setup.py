@@ -2,7 +2,7 @@ from distutils.core import setup, Extension
 
 libnvme_module = Extension(
     '_nvme',
-    sources = ['nvme_wrap.c'],
+    sources = ['nvme.i'],
     libraries = ['nvme', 'json-c', 'uuid'],
     library_dirs = ['../src'],
     include_dirs = ['../ccan', '../src', '../src/nvme'],
