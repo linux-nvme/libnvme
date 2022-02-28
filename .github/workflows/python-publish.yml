@@ -35,9 +35,13 @@ jobs:
       run: |
         sudo apt-get install libjson-c-dev meson
         python -m pip install --upgrade pip
-        pip install build
+        pip install build cibuildwheel
     - name: Build package
-      run: python -m build --sdist
+      run: python -m cibuildwheel --output-dir wheelhouse
+      env:
+          CIBW_BEFORE_BUILD_LINUX: yum install -y openssl-devel libuuid-devel json-c-devel
+          CIBW_BUILD_VERBOSITY: 1
+
     - name: Publish package to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
