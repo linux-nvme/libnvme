@@ -8,7 +8,7 @@
 project(
     'libnvme', ['c', 'cpp'],
     meson_version: '>= 0.47.0',
-    version: '1.0',
+    version: '1.0rc7',
     license: 'LGPLv2+',
     default_options: [
         'c_std=gnu99',
@@ -18,7 +18,7 @@ project(
     ]
 )
 
-library_version = meson.project_version() + '.0'
+library_version = '1.0.0'
 
 ################################################################################
 cc = meson.get_compiler('c')
