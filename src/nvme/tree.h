@@ -886,23 +886,6 @@ void nvme_ctrl_set_discovered(nvme_ctrl_t c, bool discovered);
 bool nvme_ctrl_is_discovered(nvme_ctrl_t c);
 
 /**
- * nvme_ctrl_set_persistent() - Set the 'persistent' flag
- * @c:		Controller instance
- * @persistent:	value of the 'persistent' flag
- *
- * Set the 'persistent' flag of @c to @persistent
- */
-void nvme_ctrl_set_persistent(nvme_ctrl_t c, bool persistent);
-
-/**
- * nvme_ctrl_is_persistent() - Returns the value of the 'persistent' flag
- * @c:	Controller instance
- *
- * Return: Value of the 'persistent' flag of @c
- */
-bool nvme_ctrl_is_persistent(nvme_ctrl_t c);
-
-/**
  * nvme_ctrl_set_discovery_ctrl() - Set the 'discovery_ctrl' flag
  * @c:		Controller to be modified
  * @discovery:	value of the discovery_ctrl flag

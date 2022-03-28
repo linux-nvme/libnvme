@@ -39,7 +39,6 @@ LIBNVME_1_0 {
 		nvme_ctrl_reset;
 		nvme_ctrl_set_dhchap_key;
 		nvme_ctrl_set_discovery_ctrl;
-		nvme_ctrl_set_persistent;
 		nvme_ctrls_filter;
 		nvme_default_host;
 		nvme_dev_self_test;

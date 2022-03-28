@@ -311,7 +311,6 @@ struct nvme_ctrl {
   %immutable queue_count;
   %immutable serial;
   %immutable sqsize;
-  %immutable persistent;
   %immutable discovery_ctrl;
   char *transport;
   char *subsysnqn;
@@ -325,7 +324,6 @@ struct nvme_ctrl {
   char *queue_count;
   char *serial;
   char *sqsize;
-  bool persistent;
   bool discovery_ctrl;
 };
 
@@ -564,9 +562,6 @@ struct nvme_ns {
   }
   bool connected() {
     return nvme_ctrl_get_name($self) != NULL;
-  }
-  void persistent_set(bool persistent) {
-    nvme_ctrl_set_persistent($self, persistent);
   }
   void rescan() {
     nvme_rescan_ctrl($self);
