@@ -324,8 +324,16 @@ nvme_ns_t nvme_subsystem_next_ns(nvme_subsystem_t s, nvme_ns_t n)
 
 static void __nvme_free_ns(struct nvme_ns *n)
 {
+	nvme_path_t p;
+
+	for (p = list_top(&n->paths, struct nvme_path, entry);
+	     p; p = list_next(&n->paths, p, entry))
+		list_del_init(&p->nentry);
 	list_del_init(&n->entry);
-	close(n->fd);
+	if (n->fd >= 0) {
+		close(n->fd);
+		n->fd = -1;
+	}
 	free(n->generic_name);
 	free(n->name);
 	free(n->sysfs_dir);
@@ -465,7 +473,28 @@ struct nvme_host *nvme_lookup_host(nvme_root_t r, const char *hostnqn,
 static int nvme_subsystem_scan_namespaces(nvme_root_t r, nvme_subsystem_t s)
 {
 	struct dirent **namespaces;
+	nvme_ns_t n, _n;
 	int i, num_ns, ret;
+
+	/*
+	 * Always remove old entries.
+	 * Namespaces can be identified by either
+	 * a) the UUID if present
+	 * b) the NGUID if present
+	 * c) the EUI64 if present
+	 * d) the NSID
+	 *
+	 * And to complicate matters the NSID _might_ change
+	 * eg when the controller has been reset, not every ID
+	 * needs to be present, and the linux logical namespace
+	 * (ie the 'n<num>' part of the device name) is _not_
+	 * the NSID, but rather a logical number which theoretically
+	 * might change independent on the NSID.
+	 * So to avoid having to have an overly complex matching
+	 * algorithm just remove all namespaces and redo from scratch.
+	 */
+	nvme_subsystem_for_each_ns_safe(s, n, _n)
+		__nvme_free_ns(n);
 
 	num_ns = nvme_scan_subsystem_namespaces(s, &namespaces);
 	if (num_ns < 0) {
@@ -1095,9 +1124,19 @@ static int nvme_ctrl_scan_paths(nvme_root_t r, struct nvme_ctrl *c)
 static int nvme_ctrl_scan_namespaces(nvme_root_t r, struct nvme_ctrl *c)
 {
 	struct dirent **namespaces;
+	nvme_ns_t n, _n;
 	int i, ret;
 
+	/* cf the comment at nvme_subsystem_scan_namespaces() */
+	nvme_ctrl_for_each_ns_safe(c, n, _n)
+		__nvme_free_ns(n);
+
 	ret = nvme_scan_ctrl_namespaces(c, &namespaces);
+	if (ret < 0) {
+		nvme_msg(r, LOG_DEBUG, "failed to scan ctrl %s namespaces",
+			 c->name);
+		return ret;
+	}
 	for (i = 0; i < ret; i++)
 		nvme_ctrl_scan_namespace(r, c, namespaces[i]->d_name);
 
@@ -1938,20 +1977,23 @@ struct nvme_ns *nvme_subsystem_lookup_namespace(struct nvme_subsystem *s,
 {
 	nvme_root_t r = s->h ? s->h->r : NULL;
 	struct nvme_ns *n;
-	char *name;
 	int ret;
 
-	ret = asprintf(&name, "%sn%u", s->name, nsid);
-	if (ret < 0)
-		return NULL;
-	n = __nvme_scan_namespace(s->sysfs_dir, name);
-	free(name);
-	if (!n) {
-		nvme_msg(r, LOG_DEBUG, "failed to scan namespace %d\n", nsid);
-		return NULL;
+	/* Lookup through existing namespaces */
+	nvme_subsystem_for_each_ns(s, n) {
+		if (n->nsid == nsid)
+			return n;
 	}
 
-	n->s = s;
-	list_add(&s->namespaces, &n->entry);
-	return n;
+	/* Not found, rescan */
+	ret = nvme_subsystem_scan_namespaces(r, s);
+	if (ret)
+		return NULL;
+
+	/* Recheck if the namespace has been found now */
+	nvme_subsystem_for_each_ns(s, n) {
+		if (n->nsid == nsid)
+			return n;
+	}
+	return NULL;
 }
