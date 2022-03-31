@@ -570,12 +570,13 @@ static int nvme_scan_subsystem(struct nvme_root *r, const char *name,
 	if (!s)
 		return -1;
 
-	nvme_subsystem_scan_namespaces(r, s);
-
 	if (f && !f(s)) {
 		nvme_msg(r, LOG_DEBUG, "filter out subsystem %s\n", name);
 		__nvme_free_subsystem(s);
+		return 0;
 	}
+
+	nvme_subsystem_scan_namespaces(r, s);
 
 	return 0;
 }
@@ -1408,9 +1409,9 @@ void nvme_rescan_ctrl(struct nvme_ctrl *c)
 	nvme_root_t r = c->s && c->s->h ? c->s->h->r : NULL;
 	if (!c->s)
 		return;
-	nvme_subsystem_scan_namespaces(r, c->s);
 	nvme_ctrl_scan_namespaces(r, c);
 	nvme_ctrl_scan_paths(r, c);
+	nvme_subsystem_scan_namespaces(r, c->s);
 }
 
 static int nvme_bytes_to_lba(nvme_ns_t n, off_t offset, size_t count,
@@ -1854,30 +1855,63 @@ static int nvme_ctrl_scan_namespace(nvme_root_t r, struct nvme_ctrl *c,
 	return 0;
 }
 
-static void nvme_subsystem_set_ns_path(nvme_subsystem_t s, nvme_ns_t n)
+static nvme_path_t nvme_find_path(nvme_root_t r, const char *name)
 {
+	nvme_host_t h;
+	nvme_subsystem_t s;
 	nvme_ctrl_t c;
 	nvme_path_t p;
-	int ns_ctrl, ns_nsid, ret;
 
-	ret = sscanf(nvme_ns_get_name(n), "nvme%dn%d", &ns_ctrl, &ns_nsid);
-	if (ret != 2)
-		return;
-
-	nvme_subsystem_for_each_ctrl(s, c) {
-		nvme_ctrl_for_each_path(c, p) {
-			int p_subsys, p_ctrl, p_nsid;
-
-			ret = sscanf(nvme_path_get_name(p), "nvme%dc%dn%d",
-				     &p_subsys, &p_ctrl, &p_nsid);
-			if (ret != 3)
-				continue;
-			if (ns_ctrl == p_subsys && ns_nsid == p_nsid) {
-				list_add(&n->paths, &p->nentry);
-				p->n = n;
+	nvme_for_each_host(r, h) {
+		nvme_for_each_subsystem(h, s) {
+			nvme_subsystem_for_each_ctrl(s, c) {
+				nvme_ctrl_for_each_path(c, p) {
+					if (!strcmp(p->name, name))
+						return p;
+				}
 			}
 		}
 	}
+	return NULL;
+}
+
+static void nvme_namespace_scan_path(nvme_root_t r, nvme_ns_t n,
+				     const char *name)
+{
+	int p_subsys, p_ctrl, p_nsid, ns_ctrl, ns_nsid;
+	nvme_path_t p;
+	int ret;
+
+	ret = sscanf(name, "nvme%dc%dn%d",
+		     &p_subsys, &p_ctrl, &p_nsid);
+	if (ret != 3)
+		return;
+	ret = sscanf(n->name, "nvme%dn%d", &ns_ctrl, &ns_nsid);
+	if (ns_ctrl != p_subsys || p_nsid != ns_nsid)
+		return;
+	p = nvme_find_path(r, name);
+	if (!p) {
+		nvme_msg(r, LOG_WARNING, "path %s not present\n", name);
+		return;
+	}
+	list_add(&n->paths, &p->nentry);
+	p->n = n;
+}
+
+static int nvme_namespace_scan_paths(nvme_root_t r, nvme_ns_t n)
+{
+	struct dirent **paths;
+	int i, ret;
+
+	ret = nvme_scan_namespace_paths(&paths);
+	if (ret < 0)
+		return ret;
+
+	for (i = 0; i < ret; i++)
+		nvme_namespace_scan_path(r, n, paths[i]->d_name);
+
+	nvme_free_dirents(paths, i);
+	return 0;
 }
 
 static int nvme_subsystem_scan_namespace(nvme_root_t r, nvme_subsystem_t s,
@@ -1895,7 +1929,7 @@ static int nvme_subsystem_scan_namespace(nvme_root_t r, nvme_subsystem_t s,
 
 	n->s = s;
 	list_add(&s->namespaces, &n->entry);
-	nvme_subsystem_set_ns_path(s, n);
+	nvme_namespace_scan_paths(r, n);
 	return 0;
 }
 
