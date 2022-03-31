@@ -247,6 +247,7 @@ LIBNVME_1_0 {
 		nvme_scan_ctrl_namespaces;
 		nvme_scan_topology;
 		nvme_scan_namespace;
+		nvme_scan_namespace_paths;
 		nvme_scan_subsystem_namespaces;
 		nvme_scan_subsystems;
 		nvme_security_receive;

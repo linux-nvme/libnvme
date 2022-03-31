@@ -93,4 +93,12 @@ int nvme_scan_ctrl_namespace_paths(nvme_ctrl_t c, struct dirent ***paths);
  */
 int nvme_scan_ctrl_namespaces(nvme_ctrl_t c, struct dirent ***ns);
 
+/**
+ * nvme_scan_namespace_paths() - Scan for namespace paths
+ * @paths: Pointer to array of dirents
+ *
+ * Return: number of entries in @paths
+ */
+int nvme_scan_namespace_paths(struct dirent ***paths);
+
 #endif /* _LIBNVME_FILTERS_H */

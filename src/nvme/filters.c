@@ -116,3 +116,9 @@ int nvme_scan_ctrl_namespaces(nvme_ctrl_t c, struct dirent ***ns)
 	return scandir(nvme_ctrl_get_sysfs_dir(c), ns,
 		       nvme_namespace_filter, alphasort);
 }
+
+int nvme_scan_namespace_paths(struct dirent ***paths)
+{
+	return scandir(nvme_ns_sysfs_dir, paths,
+		       nvme_paths_filter, alphasort);
+}
