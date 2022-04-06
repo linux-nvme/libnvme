@@ -479,9 +479,19 @@ char *nvme_get_subsys_attr(nvme_subsystem_t s, const char *attr)
 	return nvme_get_attr(nvme_subsystem_get_sysfs_dir(s), attr);
 }
 
+int nvme_set_subsys_attr(nvme_subsystem_t s, const char *attr, const char *value)
+{
+	return nvme_set_attr(nvme_subsystem_get_sysfs_dir(s), attr, value);
+}
+
 char *nvme_get_ctrl_attr(nvme_ctrl_t c, const char *attr)
 {
 	return nvme_get_attr(nvme_ctrl_get_sysfs_dir(c), attr);
+}
+
+int nvme_set_ctrl_attr(nvme_ctrl_t c, const char *attr, const char *value)
+{
+	return nvme_set_attr(nvme_ctrl_get_sysfs_dir(c), attr, value);
 }
 
 char *nvme_get_ns_attr(nvme_ns_t n, const char *attr)
@@ -489,9 +499,19 @@ char *nvme_get_ns_attr(nvme_ns_t n, const char *attr)
 	return nvme_get_attr(nvme_ns_get_sysfs_dir(n), attr);
 }
 
+int nvme_set_ns_attr(nvme_ns_t n, const char *attr, const char *value)
+{
+	return nvme_set_attr(nvme_ns_get_sysfs_dir(n), attr, value);
+}
+
 char *nvme_get_path_attr(nvme_path_t p, const char *attr)
 {
 	return nvme_get_attr(nvme_path_get_sysfs_dir(p), attr);
+}
+
+int nvme_set_path_attr(nvme_path_t p, const char *attr, const char *value)
+{
+	return nvme_set_attr(nvme_path_get_sysfs_dir(p), attr, value);
 }
 
 #ifndef CONFIG_OPENSSL

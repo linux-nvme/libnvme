@@ -124,8 +124,6 @@ struct nvme_root {
 	bool modified;
 };
 
-int nvme_set_attr(const char *dir, const char *attr, const char *value);
-
 int json_read_config(nvme_root_t r, const char *config_file);
 
 int json_update_config(nvme_root_t r, const char *config_file);

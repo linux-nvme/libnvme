@@ -1150,9 +1150,19 @@ int nvme_dump_tree(nvme_root_t r);
  * @attr:	sysfs attribute name
  *
  * Return: String with the contents of @attr or %NULL in case of an empty value
- * 	   or in case of an error (indicated by non-zero errno code).
+ *	   or in case of an error (indicated by non-zero errno code).
  */
 char *nvme_get_attr(const char *d, const char *attr);
+
+/**
+ * nvme_set_attr() - Write sysfs attribute
+ * @d:		sysfs directory
+ * @attr:	sysfs attribute name
+ * @value:	sysfs attribute vlaue
+ *
+ * Returns: 0 on success, -1 on failure with errno set.
+ */
+int nvme_set_attr(const char *d, const char *attr, const char *value);
 
 /**
  * nvme_get_subsys_attr() - Read subsystem sysfs attribute
@@ -1160,9 +1170,19 @@ char *nvme_get_attr(const char *d, const char *attr);
  * @attr:	sysfs attribute name
  *
  * Return: String with the contents of @attr or %NULL in case of an empty value
- * 	   or in case of an error (indicated by non-zero errno code).
+ *	   or in case of an error (indicated by non-zero errno code).
  */
 char *nvme_get_subsys_attr(nvme_subsystem_t s, const char *attr);
+
+/**
+ * nvme_set_subsys_attr() - Write subsystem sysfs attribute
+ * @s:		nvme_subsystem_t object
+ * @attr:	sysfs attribute name
+ * @value:	sysfs atrribute value
+ *
+ * Returns: 0 on success, -1 on failure with errno set.
+ */
+int nvme_set_subsys_attr(nvme_subsystem_t s, const char *attr, const char *value);
 
 /**
  * nvme_get_ctrl_attr() - Read controller sysfs attribute
@@ -1170,9 +1190,19 @@ char *nvme_get_subsys_attr(nvme_subsystem_t s, const char *attr);
  * @attr:	sysfs attribute name
  *
  * Return: String with the contents of @attr or %NULL in case of an empty value
- * 	   or in case of an error (indicated by non-zero errno code).
+ *	   or in case of an error (indicated by non-zero errno code).
  */
 char *nvme_get_ctrl_attr(nvme_ctrl_t c, const char *attr);
+
+/**
+ * nvme_set_ctrl_attr() - Write controller sysfs attribute
+ * @c:		Controller instance
+ * @attr:	sysfs attribute name
+ * @value:	sysfs atrribute value
+ *
+ * Returns: 0 on success, -1 on failure with errno set.
+ */
+int nvme_set_ctrl_attr(nvme_ctrl_t c, const char *attr, const char *value);
 
 /**
  * nvme_get_ns_attr() - Read namespace sysfs attribute
@@ -1180,9 +1210,19 @@ char *nvme_get_ctrl_attr(nvme_ctrl_t c, const char *attr);
  * @attr:	sysfs attribute name
  *
  * Return: String with the contents of @attr or %NULL in case of an empty value
- * 	   or in case of an error (indicated by non-zero errno code).
+ *         or in case of an error (indicated by non-zero errno code).
  */
 char *nvme_get_ns_attr(nvme_ns_t n, const char *attr);
+
+/**
+ * nvme_set_ns_attr() - Write namespace sysfs attribute
+ * @n:		nvme_ns_t object
+ * @attr:	sysfs attribute name
+ * @value:	sysfs attribue value
+ *
+ * Returns: 0 on success, -1 on failure with errno set.
+ */
+int nvme_set_ns_attr(nvme_ns_t n, const char *attr, const char *value);
 
 /**
  * nvme_subsystem_lookup_namespace() - lookup namespace by NSID

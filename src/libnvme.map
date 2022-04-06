@@ -253,6 +253,7 @@ LIBNVME_1_0 {
 		nvme_security_receive;
 		nvme_security_receive;
 		nvme_security_send;
+		nvme_set_ctrl_attr;
 		nvme_set_feature;
 		nvme_set_features;
 		nvme_set_features_arbitration;
@@ -281,7 +282,10 @@ LIBNVME_1_0 {
 		nvme_set_features_volatile_wc;
 		nvme_set_features_write_atomic;
 		nvme_set_features_write_protect;
+		nvme_set_ns_attr;
+		nvme_set_path_attr;
 		nvme_set_property;
+		nvme_set_subsys_attr;
 		nvme_setup_ctrl_list;
 		nvme_setup_id_ns;
 		nvme_status_to_errno;
