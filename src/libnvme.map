@@ -6,8 +6,8 @@ LIBNVME_1_0 {
 		nvme_capacity_mgmt;
 		nvme_compare;
 		nvme_copy;
-		nvme_create_root;
 		nvme_create_ctrl;
+		nvme_create_root;
 		nvme_ctrl_disconnect;
 		nvme_ctrl_first_ns;
 		nvme_ctrl_first_path;
@@ -158,10 +158,10 @@ LIBNVME_1_0 {
 		nvme_identify_domain_list;
 		nvme_identify_endurance_group_list;
 		nvme_identify_independent_identify_ns;
-		nvme_identify_ns_csi_user_data_format;
-		nvme_identify_iocs_ns_csi_user_data_format;
 		nvme_identify_iocs;
+		nvme_identify_iocs_ns_csi_user_data_format;
 		nvme_identify_ns;
+		nvme_identify_ns_csi_user_data_format;
 		nvme_identify_ns_descs;
 		nvme_identify_ns_granularity;
 		nvme_identify_nsid_ctrl_list;
@@ -246,10 +246,10 @@ LIBNVME_1_0 {
 		nvme_scan_ctrl;
 		nvme_scan_ctrl_namespace_paths;
 		nvme_scan_ctrl_namespaces;
-		nvme_scan_topology;
 		nvme_scan_namespace;
 		nvme_scan_subsystem_namespaces;
 		nvme_scan_subsystems;
+		nvme_scan_topology;
 		nvme_security_receive;
 		nvme_security_receive;
 		nvme_security_send;
