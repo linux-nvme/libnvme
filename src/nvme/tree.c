@@ -852,6 +852,27 @@ bool nvme_ctrl_is_discovery_ctrl(nvme_ctrl_t c)
 	return c->discovery_ctrl;
 }
 
+int nvme_ctrl_set_keep_alive_tmo(nvme_ctrl_t c, int tmo)
+{
+	int ret;
+	char *value;
+
+	if (asprintf(&value, "%d", tmo) < 0)
+		return -1;
+
+	ret = nvme_set_ctrl_attr(c, "kato", value);
+	if (!ret)
+		c->cfg.keep_alive_tmo = tmo;
+
+	free(value);
+	return ret;
+}
+
+int nvme_ctrl_get_keep_alive_tmo(nvme_ctrl_t c)
+{
+	return c->cfg.keep_alive_tmo;
+}
+
 int nvme_ctrl_identify(nvme_ctrl_t c, struct nvme_id_ctrl *id)
 {
 	return nvme_identify_ctrl(nvme_ctrl_get_fd(c), id);

@@ -955,6 +955,28 @@ void nvme_ctrl_set_discovery_ctrl(nvme_ctrl_t c, bool discovery);
 bool nvme_ctrl_is_discovery_ctrl(nvme_ctrl_t c);
 
 /**
+ * nvme_ctrl_set_keep_alive_tmo - Set keep alive timeout
+ * @c:		Controller to be modified
+ * @tmo:	Keep alive timeout value in seconds
+ *
+ * Sets the keep alive timeout value in seconds for @c.
+ *
+ * Returns: 0 on success, -1 on failure with errno set.
+ */
+int nvme_ctrl_set_keep_alive_tmo(nvme_ctrl_t c, int tmo);
+
+/**
+ * nvme_ctrl_get_keep_alive_tmo - Get keep alive timeout
+ * @c:		Controller to be read
+ *
+ * Retrieves the current keep alive timeout value in seconds
+ * for @c.
+ *
+ * Return: timeout value in seconds on success, -1 on failure with errno set.
+ */
+int nvme_ctrl_get_keep_alive_tmo(nvme_ctrl_t c);
+
+/**
  * nvme_ctrl_identify() - Issues an 'identify controller' command
  * @c:	Controller instance
  * @id:	Identify controller data structure

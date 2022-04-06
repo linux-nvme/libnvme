@@ -18,6 +18,7 @@ LIBNVME_1_0 {
 		nvme_ctrl_get_firmware;
 		nvme_ctrl_get_host_iface;
 		nvme_ctrl_get_host_traddr;
+		nvme_ctrl_get_keep_alive_tmo;
 		nvme_ctrl_get_model;
 		nvme_ctrl_get_name;
 		nvme_ctrl_get_numa_node;
@@ -38,6 +39,7 @@ LIBNVME_1_0 {
 		nvme_ctrl_reset;
 		nvme_ctrl_set_dhchap_key;
 		nvme_ctrl_set_discovery_ctrl;
+		nvme_ctrl_set_keep_alive_tmo;
 		nvme_ctrl_set_persistent;
 		nvme_ctrls_filter;
 		nvme_default_host;
