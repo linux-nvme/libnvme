@@ -89,99 +89,45 @@ static int test_ctrl(nvme_ctrl_t c)
 	printf("  model:%-.40s\n", id.mn);
 
 	ret = nvme_identify_allocated_ns_list(fd, 0, &ns_list);
-	if (!ret)
-		printf("  PASSED: Allocated NS List\n");
-	else
-		printf("  ERROR: Allocated NS List:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Allocated NS List" : "PASSED: Allocated NS List", ret);
 	ret = nvme_identify_active_ns_list(fd, 0, &ns_list);
-	if (!ret)
-		printf("  PASSED: Active NS List\n");
-	else
-		printf("  ERROR: Active NS List:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Active NS List" : "PASSED: Active NS List", ret);
 	ret = nvme_identify_ctrl_list(fd, 0, &ctrlist);
-	if (!ret)
-		printf("  PASSED: Ctrl List\n");
-	else
-		printf("  ERROR: CtrlList:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Ctrl List" : "PASSED: Ctrl List", ret);
 	ret = nvme_identify_nsid_ctrl_list(fd, 1, 0, &ctrlist);
-	if (!ret)
-		printf("  PASSED: NSID Ctrl List\n");
-	else
-		printf("  ERROR: NSID CtrlList:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: NSID Ctrl List" : "PASSED: NSID Ctrl List", ret);
 	ret = nvme_identify_primary_ctrl(fd, 0, &prim);
-	if (!ret)
-		printf("  PASSED: Identify Primary\n");
-	else
-		printf("  ERROR: Identify Primary:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Identify Primary" : "PASSED: Identify Primary", ret);
 	ret = nvme_identify_secondary_ctrl_list(fd, 1, 0, &sec);
-	if (!ret)
-		printf("  PASSED: Identify Secondary\n");
-	else
-		printf("  ERROR: Identify Secondary:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Identify Secondary" : "PASSED: Identify Secondary", ret);
 	ret = nvme_identify_ns_granularity(fd, &gran);
-	if (!ret)
-		printf("  PASSED: Identify NS granularity\n");
-	else
-		printf("  ERROR: Identify NS granularity:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Identify NS granularity" : "PASSED: Identify NS granularity", ret);
 	ret = nvme_identify_uuid(fd, &uuid);
-	if (!ret)
-		printf("  PASSED: Identify UUID List\n");
-	else
-		printf("  ERROR: Identify UUID List:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Identify UUID List" : "PASSED: Identify UUID List", ret);
 
 	printf("\nLogs\n");
 	printf("  SMART: Current temperature:%d percent used:%d%%\n", temp,
 		smart.percent_used);
 	ret = nvme_get_log_sanitize(fd, true, &sanlog);
-	if (!ret)
-		printf("  Sanitize Log:\n");
-	else
-		printf("  ERROR: Sanitize Log:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Sanitize Log" : "PASSED: Sanitize Log", ret);
 	ret = nvme_get_log_reservation(fd, true, &resvnotify);
-	if (!ret)
-		printf("  Reservation Log\n");
-	else
-		printf("  ERROR: Reservation Log:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Reservation Log" : "PASSED: Reservation Log", ret);
 	ret = nvme_get_log_ana_groups(fd, true, sizeof(buf), analog);
-	if (!ret)
-		printf("  ANA Groups\n");
-	else
-		printf("  ERROR: ANA Groups:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: ANA Groups" : "PASSED: ANA Groups", ret);
 	ret = nvme_get_log_endurance_group(fd, 0, &eglog);
-	if (!ret)
-		printf("  Endurance Group\n");
-	else
-		printf("  ERROR: Endurance Group:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Endurance Group" : "PASSED: Endurance Group", ret);
 	ret = nvme_get_log_telemetry_ctrl(fd, true, 0, sizeof(buf), telem);
-	if (!ret)
-		printf("  Telemetry Controller\n");
-	else
-		printf("  ERROR: Telemetry Controller:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Telemetry Controller" : "PASSED: Telemetry Controller", ret);
 	ret = nvme_get_log_device_self_test(fd, &st);
-	if (!ret)
-		printf("  Device Self Test\n");
-	else
-		printf("  ERROR: Device Self Test:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Device Self Test" : "PASSED: Device Self Test", ret);
 	ret = nvme_get_log_cmd_effects(fd, NVME_CSI_NVM, &cfx);
-	if (!ret)
-		printf("  Command Effects\n");
-	else
-		printf("  ERROR: Command Effects:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Command Effects" : "PASSED: Command Effects", ret);
 	ret = nvme_get_log_changed_ns_list(fd, true, &ns_list);
-	if (!ret)
-		printf("  Change NS List\n");
-	else
-		printf("  ERROR: Change NS List:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Change NS List" : "PASSED: Change NS List", ret);
 	ret = nvme_get_log_fw_slot(fd, true, &fw);
-	if (!ret)
-		printf("  FW Slot\n");
-	else
-		printf("  ERROR: FW Slot%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: FW Slot" : "PASSED: FW Slot", ret);
 	ret = nvme_get_log_error(fd, 64, true, error);
-	if (!ret)
-		printf("  Error Log\n");
-	else
-		printf("  ERROR: Error Log:%x\n", ret);
+	printf("%s: %x\n", ret ? "ERROR: Error Log" : "PASSED: Error Log", ret);
 	printf("\nFeatures\n");
 	ret = nvme_get_features_arbitration(fd, sel, &result);
 	if (!ret)
