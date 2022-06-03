@@ -14,6 +14,7 @@
 
 #include <sys/param.h>
 #include <sys/stat.h>
+ #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -30,6 +31,7 @@
 
 #include <ccan/endian/endian.h>
 
+#include "filters.h"
 #include "linux.h"
 #include "tree.h"
 #include "log.h"
@@ -492,6 +494,152 @@ char *nvme_get_ns_attr(nvme_ns_t n, const char *attr)
 char *nvme_get_path_attr(nvme_path_t p, const char *attr)
 {
 	return nvme_get_attr(nvme_path_get_sysfs_dir(p), attr);
+}
+
+static void *nvme_get_properties(int fd)
+{
+	int offset, err, size = getpagesize();
+	__u64 value;
+	void *pbar;
+
+	pbar = malloc(size);
+	if (!pbar) {
+		fprintf(stderr, "malloc: %s\n", strerror(errno));
+		return NULL;
+	}
+
+	memset(pbar, 0xff, size);
+	for (offset = NVME_REG_CAP; offset <= NVME_REG_CMBSZ;) {
+		struct nvme_get_property_args args = {
+			.args_size	= sizeof(args),
+			.fd		= fd,
+			.offset		= offset,
+			.value		= &value,
+			.timeout	= NVME_DEFAULT_IOCTL_TIMEOUT,
+		};
+		err = nvme_get_property(&args);
+		if (err > 0 && (err & 0xff) == NVME_SC_INVALID_FIELD) {
+			err = 0;
+			value = -1;
+		} else if (err) {
+			free(pbar);
+			pbar = NULL;
+			break;
+		}
+		if (nvme_is_64bit_reg(offset)) {
+			*(uint64_t *)(pbar + offset) = value;
+			offset += 8;
+		} else {
+			*(uint32_t *)(pbar + offset) = value;
+			offset += 4;
+		}
+	}
+
+	return pbar;
+}
+
+static void *mmap_registers(const char *dev)
+{
+	int fd;
+	char *path;
+	void *membase = NULL;
+
+	if (asprintf(&path, "/sys/class/nvme/%s/device/resource0", dev) < 0) {
+		fprintf(stderr, "Can't allocate system path for resource0 %s\n", dev);
+		return NULL;
+	}
+
+	fd = open(path, O_RDONLY);
+	if (fd < 0) {
+		fprintf(stderr, "%s did not find a pci resource, open failed %s\n",
+				dev, strerror(errno));
+		goto free_path;
+	}
+
+	membase = mmap(NULL, getpagesize(), PROT_READ, MAP_SHARED, fd, 0);
+	if (membase == MAP_FAILED) {
+		fprintf(stderr, "%s failed to map. ", dev);
+		fprintf(stderr, "Did your kernel enable CONFIG_IO_STRICT_DEVMEM?\n");
+		membase = NULL;
+	}
+
+	close(fd);
+
+free_path:
+	free(path);
+	return membase;
+}
+
+void *nvme_get_registers(int fd, const char *dev, bool *fabrics)
+{
+	struct dirent **ctrls;
+	int i, num_ctrls, ret, transport_fd;
+	char *base = NULL, *path, transport[4];
+	void *registers = NULL;
+
+	num_ctrls = nvme_scan_ctrls(&ctrls);
+	if (num_ctrls < 0) {
+		fprintf(stderr, "failed to scan ctrls: %s\n", strerror(errno));
+		return NULL;
+	}
+
+	for (i = 0; i < num_ctrls; i++) {
+		if (strncmp(dev, ctrls[i]->d_name, strlen(ctrls[i]->d_name)) == 0) {
+			base = ctrls[i]->d_name;
+			break;
+		}
+	}
+
+	if (!base) {
+		fprintf(stderr, "Can't find %s in scanned ctrls\n", dev);
+		goto free_ctrls;
+	}
+
+	if (asprintf(&path, "/sys/class/nvme/%s/transport", base) < 0) {
+		fprintf(stderr, "Can't allocate system path for transport %s\n", dev);
+		goto free_ctrls;
+	}
+
+	transport_fd = open(path, O_RDONLY);
+	if (transport_fd < 0) {
+		fprintf(stderr, "%s did not find transport, open failed %s\n",
+				path, strerror(errno));
+		goto free_path;
+	}
+
+    ret = read(transport_fd, transport, sizeof(transport));
+    if (ret < 0) {
+        fprintf(stderr, "%s failed to read transport %s\n",
+				base, strerror(errno));
+		goto close_fd;
+	}
+
+	if (strncmp("pcie", transport, sizeof(transport)) == 0) {
+		*fabrics = false;
+		registers = mmap_registers(base);
+	}
+	else {
+		*fabrics = true;
+		registers = nvme_get_properties(fd);
+	}
+
+close_fd:
+	close(transport_fd);
+
+free_path:
+	free(path);
+
+free_ctrls:
+	nvme_free_dirents(ctrls, num_ctrls);
+	return registers;
+}
+
+void nvme_free_registers(void *registers, bool fabrics)
+{
+	if (fabrics)
+		free(registers);
+	else
+		munmap(registers, getpagesize());
 }
 
 #ifndef CONFIG_OPENSSL

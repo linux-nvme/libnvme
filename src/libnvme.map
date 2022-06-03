@@ -5,6 +5,8 @@ LIBNVME_1_1 {
 		nvme_get_version;
 		nvme_init_copy_range_f1;
 		nvme_free_dirents;
+		nvme_get_registers;
+		nvme_free_registers;
 };
 
 LIBNVME_1_0 {

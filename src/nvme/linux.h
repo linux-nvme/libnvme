@@ -177,6 +177,25 @@ int nvme_namespace_detach_ctrls(int fd, __u32 nsid, __u16 num_ctrls, __u16 *ctrl
 int nvme_open(const char *name);
 
 /**
+ * nvme_get_registers() - Read registers mmap or with fabrics command
+ * @fd:			Opened target device file descriptor
+ * @dev:		Base name of the device
+ * @fabrics:	it will set as true when the transport is fabrics
+ *
+ * Return: If get registers successful the function returns register buffer
+ * return NULL on failure.
+ */
+void *nvme_get_registers(int fd, const char *dev, bool *fabrics);
+
+/**
+ * nvme_free_registers() - Free returned buffer from nvme_get_registers
+ * @registers:	Returned buffer from nvme_get_registers
+ * @fabrics:	transport is fabrics or not
+ *
+ */
+void nvme_free_registers(void *registers, bool fabrics);
+
+/**
  * enum nvme_hmac_alg - HMAC algorithm
  * @NVME_HMAC_ALG_NONE:		No HMAC algorithm
  * @NVME_HMAC_ALG_SHA2_256:	SHA2-256
