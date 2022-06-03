@@ -10,6 +10,7 @@
 #ifndef _LIBNVME_TREE_H
 #define _LIBNVME_TREE_H
 
+#include <dirent.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -1227,5 +1228,12 @@ const char *nvme_host_get_hostsymname(nvme_host_t h);
  * @hostsymname:	Symbolic name
  */
 void nvme_host_set_hostsymname(nvme_host_t h, const char *hostsymname);
+
+/**
+ * nvme_free_dirents() - free dirents
+ * @d:		Dirents that is allocated with scan functions
+ * @count:	Number of dirents to be free
+ */
+void nvme_free_dirents(struct dirent **d, int count);
 
 #endif /* _LIBNVME_TREE_H */

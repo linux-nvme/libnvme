@@ -6,7 +6,6 @@
  * Authors: Keith Busch <keith.busch@wdc.com>
  * 	    Chaitanya Kulkarni <chaitanya.kulkarni@wdc.com>
  */
-#include <dirent.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -48,7 +47,7 @@ static int nvme_ctrl_scan_namespace(nvme_root_t r, struct nvme_ctrl *c,
 				    char *name);
 static int nvme_ctrl_scan_path(nvme_root_t r, struct nvme_ctrl *c, char *name);
 
-static inline void nvme_free_dirents(struct dirent **d, int i)
+void nvme_free_dirents(struct dirent **d, int i)
 {
 	while (i-- > 0)
 		free(d[i]);
