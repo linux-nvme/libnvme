@@ -827,18 +827,12 @@ int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 				 name, retries, max_retries, errno);
 			goto out_free_log;
 		}
-
+		if (genctr == le64_to_cpu(log->genctr))
+			break;
 		genctr = le64_to_cpu(log->genctr);
 		nvme_msg(r, LOG_DEBUG,
 			 "%s: discover genctr %" PRIu64 ", retry\n",
 			 name, genctr);
-		ret = nvme_discovery_log(nvme_ctrl_get_fd(c), hdr, log, true);
-		if (ret) {
-			nvme_msg(r, LOG_INFO,
-				 "%s: discover try %d/%d failed, error %d\n",
-				 name, retries, max_retries, errno);
-			goto out_free_log;
-		}
 	} while (genctr != le64_to_cpu(log->genctr) &&
 		 ++retries < max_retries);
 
