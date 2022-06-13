@@ -30,13 +30,21 @@ ifneq ("$(wildcard ${BUILD-DIR})","")
 	rm -rf ${BUILD-DIR}
 endif
 
-.PHONY: install dist
-install dist: ${BUILD-DIR}
-	cd ${BUILD-DIR} && meson $@
+.PHONY: install
+install: ${NAME}
+	cd ${BUILD-DIR} && sudo meson $@
+
+.PHONY: uninstall
+uninstall: ${BUILD-DIR}
+	sudo ninja -C ${BUILD-DIR} $@
 
 .PHONY: test
-test: ${BUILD-DIR}
+test: ${NAME}
 	ninja -C ${BUILD-DIR} $@
+
+.PHONY: dist
+dist: ${NAME}
+	cd ${BUILD-DIR} && meson $@
 
 .PHONY: rpm
 rpm: dist
