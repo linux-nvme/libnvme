@@ -395,7 +395,7 @@ int nvme_identify(struct nvme_identify_args *args)
 
 int nvme_get_log(struct nvme_get_log_args *args)
 {
-	__u32 numd = (args->len >> 2) - 1;
+	__u32 numd = ((args->len + 4) >> 2) - 1;
 	__u16 numdu = numd >> 16, numdl = numd & 0xffff;
 
 	__u32 cdw10 = NVME_SET(args->lid, LOG_CDW10_LID) |
