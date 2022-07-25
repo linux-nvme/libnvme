@@ -168,7 +168,7 @@ The nvme command status if a response was received or -errno
 otherwise.
 
 
-.. c:function:: void nvme_init_copy_range (struct nvme_copy_range *copy, __u16 *nlbs, __u64 *slbas, __u32 *eilbrts, __u32 *elbatms, __u32 *elbats, __u16 nr)
+.. c:function:: void nvme_init_copy_range (struct nvme_copy_range *copy, __u32 *nlbs, __u64 *slbas, __u32 *eilbrts, __u32 *elbatms, __u32 *elbats, __u16 nr)
 
    Constructs a copy range structure
 
@@ -177,7 +177,7 @@ otherwise.
 ``struct nvme_copy_range *copy``
   Copy range array
 
-``__u16 *nlbs``
+``__u32 *nlbs``
   Number of logical blocks
 
 ``__u64 *slbas``
@@ -196,7 +196,7 @@ otherwise.
   Number of descriptors to construct
 
 
-.. c:function:: void nvme_init_copy_range_f1 (struct nvme_copy_range_f1 *copy, __u16 *nlbs, __u64 *slbas, __u64 *eilbrts, __u32 *elbatms, __u32 *elbats, __u16 nr)
+.. c:function:: void nvme_init_copy_range_f1 (struct nvme_copy_range_f1 *copy, __u32 *nlbs, __u64 *slbas, __u64 *eilbrts, __u32 *elbatms, __u32 *elbats, __u16 nr)
 
    Constructs a copy range f1 structure
 
@@ -205,7 +205,7 @@ otherwise.
 ``struct nvme_copy_range_f1 *copy``
   Copy range array
 
-``__u16 *nlbs``
+``__u32 *nlbs``
   Number of logical blocks
 
 ``__u64 *slbas``

@@ -124,7 +124,7 @@ void nvme_init_dsm_range(struct nvme_dsm_range *dsm, __u32 *ctx_attrs,
  * @elbats:	Expected logical block application tag
  * @nr:		Number of descriptors to construct
  */
-void nvme_init_copy_range(struct nvme_copy_range *copy, __u16 *nlbs,
+void nvme_init_copy_range(struct nvme_copy_range *copy, __u32 *nlbs,
 			  __u64 *slbas, __u32 *eilbrts, __u32 *elbatms,
 			  __u32 *elbats, __u16 nr);
 
@@ -138,7 +138,7 @@ void nvme_init_copy_range(struct nvme_copy_range *copy, __u16 *nlbs,
  * @elbats:	Expected logical block application tag
  * @nr:		Number of descriptors to construct
  */
-void nvme_init_copy_range_f1(struct nvme_copy_range_f1 *copy, __u16 *nlbs,
+void nvme_init_copy_range_f1(struct nvme_copy_range_f1 *copy, __u32 *nlbs,
 			     __u64 *slbas, __u64 *eilbrts, __u32 *elbatms,
 			     __u32 *elbats, __u16 nr);
 
