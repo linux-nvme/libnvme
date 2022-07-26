@@ -650,10 +650,26 @@ int nvmf_add_ctrl(nvme_host_t h, nvme_ctrl_t c,
 	return nvme_init_ctrl(h, c, ret);
 }
 
+
 nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 				    struct nvmf_disc_log_entry *e,
 				    const struct nvme_fabrics_config *cfg,
 				    bool *discover)
+{
+	struct nvmf_connect_disc_entry2_args args = {
+		.args_size = sizeof(args),
+		.defcfg = cfg,
+		.discover = discover,
+		.dhchap_ctrl_key = NULL,
+	};
+
+	return nvmf_connect_disc_entry2(h, e, &args);
+}
+
+
+nvme_ctrl_t nvmf_connect_disc_entry2(nvme_host_t h,
+				     struct nvmf_disc_log_entry *e,
+				     struct nvmf_connect_disc_entry2_args *args)
 {
 	const char *transport;
 	char *traddr = NULL, *trsvcid = NULL;
@@ -710,7 +726,8 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 		 "(transport: %s, traddr: %s, trsvcid %s)\n",
 		 transport, traddr, trsvcid);
 	c = nvme_create_ctrl(h->r, e->subnqn, transport, traddr,
-			     cfg->host_traddr, cfg->host_iface, trsvcid);
+			     args->defcfg->host_traddr,
+			     args->defcfg->host_iface, trsvcid);
 	if (!c) {
 		nvme_msg(h->r, LOG_DEBUG, "skipping discovery entry, "
 			 "failed to allocate %s controller with traddr %s\n",
@@ -724,8 +741,8 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 		nvme_ctrl_set_discovered(c, true);
 		break;
 	case NVME_NQN_DISC:
-		if (discover)
-			*discover = true;
+		if (args->discover)
+			*args->discover = true;
 		nvme_ctrl_set_discovery_ctrl(c, true);
 		break;
 	default:
@@ -751,7 +768,9 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 	     e->treq & NVMF_TREQ_NOT_REQUIRED))
 		c->cfg.tls = true;
 
-	ret = nvmf_add_ctrl(h, c, cfg);
+	nvme_ctrl_set_dhchap_key(c, args->dhchap_ctrl_key);
+
+	ret = nvmf_add_ctrl(h, c, args->defcfg);
 	if (!ret)
 		return c;
 
@@ -761,7 +780,7 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 		nvme_msg(h->r, LOG_INFO, "failed to connect controller, "
 			 "retry with disabling SQ flow control\n");
 		c->cfg.disable_sqflow = false;
-		ret = nvmf_add_ctrl(h, c, cfg);
+		ret = nvmf_add_ctrl(h, c, args->defcfg);
 		if (!ret)
 			return c;
 	}

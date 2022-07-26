@@ -237,8 +237,36 @@ char *nvmf_hostid_from_file();
  * Return: Pointer to the new controller
  */
 nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
-	struct nvmf_disc_log_entry *e,
-	const struct nvme_fabrics_config *defcfg, bool *discover);
+				    struct nvmf_disc_log_entry *e,
+			            const struct nvme_fabrics_config *defcfg,
+				    bool *discover);
+
+/**
+ * struct nvmf_connect_disc_entry2_args - Arguments for the nvmf_connect_disc_entry2 command
+ * @defcfg:	Default configuration to be used for the new controller
+ * @discover:	Set to 'true' if the new controller is a discovery controller
+ * @dhchap_ctrl_key: DH-HMAC-CHAP ctrl key
+ * @args_size:	Size of &struct nvmf_connect_disc_entry2_args
+ */
+struct nvmf_connect_disc_entry2_args
+{
+	const struct nvme_fabrics_config *defcfg;
+	bool		*discover;
+	const char	*dhchap_ctrl_key;
+	int		args_size;
+};
+
+/**
+ * nvmf_connect_disc_entry2() - Connect controller based on the discovery log page entry
+ * @h:		Host to which the controller should be connected
+ * @e:		Discovery log page entry
+ * @args:	&struct nvmf_connect_disc_entry2_args argument structure
+ *
+ * Return: Pointer to the  controller
+ */
+nvme_ctrl_t nvmf_connect_disc_entry2(nvme_host_t h,
+				     struct nvmf_disc_log_entry *e,
+				     struct nvmf_connect_disc_entry2_args *args);
 
 /**
  * nvmf_is_registration_supported - check whether registration can be performed.
