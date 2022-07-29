@@ -55,6 +55,10 @@
 		    "type": "array",
 		    "items": { "$ref": "#/$defs/port" }
 		},
+		"dhchap_key": {
+		    "description": "Host DH-HMAC-CHAP key",
+		    "type": "string"
+		},
 		"required": [ "nqn" ]
 	    }
 	},
@@ -80,6 +84,10 @@
 		},
 		"trsvcid": {
 		    "description": "Transport service identifier",
+		    "type": "string"
+		},
+		"dhchap_key": {
+		    "description": "Host DH-HMAC-CHAP key",
 		    "type": "string"
 		},
 		"dhchap_ctrl_key": {

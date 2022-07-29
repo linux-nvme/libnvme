@@ -461,7 +461,7 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 		discover = true;
 	hostnqn = nvme_host_get_hostnqn(h);
 	hostid = nvme_host_get_hostid(h);
-	hostkey = nvme_host_get_dhchap_key(h);
+	hostkey = nvme_ctrl_get_dhchap_host_key(c, true);
 	ctrlkey = nvme_ctrl_get_dhchap_key(c);
 	if (add_argument(argstr, "transport", transport) ||
 	    add_argument(argstr, "traddr",

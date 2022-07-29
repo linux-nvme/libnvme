@@ -98,11 +98,15 @@ static void json_parse_port(nvme_subsystem_t s, struct json_object *port_obj)
 	attr_obj = json_object_object_get(port_obj, "dhchap_ctrl_key");
 	if (attr_obj)
 		nvme_ctrl_set_dhchap_key(c, json_object_get_string(attr_obj));
+	attr_obj = json_object_object_get(port_obj, "dhchap_key");
+	if (attr_obj)
+		nvme_ctrl_set_dhchap_host_key(c, json_object_get_string(attr_obj));
 }
 
 static void json_parse_subsys(nvme_host_t h, struct json_object *subsys_obj)
 {
 	struct json_object *nqn_obj, *port_array;
+	struct json_object *attr_obj;
 	nvme_subsystem_t s;
 	const char *nqn;
 	int p;
@@ -112,6 +116,11 @@ static void json_parse_subsys(nvme_host_t h, struct json_object *subsys_obj)
 		return;
 	nqn = json_object_get_string(nqn_obj);
 	s = nvme_lookup_subsystem(h, NULL, nqn);
+	if (!s)
+		return;
+	attr_obj = json_object_object_get(subsys_obj, "dhchap_key");
+	if (attr_obj)
+		nvme_subsystem_set_dhchap_host_key(s, json_object_get_string(attr_obj));
 	port_array = json_object_object_get(subsys_obj, "ports");
 	if (!port_array)
 		return;
@@ -221,6 +230,10 @@ static void json_update_port(struct json_object *ctrl_array, nvme_ctrl_t c)
 	value = nvme_ctrl_get_trsvcid(c);
 	if (value)
 		json_object_object_add(port_obj, "trsvcid",
+				       json_object_new_string(value));
+	value = nvme_ctrl_get_dhchap_host_key(c, false);
+	if (value)
+		json_object_object_add(port_obj, "dhchap_key",
 				       json_object_new_string(value));
 	value = nvme_ctrl_get_dhchap_key(c);
 	if (value)
@@ -365,6 +378,10 @@ static void json_dump_ctrl(struct json_object *ctrl_array, nvme_ctrl_t c)
 	if (value)
 		json_object_object_add(ctrl_obj, "trsvcid",
 				       json_object_new_string(value));
+	value = nvme_ctrl_get_dhchap_host_key(c, false);
+	if (value)
+		json_object_object_add(ctrl_obj, "dhchap_key",
+				       json_object_new_string(value));
 	value = nvme_ctrl_get_dhchap_key(c);
 	if (value)
 		json_object_object_add(ctrl_obj, "dhchap_ctrl_key",
@@ -401,11 +418,16 @@ static void json_dump_subsys(struct json_object *subsys_array,
 	nvme_ctrl_t c;
 	struct json_object *subsys_obj = json_object_new_object();
 	struct json_object *ctrl_array;
+	const char *dhchap_key;
 
 	json_object_object_add(subsys_obj, "name",
 			       json_object_new_string(nvme_subsystem_get_name(s)));
 	json_object_object_add(subsys_obj, "nqn",
 			       json_object_new_string(nvme_subsystem_get_nqn(s)));
+	dhchap_key = nvme_subsystem_get_dhchap_host_key(s, false);
+	if (dhchap_key)
+		json_object_object_add(subsys_obj, "dhchap_key",
+				       json_object_new_string(dhchap_key));
 	ctrl_array = json_object_new_array();
 	nvme_subsystem_for_each_ctrl(s, c) {
 		json_dump_ctrl(ctrl_array, c);

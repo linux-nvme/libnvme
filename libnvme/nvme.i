@@ -301,6 +301,9 @@ struct nvme_subsystem {
   char *model;
   char *serial;
   char *firmware;
+  %extend {
+    char *dhchap_host_key;
+  }
 };
 
 struct nvme_ctrl {
@@ -317,6 +320,7 @@ struct nvme_ctrl {
   %immutable traddr;
   %immutable trsvcid;
   %immutable dhchap_key;
+  %immutable dhchap_host_key;
   %immutable cntrltype;
   %immutable dctype;
   %immutable discovery_ctrl;
@@ -336,6 +340,7 @@ struct nvme_ctrl {
   char *trsvcid;
   %extend {
     char *dhchap_key;
+    char *dhchap_host_key;
   }
   char *cntrltype;
   char *dctype;
@@ -534,6 +539,12 @@ struct nvme_ns {
   struct nvme_host *nvme_subsystem_host_get(struct nvme_subsystem *s) {
     return nvme_subsystem_get_host(s);
   }
+  const char *nvme_subsystem_dhchap_host_key_get(struct nvme_subsystem *s) {
+    return nvme_subsystem_get_dhchap_host_key(s, false);
+  }
+  void nvme_subsystem_dhchap_host_key_set(struct nvme_subsystem *s, char *key) {
+    nvme_subsystem_set_dhchap_host_key(s, key);
+  }
 %};
 
 %extend ctrl_iter {
@@ -671,6 +682,9 @@ struct nvme_ns {
   }
   const char *nvme_ctrl_dhchap_key_get(struct nvme_ctrl *c) {
     return nvme_ctrl_get_dhchap_key(c);
+  }
+  const char *nvme_ctrl_dhchap_host_key_get(struct nvme_ctrl *c) {
+    return nvme_ctrl_get_dhchap_host_key(c, false);
   }
 %};
 

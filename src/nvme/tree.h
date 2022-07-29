@@ -877,7 +877,7 @@ const char *nvme_ctrl_get_host_iface(nvme_ctrl_t c);
 
 /**
  * nvme_ctrl_get_dhchap_key() - Return controller key
- * @c:	Controller for which the key should be set
+ * @c:	Controller for which the key should be returned
  *
  * Return: DH-HMAC-CHAP controller key or NULL if not set
  */
@@ -889,6 +889,28 @@ const char *nvme_ctrl_get_dhchap_key(nvme_ctrl_t c);
  * @key:	DH-HMAC-CHAP Key to set or NULL to clear existing key
  */
 void nvme_ctrl_set_dhchap_key(nvme_ctrl_t c, const char *key);
+
+/**
+ * nvme_ctrl_get_dhchap_host_key() - Return host key
+ * @c:	Controller for which the host key should be returned
+ * @traverse: true if parent structures should be checked, too
+ *
+ * Checks for any DH-HMAC-CHAP host key in either the controller,
+ * subsystem, or host structure and returns the first found one.
+ *
+ * Return: DH-HMAC-CHAP host key or NULL if not set
+ */
+const char *nvme_ctrl_get_dhchap_host_key(nvme_ctrl_t c, bool traverse);
+
+/**
+ * nvme_ctrl_set_dhchap_host_key() - Set host key
+ * @c:		Controller for which the host key should be set
+ * @key:	DH-HMAC-CHAP Key to set or NULL to clear existing key
+ *
+ * Sets the DH-HMAC-CHAP host key for only the controller structure;
+ * other keys in either subsystem or host structures are not checked.
+ */
+void nvme_ctrl_set_dhchap_host_key(nvme_ctrl_t c, const char *key);
 
 /**
  * nvme_ctrl_get_config() - Fabrics configuration of a controller
@@ -1048,6 +1070,28 @@ const char *nvme_subsystem_get_name(nvme_subsystem_t s);
  * Return: 'nvm' or 'discovery'
  */
 const char *nvme_subsystem_get_type(nvme_subsystem_t s);
+
+/**
+ * nvme_subsystem_get_dhchap_host_key() - Return host key
+ * @s:	Subsystem for which the host key should be returned
+ * @traverse: True if host structure should be checked
+ *
+ * Checks for any DH-HMAC-CHAP host key in either the subsystem
+ * or host structure and returns the first found one.
+ *
+ * Return: DH-HMAC-CHAP host key or NULL if not set
+ */
+const char *nvme_subsystem_get_dhchap_host_key(nvme_subsystem_t s, bool traverse);
+
+/**
+ * nvme_subsystem_set_dhchap_host_key() - Set host key
+ * @s:		Subsystem for which the host key should be set
+ * @key:	DH-HMAC-CHAP Key to set or NULL to clear existing key
+ *
+ * Sets the DH-HMAC-CHAP host key for only the subsystem structure;
+ * key in the host structure is not checked.
+ */
+void nvme_subsystem_set_dhchap_host_key(nvme_subsystem_t c, const char *key);
 
 /**
  * nvme_scan_topology() - Scan NVMe topology and apply filter

@@ -82,6 +82,7 @@ struct nvme_ctrl {
 	char *subsysnqn;
 	char *traddr;
 	char *trsvcid;
+	char *dhchap_host_key;
 	char *dhchap_ctrl_key;
 	char *cntrltype;
 	char *dctype;
@@ -104,6 +105,7 @@ struct nvme_subsystem {
 	char *serial;
 	char *firmware;
 	char *subsystype;
+	char *dhchap_host_key;
 };
 
 struct nvme_host {

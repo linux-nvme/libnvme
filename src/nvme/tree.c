@@ -302,6 +302,26 @@ const char *nvme_subsystem_get_type(nvme_subsystem_t s)
 	return s->subsystype;
 }
 
+const char *nvme_subsystem_get_dhchap_host_key(nvme_subsystem_t s,
+					       bool traverse)
+{
+	if (s->dhchap_host_key)
+		return s->dhchap_host_key;
+	if (traverse && s->h && s->h->dhchap_key)
+		return s->h->dhchap_key;
+	return NULL;
+}
+
+void nvme_subsystem_set_dhchap_host_key(nvme_subsystem_t s, const char *key)
+{
+	if (s->dhchap_host_key) {
+		free(s->dhchap_host_key);
+		s->dhchap_host_key = NULL;
+	}
+	if (key)
+		s->dhchap_host_key = strdup(key);
+}
+
 nvme_ctrl_t nvme_subsystem_first_ctrl(nvme_subsystem_t s)
 {
 	return list_top(&s->ctrls, struct nvme_ctrl, entry);
@@ -376,6 +396,8 @@ static void __nvme_free_subsystem(struct nvme_subsystem *s)
 		free(s->firmware);
 	if (s->subsystype)
 		free(s->subsystype);
+	if (s->dhchap_host_key)
+		free(s->dhchap_host_key);
 	free(s);
 }
 
@@ -825,6 +847,29 @@ void nvme_ctrl_set_dhchap_key(nvme_ctrl_t c, const char *key)
 		c->dhchap_ctrl_key = strdup(key);
 }
 
+const char *nvme_ctrl_get_dhchap_host_key(nvme_ctrl_t c, bool traverse)
+{
+	if (c->dhchap_host_key)
+		return c->dhchap_host_key;
+	if (traverse) {
+		if (c->s && c->s->dhchap_host_key)
+			return c->s->dhchap_host_key;
+		if (c->s->h && c->s->h->dhchap_key)
+			return c->s->h->dhchap_key;
+	}
+	return NULL;
+}
+
+void nvme_ctrl_set_dhchap_host_key(nvme_ctrl_t c, const char *key)
+{
+	if (c->dhchap_host_key) {
+		free(c->dhchap_host_key);
+		c->dhchap_host_key = NULL;
+	}
+	if (key)
+		c->dhchap_host_key = strdup(key);
+}
+
 void nvme_ctrl_set_discovered(nvme_ctrl_t c, bool discovered)
 {
 	c->discovered = discovered;
@@ -898,6 +943,7 @@ void nvme_deconfigure_ctrl(nvme_ctrl_t c)
 	FREE_CTRL_ATTR(c->serial);
 	FREE_CTRL_ATTR(c->sqsize);
 	FREE_CTRL_ATTR(c->dhchap_ctrl_key);
+	FREE_CTRL_ATTR(c->dhchap_host_key);
 	FREE_CTRL_ATTR(c->address);
 	FREE_CTRL_ATTR(c->dctype);
 	FREE_CTRL_ATTR(c->cntrltype);
@@ -1171,6 +1217,21 @@ static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 		free(c->dhchap_ctrl_key);
 		c->dhchap_ctrl_key = NULL;
 	}
+	c->dhchap_host_key = nvme_get_ctrl_attr(c, "dhchap_secret");
+	if (c->dhchap_host_key) {
+		if (!strcmp(c->dhchap_host_key, "none")) {
+			free(c->dhchap_host_key);
+			c->dhchap_host_key = NULL;
+		} else if (c->s->dhchap_host_key &&
+			   !strcmp(c->s->dhchap_host_key, c->dhchap_host_key)) {
+			free(c->dhchap_host_key);
+			c->dhchap_host_key = NULL;
+		} else if (c->s->h->dhchap_key &&
+			   !strcmp(c->s->h->dhchap_key, c->dhchap_host_key)) {
+			free(c->dhchap_host_key);
+			c->dhchap_host_key = NULL;
+		}
+	}
 	c->cntrltype = nvme_get_ctrl_attr(c, "cntrltype");
 	c->dctype = nvme_get_ctrl_attr(c, "dctype");
 
@@ -1342,7 +1403,7 @@ nvme_ctrl_t nvme_scan_ctrl(nvme_root_t r, const char *name)
 	nvme_subsystem_t s;
 	nvme_ctrl_t c;
 	char *path;
-	char *hostnqn, *hostid, *subsysnqn, *subsysname;
+	char *hostnqn, *hostid, *subsysnqn, *subsysname, *hostkey;
 	int ret;
 
 	nvme_msg(r, LOG_DEBUG, "scan controller %s\n", name);
@@ -1359,13 +1420,18 @@ nvme_ctrl_t nvme_scan_ctrl(nvme_root_t r, const char *name)
 		free(hostnqn);
 	if (hostid)
 		free(hostid);
-	if (h) {
-		if (h->dhchap_key)
-			free(h->dhchap_key);
-		h->dhchap_key = nvme_get_attr(path, "dhchap_secret");
-		if (h->dhchap_key && !strcmp(h->dhchap_key, "none")) {
-			free(h->dhchap_key);
-			h->dhchap_key = NULL;
+	hostkey = nvme_get_attr(path, "dhchap_secret");
+	if (hostkey && !strcmp(hostkey, "none"))
+		hostkey = NULL;
+	if (h && hostkey) {
+		if (h->dhchap_key) {
+			if (!strcmp(h->dhchap_key, hostkey)) {
+				free(hostkey);
+				hostkey = NULL;
+			}
+		} else {
+			h->dhchap_key = hostkey;
+			hostkey = NULL;
 		}
 	}
 	if (!h) {
@@ -1402,7 +1468,15 @@ nvme_ctrl_t nvme_scan_ctrl(nvme_root_t r, const char *name)
 		errno = ENOMEM;
 		return NULL;
 	}
-
+	if (hostkey) {
+		if (!s->dhchap_host_key) {
+			s->dhchap_host_key = hostkey;
+			hostkey = NULL;
+		} else {
+			free(hostkey);
+			hostkey = NULL;
+		}
+	}
 	c = nvme_ctrl_alloc(r, s, path, name);
 	if (!c) {
 		free(path);
