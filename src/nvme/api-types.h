@@ -666,8 +666,6 @@ struct nvme_dsm_args {
  * @prinfow:	Protection information field for write
  * @dtype:	Directive type
  * @format:	Descriptor format
- * @ilbrt_u64:	Initial logical block reference tag - 8 byte
- *              version required for enhanced protection info
  */
 struct nvme_copy_args {
 	__u64 sdlba;
@@ -677,7 +675,7 @@ struct nvme_copy_args {
 	int fd;
 	__u32 timeout;
 	__u32 nsid;
-	__u32 ilbrt;
+	__u64 ilbrt;
 	int lr;
 	int fua;
 	__u16 nr;
@@ -688,7 +686,6 @@ struct nvme_copy_args {
 	__u8 prinfow;
 	__u8 dtype;
 	__u8 format;
-	__u64 ilbrt_u64;
 };
 
 /**

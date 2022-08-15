@@ -1718,11 +1718,9 @@ int nvme_dsm(struct nvme_dsm_args *args)
 
 int nvme_copy(struct nvme_copy_args *args)
 {
-	const size_t size_v1 = sizeof_args(struct nvme_copy_args, format, __u64);
-	const size_t size_v2 = sizeof_args(struct nvme_copy_args, ilbrt_u64, __u64);
 	__u32 cdw3, cdw12, cdw14, data_len;
 
-	if (args->args_size < size_v1 || args->args_size > size_v2) {
+	if (args->args_size < sizeof(*args)) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1732,18 +1730,18 @@ int nvme_copy(struct nvme_copy_args *args)
 		((args->prinfow & 0xf) << 26) | ((args->fua & 0x1) << 30) |
 		((args->lr & 0x1) << 31);
 
-	if (args->args_size == size_v1) {
+	if (args->format == 0) {
 		cdw3 = 0;
 		cdw14 = args->ilbrt;
-	} else {
-		cdw3 = (args->ilbrt_u64 >> 32) & 0xffffffff;
-		cdw14 = args->ilbrt_u64 & 0xffffffff;
-	}
-
-	if (args->format == 1)
-		data_len = args->nr * sizeof(struct nvme_copy_range_f1);
-	else
 		data_len = args->nr * sizeof(struct nvme_copy_range);
+	} else if (args->format == 1) {
+		cdw3 = (args->ilbrt >> 32) & 0xffffffff;
+		cdw14 = args->ilbrt & 0xffffffff;
+		data_len = args->nr * sizeof(struct nvme_copy_range_f1);
+	} else {
+		errno = EINVAL;
+		return -1;
+	}
 
 	struct nvme_passthru_cmd cmd = {
 		.opcode         = nvme_cmd_copy,
