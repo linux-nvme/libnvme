@@ -340,6 +340,7 @@ LIBNVME_1_0 {
 		nvmf_default_config;
 		nvmf_eflags_str;
 		nvmf_get_discovery_log;
+		nvmf_get_discovery_log2;
 		nvmf_hostid_from_file;
 		nvmf_hostnqn_from_file;
 		nvmf_hostnqn_generate;

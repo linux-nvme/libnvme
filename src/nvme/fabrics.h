@@ -197,12 +197,51 @@ int nvmf_add_ctrl(nvme_host_t h, nvme_ctrl_t c,
  * nvmf_get_discovery_log() - Return the discovery log page
  * @c:			Discover controller to use
  * @logp:		Pointer to the log page to be returned
- * @max_retries:	maximum number of log page entries to be returned
+ * @max_retries:	Number of retries in case of failure
+ *
+ * The memory allocated for the log page and returned in @logp
+ * must be freed by the caller.
  *
  * Return: 0 on success; on failure -1 is returned and errno is set
  */
 int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 			   int max_retries);
+
+/**
+ * nvmf_get_discovery_log2() - Return the discovery log page
+ * @c:			Discover controller to use
+ * @args:		Argument structure
+ * @logp:		Pointer to the log page to be returned
+ * @max_retries:	Number of retries in case of failure
+ *
+ * The @args parameter is typically set as follows:
+ *
+ * struct nvme_get_log_args args = {
+ * 	.args_size = sizeof(args),
+ * 	.fd = 0,			< Set internally
+ * 	.nsid = NVME_NSID_NONE,
+ * 	.lsp = NVMF_LOG_DISC_LSP_NONE,	< See enum nvmf_get_log_discovery_lsp
+ * 	.lsi = NVME_LOG_LSI_NONE,
+ * 	.uuidx = NVME_UUID_NONE,
+ * 	.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+ * 	.result = NULL,
+ * 	.lid = NVME_LOG_LID_DISCOVER,
+ * 	.log = NULL,			< Set internally
+ * 	.len = 0,			< Set internally
+ * 	.csi = NVME_CSI_NVM,
+ * 	.rae = false,			< Set internally
+ * 	.ot = false,
+ * };
+ *
+ * The memory allocated for the returned log page (@logp) must
+ * be freed by the caller.
+ *
+ * Return: 0 on success; on failure -1 is returned and errno is set
+ */
+int nvmf_get_discovery_log2(nvme_ctrl_t c,
+			    struct nvme_get_log_args *args,
+			    struct nvmf_discovery_log **logp,
+			    int max_retries);
 
 /**
  * nvmf_hostnqn_generate() - Generate a machine specific host nqn

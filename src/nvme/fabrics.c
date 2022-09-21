@@ -780,30 +780,10 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 	return NULL;
 }
 
-static int nvme_discovery_log(int fd, __u32 len, struct nvmf_discovery_log *log, bool rae)
-{
-	struct nvme_get_log_args args = {
-		.args_size = sizeof(args),
-		.fd = fd,
-		.nsid = NVME_NSID_NONE,
-		.lsp = NVME_LOG_LSP_NONE,
-		.lsi = NVME_LOG_LSI_NONE,
-		.uuidx = NVME_UUID_NONE,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
-		.lid = NVME_LOG_LID_DISCOVER,
-		.log = log,
-		.len = len,
-		.csi = NVME_CSI_NVM,
-		.rae = rae,
-		.ot = false,
-	};
-
-	return nvme_get_log_page(fd, 4096, &args);
-}
-
-int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
-			   int max_retries)
+int nvmf_get_discovery_log2(nvme_ctrl_t c,
+			    struct nvme_get_log_args *args,
+			    struct nvmf_discovery_log **logp,
+			    int max_retries)
 {
 	nvme_root_t r = c->s && c->s->h ? c->s->h->r : NULL;
 	struct nvmf_discovery_log *log = NULL;
@@ -811,6 +791,9 @@ int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 	const char *name = nvme_ctrl_get_name(c);
 	uint64_t genctr, numrec;
 	unsigned int size;
+	int fd = nvme_ctrl_get_fd(c);
+
+	args->fd = fd;
 
 	do {
 		size = sizeof(struct nvmf_discovery_log);
@@ -826,7 +809,10 @@ int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 
 		nvme_msg(r, LOG_DEBUG, "%s: get header (try %d/%d)\n",
 			name, retries, max_retries);
-		ret = nvme_discovery_log(nvme_ctrl_get_fd(c), size, log, true);
+		args->rae = true;
+		args->len = size;
+		args->log = log;
+		ret = nvme_get_log_page(fd, 4096, args);
 		if (ret) {
 			nvme_msg(r, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
@@ -856,7 +842,12 @@ int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 			 "%s: get header and %" PRIu64
 			 " records (length %d genctr %" PRIu64 ")\n",
 			 name, numrec, size, genctr);
-		ret = nvme_discovery_log(nvme_ctrl_get_fd(c), size, log, false);
+
+		args->rae = false;
+		args->len = size;
+		args->log = log;
+		ret = nvme_get_log_page(fd, 4096, args);
+
 		if (ret) {
 			nvme_msg(r, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
@@ -884,6 +875,28 @@ int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 out_free_log:
 	free(log);
 	return ret;
+}
+
+int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
+			   int max_retries)
+{
+	struct nvme_get_log_args args = {
+		.args_size = sizeof(args),
+		.fd = nvme_ctrl_get_fd(c),
+		.nsid = NVME_NSID_NONE,
+		.lsp = NVMF_LOG_DISC_LSP_NONE,
+		.lsi = NVME_LOG_LSI_NONE,
+		.uuidx = NVME_UUID_NONE,
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.result = NULL,
+		.lid = NVME_LOG_LID_DISCOVER,
+		.log = NULL,
+		.len = 0,
+		.csi = NVME_CSI_NVM,
+		.rae = false,
+		.ot = false,
+	};
+	return nvmf_get_discovery_log2(c, &args, logp, max_retries);
 }
 
 #define PATH_UUID_IBM	"/proc/device-tree/ibm,partition-uuid"
