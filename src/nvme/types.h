@@ -738,7 +738,7 @@ struct nvme_id_psd {
 	__le16			actp;
 	__u8			apws;
 	__u8			rsvd23[9];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_ctrl - Identify Controller data structure
@@ -1051,7 +1051,7 @@ struct nvme_id_ctrl {
 
 	struct nvme_id_psd	psd[32];
 	__u8			vs[1024];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_id_ctrl_cmic - Controller Multipath IO and Namespace Sharing
@@ -1649,7 +1649,7 @@ struct nvme_lbaf {
 	__le16			ms;
 	__u8			ds;
 	__u8			rp;
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_lbaf_rp - This field indicates the relative performance of the LBA
@@ -1816,7 +1816,7 @@ struct nvme_id_ns {
 	struct nvme_lbaf	lbaf[64];
 	__le64			lbstm;
 	__u8			vs[3704];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_id_nsfeat - This field defines features of the namespace.
@@ -2050,7 +2050,7 @@ struct nvme_ns_id_desc {
 	__u8	nidl;
 	__le16	rsvd;
 	__u8	nid[];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_ns_id_desc_nidt - Known namespace identifier types
@@ -2099,7 +2099,7 @@ struct nvme_nvmset_attr {
 	__u8			tnvmsetcap[16];
 	__u8			unvmsetcap[16];
 	__u8			rsvd48[80];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_nvmset_list - NVM set list
@@ -2111,7 +2111,7 @@ struct nvme_id_nvmset_list {
 	__u8			nid;
 	__u8			rsvd1[127];
 	struct nvme_nvmset_attr	ent[NVME_ID_NVMSET_LIST_MAX];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_independent_id_ns - Identify - I/O Command Set Independent Identify Namespace Data Structure
@@ -2140,7 +2140,7 @@ struct nvme_id_independent_id_ns {
 	__le16	endgid;
 	__u8	nstat;
 	__u8	rsvd15[4081];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_ns_granularity_desc -	 Namespace Granularity Descriptor
@@ -2150,7 +2150,7 @@ struct nvme_id_independent_id_ns {
 struct nvme_id_ns_granularity_desc {
 	__le64			nszegran;
 	__le64			ncapgran;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_ns_granularity_list - Namespace Granularity List
@@ -2166,7 +2166,7 @@ struct nvme_id_ns_granularity_list {
 	__u8			rsvd5[27];
 	struct nvme_id_ns_granularity_desc entry[NVME_ID_ND_DESCRIPTOR_MAX];
 	__u8			rsvd288[3808];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_uuid_list_entry - UUID List Entry
@@ -2178,7 +2178,7 @@ struct nvme_id_uuid_list_entry {
 	__u8			header;
 	__u8			rsvd1[15];
 	__u8			uuid[16];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_id_uuid - Identifier Association
@@ -2202,7 +2202,7 @@ enum nvme_id_uuid {
 struct nvme_id_uuid_list {
 	__u8	rsvd0[32];
 	struct nvme_id_uuid_list_entry entry[NVME_ID_UUID_LIST_MAX];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_ctrl_list - Controller List
@@ -2212,7 +2212,7 @@ struct nvme_id_uuid_list {
 struct nvme_ctrl_list {
 	__le16 num;
 	__le16 identifier[NVME_ID_CTRL_LIST_MAX];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_ns_list - Namespace List
@@ -2220,7 +2220,7 @@ struct nvme_ctrl_list {
  */
 struct nvme_ns_list {
 	__le32 ns[NVME_ID_NS_LIST_MAX];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_ctrl_nvm - I/O Command Set Specific Identify Controller data structure
@@ -2233,14 +2233,14 @@ struct nvme_ns_list {
  * @rsvd16:	reserved
  */
 struct nvme_id_ctrl_nvm {
-	__u8     vsl;
-	__u8     wzsl;
-	__u8     wusl;
-	__u8     dmrl;
-	__u32    dmrsl;
-	__u64    dmsl;
-	__u8     rsvd16[4080];
-};
+    __u8     vsl;
+    __u8     wzsl;
+    __u8     wusl;
+    __u8     dmrl;
+    __u32    dmrsl;
+    __u64    dmsl;
+    __u8     rsvd16[4080];
+} __attribute__((packed));
 
 /**
  * struct nvme_nvm_id_ns - NVME Command Set I/O Command Set Specific Identify Namespace Data Structure
@@ -2256,7 +2256,7 @@ struct nvme_nvm_id_ns {
 	__u8	rsvd9[3];
 	__le32	elbaf[64];
 	__u8	rsvd268[3828];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_zns_lbafe - LBA Format Extension Data Structure
@@ -2268,7 +2268,7 @@ struct nvme_zns_lbafe {
 	__le64	zsze;
 	__u8	zdes;
 	__u8	rsvd9[7];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_zns_id_ns -  Zoned Namespace Command Set Specific  Identify Namespace Data Structure
@@ -2312,7 +2312,7 @@ struct nvme_zns_id_ns {
 	__u8			rsvd53[2763];
 	struct nvme_zns_lbafe	lbafe[64];
 	__u8			vs[256];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_zns_id_ctrl -  I/O Command Set Specific Identify Controller Data Structure for the Zoned Namespace Command Set
@@ -2322,7 +2322,7 @@ struct nvme_zns_id_ns {
 struct nvme_zns_id_ctrl {
 	__u8	zasl;
 	__u8	rsvd1[4095];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_primary_ctrl_cap -  Identify - Controller Capabilities Structure
@@ -2364,7 +2364,7 @@ struct nvme_primary_ctrl_cap {
 	__le16	vifrsm;
 	__le16	vigran;
 	__u8	rsvd80[4016];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_secondary_ctrl -	 Secondary Controller Entry
@@ -2386,7 +2386,7 @@ struct nvme_secondary_ctrl {
 	__le16 nvq;
 	__le16 nvi;
 	__u8   rsvd14[18];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_secondary_ctrl_list - Secondary Controller List
@@ -2398,7 +2398,7 @@ struct nvme_secondary_ctrl_list {
 	__u8   num;
 	__u8   rsvd[31];
 	struct nvme_secondary_ctrl sc_entry[NVME_ID_SECONDARY_CTRL_MAX];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_iocs - NVMe Identify IO Command Set data structure
@@ -2406,7 +2406,7 @@ struct nvme_secondary_ctrl_list {
  */
 struct nvme_id_iocs {
 	__u64 iocsc[512];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_domain_attr - Domain Attributes Entry
@@ -2424,7 +2424,7 @@ struct nvme_id_domain_attr {
 	__u8	unalloc_dom_cap[16];
 	__u8	max_egrp_dom_cap[16];
 	__u8	rsvd64[64];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_domain_list - Domain List
@@ -2436,7 +2436,7 @@ struct nvme_id_domain_list {
 	__u8	num;
 	__u8	rsvd[127];
 	struct nvme_id_domain_attr domain_attr[NVME_ID_DOMAIN_LIST_MAX];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_endurance_group_list - Endurance Group List
@@ -2446,7 +2446,7 @@ struct nvme_id_domain_list {
 struct nvme_id_endurance_group_list {
 	__le16	num;
 	__le16	identifier[NVME_ID_ENDURANCE_GROUP_LIST_MAX];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_supported_log_pages - Supported Log Pages - Log
@@ -2456,7 +2456,7 @@ struct nvme_id_endurance_group_list {
  */
 struct nvme_supported_log_pages {
 	__le32	lid_support[NVME_LOG_SUPPORTED_LOG_PAGES_MAX];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_error_log_page - Error Information Log Entry (Log Identifier 01h)
@@ -2534,7 +2534,7 @@ struct nvme_error_log_page {
 	__le64	cs;
 	__le16	trtype_spec_info;
 	__u8	rsvd2[22];
-};
+} __attribute__((packed));
 
 enum nvme_err_pel {
 	NVME_ERR_PEL_BYTE_MASK	= 0xf,
@@ -2719,7 +2719,7 @@ struct nvme_smart_log {
 	__le32			thm_temp1_total_time;
 	__le32			thm_temp2_total_time;
 	__u8			rsvd232[280];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_smart_crit - Critical Warning
@@ -2782,7 +2782,7 @@ struct nvme_firmware_slot {
 	__u8	rsvd1[7];
 	char	frs[7][8];
 	__u8	rsvd2[448];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_cmd_effects_log - Commands Supported and Effects Log
@@ -2794,7 +2794,7 @@ struct nvme_cmd_effects_log {
 	__le32 acs[256];
 	__le32 iocs[256];
 	__u8   rsvd[2048];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_cmd_effects - Commands Supported and Effects
@@ -3058,7 +3058,7 @@ struct nvme_telemetry_log {
 	__u8	ctrldgn;
 	__u8	rsnident[128];
 	__u8	data_area[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_endurance_group_log -  Endurance Group Information Log
@@ -3094,7 +3094,7 @@ struct nvme_endurance_group_log {
 	__u8	media_data_integrity_err[16];
 	__u8	num_err_info_log_entries[16];
 	__u8	rsvd160[352];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_eg_critical_warning_flags - Endurance Group Information Log - Critical Warning
@@ -3118,7 +3118,7 @@ enum nvme_eg_critical_warning_flags {
 struct nvme_aggregate_endurance_group_event {
 	__le64	num_entries;
 	__le16	entries[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_nvmset_predictable_lat_log - Predictable Latency Mode - Deterministic Threshold Configuration Data
@@ -3152,7 +3152,7 @@ struct nvme_nvmset_predictable_lat_log {
 	__le64	dtwin_we;
 	__le64	dtwin_te;
 	__u8	rsvd152[360];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_nvmeset_pl_status -  Predictable Latency Per NVM Set Log - Status
@@ -3194,7 +3194,7 @@ enum nvme_nvmset_pl_events {
 struct nvme_aggregate_predictable_lat_event {
 	__le64	num_entries;
 	__le16	entries[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_ana_group_desc - ANA Group Descriptor
@@ -3206,13 +3206,13 @@ struct nvme_aggregate_predictable_lat_event {
  * @nsids:	List of namespaces
  */
 struct nvme_ana_group_desc {
-	__le32	grpid;
-	__le32	nnsids;
-	__le64	chgcnt;
-	__u8	state;
-	__u8	rsvd17[15];
-	__le32	nsids[];
-};
+	__le32  grpid;
+	__le32  nnsids;
+	__le64  chgcnt;
+	__u8    state;
+	__u8    rsvd17[15];
+	__le32  nsids[];
+} __attribute__((packed));
 
 /**
  * enum nvme_ana_state - ANA Group Descriptor - Asymmetric Namespace Access State
@@ -3242,7 +3242,7 @@ struct nvme_ana_log {
 	__le16	ngrps;
 	__u8	rsvd10[6];
 	struct nvme_ana_group_desc descs[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_persistent_event_log - Persistent Event Log
@@ -3372,9 +3372,9 @@ struct nvme_fw_commit_event {
  * @ml_secs_since_reset:	Milliseconds Since Reset
  */
 struct nvme_time_stamp_change_event {
-	__le64	previous_timestamp;
-	__le64	ml_secs_since_reset;
-};
+	__le64 	previous_timestamp;
+	__le64 	ml_secs_since_reset;
+} __attribute__((packed));
 
 /**
  * struct nvme_power_on_reset_info_list - Controller Reset Information
@@ -3403,10 +3403,10 @@ struct nvme_power_on_reset_info_list {
  * @add_hw_err_info:		Additional Hardware Error Information
  */
 struct nvme_nss_hw_err_event {
-	__le16	nss_hw_err_event_code;
-	__u8	rsvd2[2];
-	__u8	*add_hw_err_info;
-};
+	__le16 	nss_hw_err_event_code;
+	__u8 	rsvd2[2];
+	__u8 	*add_hw_err_info;
+} __attribute__((packed));
 
 /**
  * struct nvme_change_ns_event - Change Namespace Event Data
@@ -3438,7 +3438,7 @@ struct nvme_change_ns_event {
 	__le16	nvmset_id;
 	__le16	rsvd42;
 	__le32	nsid;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_format_nvm_start_event - Format NVM Start Event Data
@@ -3448,11 +3448,11 @@ struct nvme_change_ns_event {
  * @format_nvm_cdw10:	Format NVM CDW10
  */
 struct nvme_format_nvm_start_event {
-	__le32	nsid;
-	__u8	fna;
-	__u8	rsvd5[3];
-	__le32	format_nvm_cdw10;
-};
+	__le32 	nsid;
+	__u8 	fna;
+	__u8 	rsvd5[3];
+	__le32 	format_nvm_cdw10;
+} __attribute__((packed));
 
 /**
  * struct nvme_format_nvm_compln_event - Format NVM Completion Event Data
@@ -3463,12 +3463,12 @@ struct nvme_format_nvm_start_event {
  * @status_field:	Status Field
  */
 struct nvme_format_nvm_compln_event {
-	__le32	nsid;
-	__u8	smallest_fpi;
-	__u8	format_nvm_status;
-	__le16	compln_info;
-	__le32	status_field;
-};
+	__le32 	nsid;
+	__u8 	smallest_fpi;
+	__u8 	format_nvm_status;
+	__le16 	compln_info;
+	__le32 	status_field;
+} __attribute__((packed));
 
 /**
  * struct nvme_sanitize_start_event - Sanitize Start Event Data
@@ -3477,10 +3477,10 @@ struct nvme_format_nvm_compln_event {
  * @sani_cdw11:	Sanitize CDW11
  */
 struct nvme_sanitize_start_event {
-	__le32	sani_cap;
-	__le32	sani_cdw10;
-	__le32	sani_cdw11;
-};
+	__le32 	sani_cap;
+	__le32 	sani_cdw10;
+	__le32 	sani_cdw11;
+} __attribute__((packed));
 
 /**
  * struct nvme_sanitize_compln_event - Sanitize Completion Event Data
@@ -3494,7 +3494,7 @@ struct nvme_sanitize_compln_event {
 	__le16	sani_status;
 	__le16	cmpln_info;
 	__u8	rsvd6[2];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_set_feature_event - Set Feature Event Data
@@ -3504,7 +3504,7 @@ struct nvme_sanitize_compln_event {
 struct nvme_set_feature_event {
 	__le32	layout;
 	__le32	cdw_mem[0];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_thermal_exc_event -  Thermal Excursion Event Data
@@ -3512,9 +3512,9 @@ struct nvme_set_feature_event {
  * @threshold:	temperature threshold
  */
 struct nvme_thermal_exc_event {
-	__u8	over_temp;
-	__u8	threshold;
-};
+    __u8 	over_temp;
+    __u8 	threshold;
+} __attribute__((packed));
 
 /**
  * struct nvme_lba_rd - LBA Range Descriptor
@@ -3526,7 +3526,7 @@ struct nvme_lba_rd {
 	__le64	rslba;
 	__le32	rnlb;
 	__u8	rsvd12[4];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_lbas_ns_element - LBA Status Log Namespace Element
@@ -3542,7 +3542,7 @@ struct nvme_lbas_ns_element {
 	__u8	ratype;
 	__u8	rsvd8[7];
 	struct	nvme_lba_rd lba_rd[];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_lba_status_atype - Potentially Unrecoverable LBAs
@@ -3571,7 +3571,7 @@ struct nvme_lba_status_log {
 	__u8	rsvd12[2];
 	__le16	lsgc;
 	struct nvme_lbas_ns_element elements[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_eg_event_aggregate_log - Endurance Group Event Aggregate
@@ -3581,7 +3581,7 @@ struct nvme_lba_status_log {
 struct nvme_eg_event_aggregate_log {
 	__le64	nr_entries;
 	__le16	egids[];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_fid_supported_effects - FID Supported and Effects Data Structure definitions
@@ -3624,7 +3624,7 @@ enum nvme_fid_supported_effects {
  */
 struct nvme_fid_supported_effects_log {
 	__le32	fid_support[NVME_LOG_FID_SUPPORTED_EFFECTS_MAX];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_mi_cmd_supported_effects - MI Command Supported and Effects Data Structure
@@ -3666,7 +3666,7 @@ enum nvme_mi_cmd_supported_effects {
 struct nvme_mi_cmd_supported_effects_log {
 	__le32	mi_cmd_support[NVME_LOG_MI_CMD_SUPPORTED_EFFECTS_MAX];
 	__le32	reserved1[NVME_LOG_MI_CMD_SUPPORTED_EFFECTS_RESERVED];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_boot_partition - Boot Partition Log
@@ -3683,7 +3683,7 @@ struct nvme_boot_partition {
 	__le32	bpinfo;
 	__u8	rsvd8[8];
 	__u8	boot_partition_data[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_media_unit_stat_desc - Media Unit Status Descriptor
@@ -3707,7 +3707,7 @@ struct nvme_media_unit_stat_desc {
 	__u8	percent_used;
 	__u8	mucs;
 	__u8	cio;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_media_unit_stat_log - Media Unit Status
@@ -3723,7 +3723,7 @@ struct nvme_media_unit_stat_log {
 	__le16	sel_config;
 	__u8	rsvd6[10];
 	struct nvme_media_unit_stat_desc mus_desc[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_media_unit_config_desc - Media Unit Configuration Descriptor
@@ -3735,7 +3735,7 @@ struct nvme_media_unit_config_desc {
 	__le16	muid;
 	__u8	rsvd2[4];
 	__le16	mudl;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_channel_config_desc - Channel Configuration Descriptor
@@ -3748,7 +3748,7 @@ struct nvme_channel_config_desc {
 	__le16	chanid;
 	__le16	chmus;
 	struct nvme_media_unit_config_desc mu_config_desc[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_end_grp_chan_desc - Endurance Group Channel Configuration Descriptor
@@ -3759,7 +3759,7 @@ struct nvme_channel_config_desc {
 struct nvme_end_grp_chan_desc {
 	__le16	egchans;
 	struct nvme_channel_config_desc chan_config_desc[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_end_grp_config_desc -  Endurance Group Configuration Descriptor
@@ -3783,7 +3783,7 @@ struct nvme_end_grp_config_desc {
 	__u8	rsvd64[16];
 	__le16	egsets;
 	__le16	nvmsetid[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_capacity_config_desc - Capacity Configuration structure definitions
@@ -3801,7 +3801,7 @@ struct nvme_capacity_config_desc {
 	__le16	egcn;
 	__u8	rsvd6[26];
 	struct nvme_end_grp_config_desc egcd[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_supported_cap_config_list_log - Supported Capacity Configuration list log page
@@ -3814,7 +3814,7 @@ struct nvme_supported_cap_config_list_log {
 	__u8	sccn;
 	__u8	rsvd1[15];
 	struct nvme_capacity_config_desc cap_config_desc[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_resv_notification_log - Reservation Notification Log
@@ -3832,7 +3832,7 @@ struct nvme_resv_notification_log {
 	__u8	rsvd9[2];
 	__le32	nsid;
 	__u8	rsvd16[48];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_resv_notify_rnlpt -  Reservation Notification Log - Reservation Notification Log Page Type
@@ -3927,7 +3927,7 @@ struct nvme_sanitize_log_page {
 	__le32	etbend;
 	__le32	etcend;
 	__u8	rsvd32[480];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_sanitize_sstat - Sanitize Status (SSTAT)
@@ -3996,7 +3996,7 @@ struct nvme_zns_changed_zone_log {
 	__le16		nrzid;
 	__u8		rsvd2[6];
 	__le64		zid[NVME_ZNS_CHANGED_ZONES_MAX];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_zns_zt - Zone Descriptor Data Structure - Zone Type
@@ -4064,7 +4064,7 @@ struct nvme_zns_desc {
 	__le64	zslba;
 	__le64	wp;
 	__u8	rsvd32[32];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_zone_report - Report Zones Data Structure
@@ -4076,7 +4076,7 @@ struct nvme_zone_report {
 	__le64			nr_zones;
 	__u8			rsvd8[56];
 	struct nvme_zns_desc	entries[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_lba_status_desc - LBA Status Descriptor Entry
@@ -4092,7 +4092,7 @@ struct nvme_lba_status_desc {
 	__u8	rsvd12;
 	__u8	status;
 	__u8	rsvd14[2];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_lba_status - LBA Status Descriptor List
@@ -4106,7 +4106,7 @@ struct nvme_lba_status {
 	__u8	cmpc;
 	__u8	rsvd5[3];
 	struct nvme_lba_status_desc descs[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_feat_auto_pst - Autonomous Power State Transition
@@ -4114,7 +4114,7 @@ struct nvme_lba_status {
  */
 struct nvme_feat_auto_pst {
 	__le64	apst_entry[32];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_apst_entry - Autonomous Power State Transition
@@ -4142,7 +4142,7 @@ struct nvme_metadata_element_desc {
 	__u8	rev;
 	__u16	len;
 	__u8	val[0];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_host_metadata - Host Metadata Data Structure
@@ -4232,7 +4232,7 @@ struct nvme_timestamp {
 	__u8 timestamp[6];
 	__u8 attr;
 	__u8 rsvd;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_lba_range_type_entry - LBA Range Type - Data Structure Entry
@@ -4252,7 +4252,7 @@ struct nvme_lba_range_type_entry {
 	__u64	nlb;
 	__u8	guid[16];
 	__u8	rsvd48[16];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_lbart - LBA Range Type - Data Structure Entry
@@ -4280,7 +4280,7 @@ enum nvme_lbart {
  */
 struct nvme_lba_range_type {
 	struct nvme_lba_range_type_entry entry[NVME_FEAT_LBA_RANGE_MAX];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_plm_config - Predictable Latency Mode - Deterministic Threshold Configuration Data Structure
@@ -4298,7 +4298,7 @@ struct nvme_plm_config {
 	__le64	dtwinwt;
 	__le64	dtwintt;
 	__u8	rsvd56[456];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_feat_host_behavior - Host Behavior Support - Data Structure
@@ -4308,7 +4308,7 @@ struct nvme_plm_config {
 struct nvme_feat_host_behavior {
 	__u8 acre;
 	__u8 rsvd1[511];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_host_behavior_support - Enable Advanced Command
@@ -4328,7 +4328,7 @@ struct nvme_dsm_range {
 	__le32	cattr;
 	__le32	nlb;
 	__le64	slba;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_copy_range - Copy - Source Range Entries Descriptor Format
@@ -4349,7 +4349,7 @@ struct nvme_copy_range {
 	__le32			eilbrt;
 	__le16			elbatm;
 	__le16			elbat;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_copy_range_f1 - Copy - Source Range Entries Descriptor Format 1h
@@ -4370,7 +4370,7 @@ struct nvme_copy_range_f1 {
 	__u8			elbt[10];
 	__le16			elbatm;
 	__le16			elbat;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_registered_ctrl - Registered Controller Data Structure
@@ -4386,7 +4386,7 @@ struct nvme_registered_ctrl {
 	__u8	rsvd3[5];
 	__le64	hostid;
 	__le64	rkey;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_registered_ctrl_ext - Registered Controller Extended Data Structure
@@ -4404,7 +4404,7 @@ struct nvme_registered_ctrl_ext {
 	__le64	rkey;
 	__u8	hostid[16];
 	__u8	rsvd32[32];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_resv_status - Reservation Status Data Structure
@@ -4432,7 +4432,7 @@ struct nvme_resv_status {
 		};
 		struct nvme_registered_ctrl regctl_ds[0];
 	};
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_streams_directive_params -  Streams Directive - Return Parameters Data Structure
@@ -4458,7 +4458,7 @@ struct nvme_streams_directive_params {
 	__le16	nsa;
 	__le16	nso;
 	__u8	rsvd2[6];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_streams_directive_status - Streams Directive - Get Status Data Structure
@@ -4468,7 +4468,7 @@ struct nvme_streams_directive_params {
 struct nvme_streams_directive_status {
 	__le16	osc;
 	__le16	sid[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_id_directives -	Identify Directive - Return Parameters Data Structure
@@ -4480,7 +4480,7 @@ struct nvme_id_directives {
 	__u8	supported[32];
 	__u8	enabled[32];
 	__u8	rsvd64[4032];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_directive_types - Directives Supported or Enabled
@@ -4507,7 +4507,7 @@ struct nvme_host_mem_buf_attrs {
 	__le32	hmdlec;
 	__u8	rsvd16[4080];
 
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_ae_type - Asynchronous Event Type
@@ -4686,7 +4686,7 @@ union nvmf_tsas {
 	struct tcp {
 		__u8	sectype;
 	} tcp;
-};
+} __attribute__((packed));
 
 /**
  * struct nvmf_disc_log_entry - Discovery Log Page entry
@@ -4749,7 +4749,7 @@ struct nvmf_disc_log_entry {
 	char		subnqn[NVME_NQN_LENGTH];
 	char		traddr[NVMF_TRADDR_SIZE];
 	union nvmf_tsas	tsas;
-};
+} __attribute__((packed));
 
 /**
  * enum nvmf_trtype - Transport Type codes for Discovery Log Page entry TRTYPE field
@@ -4905,7 +4905,7 @@ struct nvmf_discovery_log {
 	__le16		recfmt;
 	__u8		rsvd14[1006];
 	struct nvmf_disc_log_entry entries[];
-};
+} __attribute__((packed));
 
 /*
  * Discovery Information Management (DIM) command. This is sent by a
@@ -5082,7 +5082,7 @@ struct nvmf_connect_data {
 	char		subsysnqn[NVME_NQN_LENGTH];
 	char		hostnqn[NVME_NQN_LENGTH];
 	char		rsvd5[256];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_read_nvm_ss_info - NVM Subsystem Information Data Structure
@@ -5096,7 +5096,7 @@ struct nvme_mi_read_nvm_ss_info {
 	__u8	mjr;
 	__u8	mnr;
 	__u8	rsvd3[29];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_port_pcie - PCIe Port Specific Data
@@ -5116,7 +5116,7 @@ struct nvme_mi_port_pcie {
 	__u8	nlw;
 	__u8	pn;
 	__u8	rsvd14[18];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_port_smb - SMBus Port Specific Data
@@ -5134,7 +5134,7 @@ struct nvme_mi_port_smb {
 	__u8	mme_freq;
 	__u8	nvmebm;
 	__u8	rsvd13[19];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_read_port_info - Port Information Data Structure
@@ -5178,7 +5178,7 @@ struct nvme_mi_read_ctrl_info {
 	__le16	ssvid;
 	__le16	ssid;
 	__u8	rsvd16[16];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_osc - Optionally Supported Command Data Structure
@@ -5188,7 +5188,7 @@ struct nvme_mi_read_ctrl_info {
 struct nvme_mi_osc {
 	__u8	type;
 	__u8	opc;
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_read_sc_list -  Management Endpoint Buffer Supported Command List Data Structure
@@ -5199,7 +5199,7 @@ struct nvme_mi_osc {
 struct nvme_mi_read_sc_list {
 	__le16	numcmd;
 	struct nvme_mi_osc cmds[];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_nvm_ss_health_status - Subsystem Management Data Structure
@@ -5217,7 +5217,7 @@ struct nvme_mi_nvm_ss_health_status {
 	__u8	pdlu;
 	__le16	ccs;
 	__u8	rsvd8[2];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_mi_ccs - Get State Control Primitive Success Response Fields - Control Primitive Specific Response
@@ -5281,7 +5281,7 @@ struct nvme_mi_ctrl_health_status {
 	__u8	spare;
 	__u8	cwarn;
 	__u8	rsvd9[7];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_mi_csts - Controller Health Data Structure (CHDS) - Controller Status (CSTS)
@@ -5355,7 +5355,7 @@ struct nvme_mi_vpd_mra {
 	__u8	mtl;
 	__u8	tnvmcap[16];
 	__u8	rsvd37[27];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_vpd_ppmra -  NVMe PCIe Port MultiRecord Area
@@ -5379,7 +5379,7 @@ struct nvme_mi_vpd_ppmra {
 	__u8	refccap;
 	__u8	pi;
 	__u8	rsvd13[3];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_vpd_telem - Vital Product Data Element Descriptor
@@ -5394,7 +5394,7 @@ struct nvme_mi_vpd_telem {
 	__u8	rev;
 	__u8	len;
 	__u8	data[0];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_mi_elem - Element Descriptor Types
@@ -5428,7 +5428,7 @@ struct nvme_mi_vpd_tra {
 	__u8	rsvd6;
 	__u8	ec;
 	struct nvme_mi_vpd_telem elems[0];
-};
+} __attribute__((packed));
 
 /**
  * struct nvme_mi_vpd_mr_common -  NVMe MultiRecord Area
@@ -5477,7 +5477,7 @@ struct nvme_mi_vpd_hdr {
 	__u8	rsvd6;
 	__u8	chchk;
 	__u8	vpd[];
-};
+} __attribute__((packed));
 
 /**
  * enum nvme_status_field - Defines all parts of the nvme status field: status
