@@ -1069,11 +1069,11 @@ static inline int nvme_mi_admin_identify_ns(nvme_mi_ctrl_t ctrl, __u32 nsid,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 static inline int nvme_mi_admin_identify_ns_descs(nvme_mi_ctrl_t ctrl,
-		__u32 nsid,
-		struct nvme_ns_id_desc *descs)
+						  __u32 nsid,
+						  struct nvme_ns_id_desc *descs)
 {
 	return nvme_mi_admin_identify_cns_nsid(ctrl, NVME_IDENTIFY_CNS_NS_DESC_LIST,
-			nsid, descs);
+					       nsid, descs);
 }
 
 /**
@@ -1294,8 +1294,8 @@ static inline int nvme_mi_admin_identify_active_ns_list(nvme_mi_ctrl_t ctrl,
  * See: &struct nvme_primary_ctrl_cap
  */
 static inline int nvme_mi_admin_identify_primary_ctrl(nvme_mi_ctrl_t ctrl,
-		__u16 cntid,
-		struct nvme_primary_ctrl_cap *cap)
+						      __u16 cntid,
+						      struct nvme_primary_ctrl_cap *cap)
 {
 	struct nvme_identify_args args = {
 		.result = NULL,
