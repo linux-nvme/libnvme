@@ -503,7 +503,7 @@ int nvme_get_feature_length2(int fid, __u32 cdw11, enum nvme_data_tfr dir,
 			*len = 0;
 			break;
 		}
-		fallthrough;
+		LIBNVME_FALLTHROUGH;
 	default:
 		return nvme_get_feature_length(fid, cdw11, len);
 	}

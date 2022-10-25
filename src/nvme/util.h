@@ -18,9 +18,12 @@
  */
 
 #if __has_attribute(__fallthrough__)
-# define fallthrough __attribute__((__fallthrough__))
+#define LIBNVME_FALLTHROUGH __attribute__((__fallthrough__))
 #else
-# define fallthrough do {} while (0) /* fallthrough */
+#define LIBNVME_FALLTHROUGH \
+	do                      \
+	{                       \
+	} while (0) /* fallthrough */
 #endif
 
 /**
