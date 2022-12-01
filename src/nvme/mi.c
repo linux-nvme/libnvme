@@ -582,12 +582,39 @@ int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
 	}
 
 	/* bidirectional not permitted (see DLEN definition) */
-	if (req_data_size && *resp_data_size) {
+	int direction = admin_req->opcode & 0x3;
+	if (direction == NVME_DATA_TFR_BIDIRECTIONAL || (req_data_size && *resp_data_size))
+	{
+		nvme_msg(ctrl->ep->root, LOG_ERR,
+				 "nvme_mi_admin_xfer doesn't support bidirectional commands\n");
 		errno = EINVAL;
 		return -1;
 	}
-
-	if (!*resp_data_size && resp_data_offset) {
+	else if (direction == NVME_DATA_TFR_HOST_TO_CTRL && *resp_data_size)
+	{
+		nvme_msg(ctrl->ep->root, LOG_ERR,
+				 "nvme_mi_admin_xfer doesn't support response data on WRITE commands\n");
+		errno = EINVAL;
+		return -1;
+	}
+	else if (direction == NVME_DATA_TFR_CTRL_TO_HOST && req_data_size)
+	{
+		nvme_msg(ctrl->ep->root, LOG_ERR,
+				 "nvme_mi_admin_xfer doesn't support request data on READ commands\n");
+		errno = EINVAL;
+		return -1;
+	}
+	else if (resp_data_offset && (direction != NVME_DATA_TFR_CTRL_TO_HOST || !*resp_data_size))
+	{
+		nvme_msg(ctrl->ep->root, LOG_ERR,
+				 "nvme_mi_admin_xfer invalid offset value\n");
+		errno = EINVAL;
+		return -1;
+	}
+	else if (direction == NVME_DATA_TFR_NO_DATA_TFR && req_data_size && *resp_data_size)
+	{
+		nvme_msg(ctrl->ep->root, LOG_ERR,
+				 "nvme_mi_admin_xfer doesn't support data on NONE_DATA_TRANSFER commands\n");
 		errno = EINVAL;
 		return -1;
 	}
@@ -611,9 +638,42 @@ int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
 	resp.data_len = *resp_data_size;
 
 	/* limit the response size, specify offset */
-	admin_req->flags = 0x3;
-	admin_req->dlen = cpu_to_le32(resp.data_len & 0xffffffff);
-	admin_req->doff = cpu_to_le32(resp_data_offset & 0xffffffff);
+	if (direction == NVME_DATA_TFR_HOST_TO_CTRL)
+	{
+		if (req.data_len)
+		{
+			admin_req->flags = 0x1;
+		}
+		else
+		{
+			admin_req->flags = 0;
+		}
+		admin_req->dlen = cpu_to_le32(resp.data_len & 0xffffffff);
+		admin_req->doff = 0;
+	}
+	else if (direction == NVME_DATA_TFR_CTRL_TO_HOST)
+	{
+		if (resp.data_len && resp_data_offset)
+		{
+			admin_req->flags = 0x3;
+		}
+		else if (resp.data_len)
+		{
+			admin_req->flags = 0x1;
+		}
+		else
+		{
+			admin_req->flags = 0x0;
+		}
+		admin_req->dlen = cpu_to_le32(resp.data_len & 0xffffffff);
+		admin_req->doff = cpu_to_le32(resp_data_offset & 0xffffffff);
+	}
+	else
+	{
+		admin_req->flags = 0;
+		admin_req->dlen = 0;
+		admin_req->doff = 0;
+	}
 
 	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
 	if (rc)
