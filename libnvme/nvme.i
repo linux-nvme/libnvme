@@ -179,9 +179,17 @@ static void PyDict_SetItemStringDecRef(PyObject *p, const char *key, PyObject *v
 }
 %}
 
+%{
+static void strchomp(char *s, int l) {
+    while (l && (s[l] == '\0' || s[l] == ' '))
+      s[l--] = '\0';
+}
+%}
+
 %typemap(out) struct nvmf_discovery_log * {
   struct nvmf_discovery_log *log = $1;
   int numrec = log? log->numrec : 0, i;
+  char *traddr = NULL, *trsvcid = NULL;
   PyObject *obj = PyList_New(numrec);
   if (!obj)
     return NULL;
@@ -229,9 +237,13 @@ static void PyDict_SetItemStringDecRef(PyObject *p, const char *key, PyObject *v
       val = PyLong_FromLong(e->adrfam);
     }
     PyDict_SetItemStringDecRef(entry, "adrfam", val);
-    val = PyUnicode_FromString(e->traddr);
+    strchomp(e->traddr, NVMF_TRADDR_SIZE - 1);
+    strchomp(e->trsvcid, NVMF_TRSVCID_SIZE - 1);
+    traddr = e->traddr;
+    trsvcid = e->trsvcid;
+    val = PyUnicode_FromString(traddr);
     PyDict_SetItemStringDecRef(entry, "traddr", val);
-    val = PyUnicode_FromString(e->trsvcid);
+    val = PyUnicode_FromString(trsvcid);
     PyDict_SetItemStringDecRef(entry, "trsvcid", val);
     val = PyUnicode_FromString(e->subnqn);
     PyDict_SetItemStringDecRef(entry, "subnqn", val);
