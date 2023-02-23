@@ -17,7 +17,7 @@ api_files = [
   'tree.h',
   'types.h',
   'fabrics.h',
-  'util.h'
+  'util.h',
 ]
 
 api_paths = []
