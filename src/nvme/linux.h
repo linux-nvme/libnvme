@@ -31,7 +31,7 @@
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_fw_download_seq(int fd, __u32 size, __u32 xfer, __u32 offset,
+int nvme_fw_download_seq(struct dev_handle *h, __u32 size, __u32 xfer, __u32 offset,
 			 void *buf);
 
 /**
@@ -62,7 +62,7 @@ enum nvme_telemetry_da {
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_ctrl_telemetry(int fd, bool rae, struct nvme_telemetry_log **log,
+int nvme_get_ctrl_telemetry(struct dev_handle *h, bool rae, struct nvme_telemetry_log **log,
 		enum nvme_telemetry_da da, size_t *size);
 
 /**
@@ -78,7 +78,7 @@ int nvme_get_ctrl_telemetry(int fd, bool rae, struct nvme_telemetry_log **log,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_host_telemetry(int fd,  struct nvme_telemetry_log **log,
+int nvme_get_host_telemetry(struct dev_handle *h,  struct nvme_telemetry_log **log,
 		enum nvme_telemetry_da da, size_t *size);
 
 /**
@@ -94,7 +94,7 @@ int nvme_get_host_telemetry(int fd,  struct nvme_telemetry_log **log,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_new_host_telemetry(int fd,  struct nvme_telemetry_log **log,
+int nvme_get_new_host_telemetry(struct dev_handle *h,  struct nvme_telemetry_log **log,
 		enum nvme_telemetry_da da, size_t *size);
 
 /**
@@ -105,7 +105,7 @@ int nvme_get_new_host_telemetry(int fd,  struct nvme_telemetry_log **log,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_ana_log_len(int fd, size_t *analen);
+int nvme_get_ana_log_len(struct dev_handle *h, size_t *analen);
 
 /**
  * nvme_get_logical_block_size() - Retrieve block size
@@ -116,7 +116,7 @@ int nvme_get_ana_log_len(int fd, size_t *analen);
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_logical_block_size(int fd, __u32 nsid, int *blksize);
+int nvme_get_logical_block_size(struct dev_handle *h, __u32 nsid, int *blksize);
 
 /**
  * nvme_get_lba_status_log() - Retrieve the LBA Status log page
@@ -127,7 +127,7 @@ int nvme_get_logical_block_size(int fd, __u32 nsid, int *blksize);
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_get_lba_status_log(int fd, bool rae, struct nvme_lba_status_log **log);
+int nvme_get_lba_status_log(struct dev_handle *h, bool rae, struct nvme_lba_status_log **log);
 
 /**
  * nvme_namespace_attach_ctrls() - Attach namespace to controller(s)
@@ -139,7 +139,7 @@ int nvme_get_lba_status_log(int fd, bool rae, struct nvme_lba_status_log **log);
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_namespace_attach_ctrls(int fd, __u32 nsid, __u16 num_ctrls, __u16 *ctrlist);
+int nvme_namespace_attach_ctrls(struct dev_handle *h, __u32 nsid, __u16 num_ctrls, __u16 *ctrlist);
 
 /**
  * nvme_namespace_detach_ctrls() - Detach namespace from controller(s)
@@ -151,7 +151,7 @@ int nvme_namespace_attach_ctrls(int fd, __u32 nsid, __u16 num_ctrls, __u16 *ctrl
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_namespace_detach_ctrls(int fd, __u32 nsid, __u16 num_ctrls, __u16 *ctrlist);
+int nvme_namespace_detach_ctrls(struct dev_handle *h, __u32 nsid, __u16 num_ctrls, __u16 *ctrlist);
 
 /**
  * nvme_open() - Open an nvme controller or namespace device

@@ -1062,9 +1062,9 @@ static struct nvmf_discovery_log *nvme_discovery_log(nvme_ctrl_t c,
 	const char *name = nvme_ctrl_get_name(c);
 	uint64_t genctr, numrec;
 	unsigned int size;
-	int fd = nvme_ctrl_get_fd(c);
+	struct dev_handle *hdl = nvme_ctrl_get_fd(c);
 
-	args->fd = fd;
+	args->hdl = hdl;
 
 	do {
 		size = sizeof(struct nvmf_discovery_log);
@@ -1084,7 +1084,7 @@ static struct nvmf_discovery_log *nvme_discovery_log(nvme_ctrl_t c,
 		args->lpo = 0;
 		args->len = size;
 		args->log = log;
-		ret = nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, args);
+		ret = nvme_get_log_page(hdl, NVME_LOG_PAGE_PDU_SIZE, args);
 		if (ret) {
 			nvme_msg(r, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
@@ -1119,7 +1119,7 @@ static struct nvmf_discovery_log *nvme_discovery_log(nvme_ctrl_t c,
 		args->lpo = sizeof(struct nvmf_discovery_log);
 		args->len = size - sizeof(struct nvmf_discovery_log);
 		args->log = log->entries;
-		ret = nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, args);
+		ret = nvme_get_log_page(hdl, NVME_LOG_PAGE_PDU_SIZE, args);
 		if (ret) {
 			nvme_msg(r, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
@@ -1137,7 +1137,8 @@ static struct nvmf_discovery_log *nvme_discovery_log(nvme_ctrl_t c,
 		args->lpo = 0;
 		args->len = sizeof(struct nvmf_discovery_log);
 		args->log = log;
-		ret = nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, args);
+		ret = nvme_get_log_page(hdl, NVME_LOG_PAGE_PDU_SIZE, args);
+
 		if (ret) {
 			nvme_msg(r, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
@@ -1198,7 +1199,7 @@ int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ctrl_get_fd(c),
+		.hdl = nvme_ctrl_get_fd(c),
 		.nsid = NVME_NSID_NONE,
 		.lsp = NVMF_LOG_DISC_LSP_NONE,
 		.lsi = NVME_LOG_LSI_NONE,
@@ -1230,7 +1231,7 @@ struct nvmf_discovery_log *nvmf_get_discovery_wargs(struct nvme_get_discovery_ar
 
 	struct nvme_get_log_args _args = {
 		.args_size = sizeof(_args),
-		.fd = nvme_ctrl_get_fd(args->c),
+		.hdl = nvme_ctrl_get_fd(args->c),
 		.nsid = NVME_NSID_NONE,
 		.lsp = args->lsp,
 		.lsi = NVME_LOG_LSI_NONE,
@@ -1589,7 +1590,7 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 
 	struct nvme_dim_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ctrl_get_fd(c),
+		.hdl = nvme_ctrl_get_fd(c),
 		.result = result,
 		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
 		.tas = tas

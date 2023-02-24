@@ -492,7 +492,7 @@ nvme_ns_t nvme_subsystem_next_ns(nvme_subsystem_t s, nvme_ns_t n);
 		p = nvme_namespace_next_path(n, p))
 
 /**
- * nvme_ns_get_fd() - Get associated file descriptor
+ * nvme_ns_get_hdl() - Get handle associated file descriptor
  * @n:	Namespace instance
  *
  * libnvme will open() the file (if not already opened) and keep
@@ -502,9 +502,9 @@ nvme_ns_t nvme_subsystem_next_ns(nvme_subsystem_t s, nvme_ns_t n);
  * remain cached until the ns object is deleted or
  * nvme_ns_release_fd() is called.
  *
- * Return: File descriptor associated with @n or -1
+ * Return: dev_handle associated with @n or -1
  */
-int nvme_ns_get_fd(nvme_ns_t n);
+void* nvme_ns_get_hdl(nvme_ns_t n);
 
 /**
  * nvme_ns_release_fd() - Close fd and clear fd from ns object
@@ -806,7 +806,7 @@ nvme_ns_t nvme_path_get_ns(nvme_path_t p);
  *
  * Return: File descriptor associated with @c or -1
  */
-int nvme_ctrl_get_fd(nvme_ctrl_t c);
+void* nvme_ctrl_get_fd(nvme_ctrl_t c);
 
 /**
  * nvme_ctrl_release_fd() - Close fd and clear fd from controller object

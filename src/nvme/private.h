@@ -41,7 +41,7 @@ struct nvme_ns {
 	struct nvme_subsystem *s;
 	struct nvme_ctrl *c;
 
-	int fd;
+	struct dev_handle *hdl;
 	__u32 nsid;
 	char *name;
 	char *generic_name;
@@ -65,7 +65,7 @@ struct nvme_ctrl {
 	struct list_head namespaces;
 	struct nvme_subsystem *s;
 
-	int fd;
+	struct dev_handle *hdl;
 	char *name;
 	char *sysfs_dir;
 	char *address;
