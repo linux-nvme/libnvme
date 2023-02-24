@@ -61,6 +61,9 @@ else
 endif
 conf.set('CONFIG_JSONC', json_c_dep.found(), description: 'Is json-c required?')
 
+# Check for libxnvme availability
+libxnvme_dep = dependency('xnvme', version: '>=0.2.0', required: true)
+
 # Check for OpenSSL availability
 openssl_dep = dependency('openssl',
                          version: '>=1.1.0',

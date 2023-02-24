@@ -28,10 +28,12 @@
 enum nvme_dev_type {
 	NVME_DEV_DIRECT,
 	NVME_DEV_MI,
+	NVME_DEV_XNVME,
 };
 
 struct dev_handle {
         int fd;
+	struct xnvme_dev *xdev;
         enum nvme_dev_type dev_type;
 };
 

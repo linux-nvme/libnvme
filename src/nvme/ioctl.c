@@ -22,6 +22,9 @@
 
 #include "ioctl.h"
 #include "util.h"
+#include <libxnvme.h>
+#include <libxnvme_nvm.h>
+
 
 static int nvme_verify_chr(int fd)
 {
@@ -73,6 +76,9 @@ int nvme_get_nsid(struct dev_handle *hnd, __u32 *nsid)
 	errno = 0;
 	if (hnd->dev_type == NVME_DEV_DIRECT)
 		*nsid = ioctl(hnd->fd, NVME_IOCTL_ID);
+	else if (hnd->dev_type == NVME_DEV_XNVME)
+		*nsid = xnvme_dev_get_nsid(hnd->xdev);
+
 	return -1 * (errno != 0);
 }
 
@@ -80,7 +86,41 @@ static int nvme_submit_passthru64(struct dev_handle *hnd, unsigned long ioctl_cm
 				  struct nvme_passthru_cmd64 *cmd,
 				  __u64 *result)
 {
-	int err = ioctl(fd, ioctl_cmd, cmd);
+	int err = -1;
+
+	if (hnd->dev_type == NVME_DEV_DIRECT) {
+		err = ioctl(hnd->fd, ioctl_cmd, cmd);
+
+                if (err >= 0 && result)
+                        *result = cmd->result;
+        } else if (hnd->dev_type == NVME_DEV_XNVME) {
+                struct xnvme_dev *dev = (struct xnvme_dev *)hnd->xdev;
+                struct xnvme_cmd_ctx ctx = xnvme_cmd_ctx_from_dev(dev);
+                void *dbuf = NULL;
+
+                if (cmd->data_len) {
+                        dbuf = xnvme_buf_alloc(dev, cmd->data_len);
+                        if (!dbuf) {
+                                printf("[libnvme] xnvme_buf_alloc() failed \n");
+				return -1;
+                        }
+                }
+
+                memcpy(&ctx, cmd, sizeof(*cmd));
+                memcpy(dbuf, (int *)cmd->addr, cmd->data_len);
+
+                if (ioctl_cmd == NVME_IOCTL_ADMIN_CMD)
+                        err = xnvme_cmd_pass_admin(&ctx, dbuf, cmd->data_len, NULL, 0);
+                else if (ioctl_cmd == NVME_IOCTL_IO_CMD)
+                        err = xnvme_cmd_pass(&ctx, dbuf, cmd->data_len, NULL, 0);
+
+                if (err || xnvme_cmd_ctx_cpl_status(&ctx)) {
+                        printf("[libnvme] xnvme cmd failed..... \n");
+                }
+
+                memcpy((int *)cmd->addr, dbuf, cmd->data_len);
+                xnvme_buf_free(dev, dbuf);
+        }
 
 	if (err >= 0 && result)
 		*result = cmd->result;
@@ -90,7 +130,40 @@ static int nvme_submit_passthru64(struct dev_handle *hnd, unsigned long ioctl_cm
 static int nvme_submit_passthru(struct dev_handle *hnd, unsigned long ioctl_cmd,
 				struct nvme_passthru_cmd *cmd, __u32 *result)
 {
-	int err = ioctl(fd, ioctl_cmd, cmd);
+	int err = -1;
+
+	if (hnd->dev_type == NVME_DEV_DIRECT) {
+		err = ioctl(hnd->fd, ioctl_cmd, cmd);
+
+		if (err >= 0 && result)
+			*result = cmd->result;
+	} else if (hnd->dev_type == NVME_DEV_XNVME) {
+		struct xnvme_cmd_ctx ctx = xnvme_cmd_ctx_from_dev(hnd->xdev);
+		void *dbuf = NULL;
+
+		if (cmd->data_len) {
+			dbuf = xnvme_buf_alloc(hnd->xdev, cmd->data_len);
+			if (!dbuf) {
+				printf("[libnvme] xnvme_buf_alloc() failed \n");
+				return -1;
+			}
+		}
+
+		memcpy(&ctx, cmd, sizeof(*cmd));
+		memcpy(dbuf, (int *)cmd->addr, cmd->data_len);
+
+		if (ioctl_cmd == NVME_IOCTL_ADMIN_CMD)
+			err = xnvme_cmd_pass_admin(&ctx, dbuf, cmd->data_len, NULL, 0);
+		else if (ioctl_cmd == NVME_IOCTL_IO_CMD)
+			err = xnvme_cmd_pass(&ctx, dbuf, cmd->data_len, NULL, 0);
+
+                if (err || xnvme_cmd_ctx_cpl_status(&ctx)) {
+                        printf("[libnvme] xnvme cmd failed..... \n");
+                }
+
+		memcpy((int *)cmd->addr, dbuf, cmd->data_len);
+                xnvme_buf_free(hnd->xdev, dbuf);
+        }
 
 	if (err >= 0 && result)
 		*result = cmd->result;
