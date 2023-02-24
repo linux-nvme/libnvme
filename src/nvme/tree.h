@@ -469,7 +469,7 @@ nvme_ns_t nvme_subsystem_next_ns(nvme_subsystem_t s, nvme_ns_t n);
  *
  * Return: File descriptor associated with @n or -1
  */
-int nvme_ns_get_fd(nvme_ns_t n);
+void* nvme_ns_get_fd(nvme_ns_t n);
 
 /**
  * nvme_ns_get_nsid() - NSID of a namespace
@@ -757,7 +757,7 @@ nvme_ns_t nvme_path_get_ns(nvme_path_t p);
  *
  * Return: File descriptor associated with @c or -1
  */
-int nvme_ctrl_get_fd(nvme_ctrl_t c);
+void* nvme_ctrl_get_fd(nvme_ctrl_t c);
 
 /**
  * nvme_ctrl_get_name() - sysfs name of a controller

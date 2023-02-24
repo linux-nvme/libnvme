@@ -89,13 +89,13 @@ close_fd:
 	return -1;
 }
 
-int nvme_fw_download_seq(int fd, __u32 size, __u32 xfer, __u32 offset,
+int nvme_fw_download_seq(struct dev_handle *hnd, __u32 size, __u32 xfer, __u32 offset,
 			 void *buf)
 {
 	int err = 0;
 	struct nvme_fw_download_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.offset = offset,
 		.data_len = xfer,
 		.data = buf,
@@ -117,7 +117,7 @@ int nvme_fw_download_seq(int fd, __u32 size, __u32 xfer, __u32 offset,
 	return err;
 }
 
-static int nvme_get_telemetry_log(int fd, bool create, bool ctrl, bool rae,
+static int nvme_get_telemetry_log(struct dev_handle *hnd, bool create, bool ctrl, bool rae,
 				  struct nvme_telemetry_log **buf, enum nvme_telemetry_da da,
 				  size_t *size)
 {
@@ -130,7 +130,7 @@ static int nvme_get_telemetry_log(int fd, bool create, bool ctrl, bool rae,
 	int err;
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.nsid = NVME_NSID_NONE,
 		.lsp = NVME_LOG_LSP_NONE,
 		.lsi = NVME_LOG_LSI_NONE,
@@ -151,14 +151,14 @@ static int nvme_get_telemetry_log(int fd, bool create, bool ctrl, bool rae,
 	}
 
 	if (ctrl) {
-		err = nvme_get_log_telemetry_ctrl(fd, true, 0, xfer, log);
+		err = nvme_get_log_telemetry_ctrl(hnd, true, 0, xfer, log);
 		lid = NVME_LOG_LID_TELEMETRY_CTRL;
 	} else {
 		lid = NVME_LOG_LID_TELEMETRY_HOST;
 		if (create)
-			err = nvme_get_log_create_telemetry_host(fd, log);
+			err = nvme_get_log_create_telemetry_host(hnd, log);
 		else
-			err = nvme_get_log_telemetry_host(fd, 0, xfer, log);
+			err = nvme_get_log_telemetry_host(hnd, 0, xfer, log);
 	}
 
 	if (err)
@@ -179,7 +179,7 @@ static int nvme_get_telemetry_log(int fd, bool create, bool ctrl, bool rae,
 		*size = (le16_to_cpu(telem->dalb3) + 1) * xfer;
 		break;
 	case NVME_TELEMETRY_DA_4:
-		err = nvme_identify_ctrl(fd, &id_ctrl);
+		err = nvme_identify_ctrl(hnd, &id_ctrl);
 		if (err) {
 			perror("identify-ctrl");
 			errno = EINVAL;
@@ -213,7 +213,7 @@ static int nvme_get_telemetry_log(int fd, bool create, bool ctrl, bool rae,
 	args.lid = lid;
 	args.log = log;
 	args.len = *size;
-	err = nvme_get_log_page(fd, 4096, &args);
+	err = nvme_get_log_page(hnd, 4096, &args);
 	if (!err) {
 		*buf = log;
 		return 0;
@@ -223,32 +223,32 @@ free:
 	return err;
 }
 
-int nvme_get_ctrl_telemetry(int fd, bool rae, struct nvme_telemetry_log **log,
+int nvme_get_ctrl_telemetry(struct dev_handle *hnd, bool rae, struct nvme_telemetry_log **log,
 		enum nvme_telemetry_da da, size_t *size)
 {
-	return nvme_get_telemetry_log(fd, false, true, rae, log, da, size);
+	return nvme_get_telemetry_log(hnd, false, true, rae, log, da, size);
 }
 
-int nvme_get_host_telemetry(int fd, struct nvme_telemetry_log **log,
+int nvme_get_host_telemetry(struct dev_handle *hnd, struct nvme_telemetry_log **log,
 		enum nvme_telemetry_da da, size_t *size)
 {
-	return nvme_get_telemetry_log(fd, false, false, false, log, da, size);
+	return nvme_get_telemetry_log(hnd, false, false, false, log, da, size);
 }
 
-int nvme_get_new_host_telemetry(int fd, struct nvme_telemetry_log **log,
+int nvme_get_new_host_telemetry(struct dev_handle *hnd, struct nvme_telemetry_log **log,
 		enum nvme_telemetry_da da, size_t *size)
 {
-	return nvme_get_telemetry_log(fd, true, false, false, log, da, size);
+	return nvme_get_telemetry_log(hnd, true, false, false, log, da, size);
 }
 
-int nvme_get_lba_status_log(int fd, bool rae, struct nvme_lba_status_log **log)
+int nvme_get_lba_status_log(struct dev_handle *hnd, bool rae, struct nvme_lba_status_log **log)
 {
 	__u32 size = sizeof(struct nvme_lba_status_log);
 	void *buf, *tmp;
 	int err;
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.nsid = NVME_NSID_NONE,
 		.lsp = NVME_LOG_LSP_NONE,
 		.lsi = NVME_LOG_LSI_NONE,
@@ -265,7 +265,7 @@ int nvme_get_lba_status_log(int fd, bool rae, struct nvme_lba_status_log **log)
 		return -1;
 
 	*log = buf;
-	err = nvme_get_log_lba_status(fd, true, 0, size, buf);
+	err = nvme_get_log_lba_status(hnd, true, 0, size, buf);
 	if (err)
 		goto free;
 
@@ -284,7 +284,7 @@ int nvme_get_lba_status_log(int fd, bool rae, struct nvme_lba_status_log **log)
 	args.lid = NVME_LOG_LID_LBA_STATUS;
 	args.log = buf;
 	args.len = size;
-	err = nvme_get_log_page(fd, 4096, &args);
+	err = nvme_get_log_page(hnd, 4096, &args);
 	if (!err)
 		return 0;
 
@@ -294,13 +294,13 @@ free:
 	return err;
 }
 
-static int nvme_ns_attachment(int fd, __u32 nsid, __u16 num_ctrls,
+static int nvme_ns_attachment(struct dev_handle *hnd, __u32 nsid, __u16 num_ctrls,
 			      __u16 *ctrlist, bool attach, __u32 timeout)
 {
 	struct nvme_ctrl_list cntlist = { 0 };
 	struct nvme_ns_attach_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.nsid = nsid,
 		.sel = NVME_NS_ATTACH_SEL_CTRL_DEATTACH,
 		.ctrlist = &cntlist,
@@ -314,26 +314,26 @@ static int nvme_ns_attachment(int fd, __u32 nsid, __u16 num_ctrls,
 	return nvme_ns_attach(&args);
 }
 
-int nvme_namespace_attach_ctrls(int fd, __u32 nsid, __u16 num_ctrls,
+int nvme_namespace_attach_ctrls(struct dev_handle *hnd, __u32 nsid, __u16 num_ctrls,
 				__u16 *ctrlist)
 {
-	return nvme_ns_attachment(fd, nsid, num_ctrls, ctrlist, true,
+	return nvme_ns_attachment(hnd, nsid, num_ctrls, ctrlist, true,
 				  NVME_DEFAULT_IOCTL_TIMEOUT);
 }
 
-int nvme_namespace_detach_ctrls(int fd, __u32 nsid, __u16 num_ctrls,
+int nvme_namespace_detach_ctrls(struct dev_handle *hnd, __u32 nsid, __u16 num_ctrls,
 				__u16 *ctrlist)
 {
-	return nvme_ns_attachment(fd, nsid, num_ctrls, ctrlist, false,
+	return nvme_ns_attachment(hnd, nsid, num_ctrls, ctrlist, false,
 				  NVME_DEFAULT_IOCTL_TIMEOUT);
 }
 
-int nvme_get_ana_log_len(int fd, size_t *analen)
+int nvme_get_ana_log_len(struct dev_handle *hnd, size_t *analen)
 {
 	struct nvme_id_ctrl ctrl;
 	int ret;
 
-	ret = nvme_identify_ctrl(fd, &ctrl);
+	ret = nvme_identify_ctrl(hnd, &ctrl);
 	if (ret)
 		return ret;
 
@@ -343,13 +343,13 @@ int nvme_get_ana_log_len(int fd, size_t *analen)
 	return 0;
 }
 
-int nvme_get_logical_block_size(int fd, __u32 nsid, int *blksize)
+int nvme_get_logical_block_size(struct dev_handle *hnd, __u32 nsid, int *blksize)
 {
 	struct nvme_id_ns ns;
 	__u8 flbas;
 	int ret;
 
-	ret = nvme_identify_ns(fd, nsid, &ns);
+	ret = nvme_identify_ns(hnd, nsid, &ns);
 	if (ret)
 		return ret;
 

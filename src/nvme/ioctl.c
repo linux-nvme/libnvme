@@ -38,44 +38,45 @@ static int nvme_verify_chr(int fd)
 	return 0;
 }
 
-int nvme_subsystem_reset(int fd)
+int nvme_subsystem_reset(struct dev_handle *hnd)
 {
 	int ret;
 
-	ret = nvme_verify_chr(fd);
+	ret = nvme_verify_chr(hnd->fd);
 	if (ret)
 		return ret;
-	return ioctl(fd, NVME_IOCTL_SUBSYS_RESET);
+	return ioctl(hnd->fd, NVME_IOCTL_SUBSYS_RESET);
 }
 
-int nvme_ctrl_reset(int fd)
+int nvme_ctrl_reset(struct dev_handle *hnd)
 {
 	int ret;
 
-	ret = nvme_verify_chr(fd);
+	ret = nvme_verify_chr(hnd->fd);
 	if (ret)
 		return ret;
-	return ioctl(fd, NVME_IOCTL_RESET);
+	return ioctl(hnd->fd, NVME_IOCTL_RESET);
 }
 
-int nvme_ns_rescan(int fd)
+int nvme_ns_rescan(struct dev_handle *hnd)
 {
 	int ret;
 
-	ret = nvme_verify_chr(fd);
+	ret = nvme_verify_chr(hnd->fd);
 	if (ret)
 		return ret;
-	return ioctl(fd, NVME_IOCTL_RESCAN);
+	return ioctl(hnd->fd, NVME_IOCTL_RESCAN);
 }
 
-int nvme_get_nsid(int fd, __u32 *nsid)
+int nvme_get_nsid(struct dev_handle *hnd, __u32 *nsid)
 {
 	errno = 0;
-	*nsid = ioctl(fd, NVME_IOCTL_ID);
+	if (hnd->dev_type == NVME_DEV_DIRECT)
+		*nsid = ioctl(hnd->fd, NVME_IOCTL_ID);
 	return -1 * (errno != 0);
 }
 
-static int nvme_submit_passthru64(int fd, unsigned long ioctl_cmd,
+static int nvme_submit_passthru64(struct dev_handle *hnd, unsigned long ioctl_cmd,
 				  struct nvme_passthru_cmd64 *cmd,
 				  __u64 *result)
 {
@@ -86,7 +87,7 @@ static int nvme_submit_passthru64(int fd, unsigned long ioctl_cmd,
 	return err;
 }
 
-static int nvme_submit_passthru(int fd, unsigned long ioctl_cmd,
+static int nvme_submit_passthru(struct dev_handle *hnd, unsigned long ioctl_cmd,
 				struct nvme_passthru_cmd *cmd, __u32 *result)
 {
 	int err = ioctl(fd, ioctl_cmd, cmd);
@@ -96,7 +97,7 @@ static int nvme_submit_passthru(int fd, unsigned long ioctl_cmd,
 	return err;
 }
 
-static int nvme_passthru64(int fd, unsigned long ioctl_cmd, __u8 opcode,
+static int nvme_passthru64(struct dev_handle *hnd, unsigned long ioctl_cmd, __u8 opcode,
 			   __u8 flags, __u16 rsvd, __u32 nsid, __u32 cdw2,
 			   __u32 cdw3, __u32 cdw10, __u32 cdw11, __u32 cdw12,
 			   __u32 cdw13, __u32 cdw14, __u32 cdw15,
@@ -123,10 +124,10 @@ static int nvme_passthru64(int fd, unsigned long ioctl_cmd, __u8 opcode,
 		.timeout_ms	= timeout_ms,
 	};
 
-	return nvme_submit_passthru64(fd, ioctl_cmd, &cmd, result);
+	return nvme_submit_passthru64(hnd, ioctl_cmd, &cmd, result);
 }
 
-static int nvme_passthru(int fd, unsigned long ioctl_cmd, __u8 opcode,
+static int nvme_passthru(struct dev_handle *hnd, unsigned long ioctl_cmd, __u8 opcode,
 			 __u8 flags, __u16 rsvd, __u32 nsid, __u32 cdw2,
 			 __u32 cdw3, __u32 cdw10, __u32 cdw11, __u32 cdw12,
 			 __u32 cdw13, __u32 cdw14, __u32 cdw15, __u32 data_len,
@@ -153,41 +154,41 @@ static int nvme_passthru(int fd, unsigned long ioctl_cmd, __u8 opcode,
 		.timeout_ms	= timeout_ms,
 	};
 
-	return nvme_submit_passthru(fd, ioctl_cmd, &cmd, result);
+	return nvme_submit_passthru(hnd, ioctl_cmd, &cmd, result);
 }
 
-int nvme_submit_admin_passthru64(int fd, struct nvme_passthru_cmd64 *cmd,
+int nvme_submit_admin_passthru64(struct dev_handle *hnd, struct nvme_passthru_cmd64 *cmd,
 				 __u64 *result)
 {
-	return nvme_submit_passthru64(fd, NVME_IOCTL_ADMIN64_CMD, cmd, result);
+	return nvme_submit_passthru64(hnd, NVME_IOCTL_ADMIN64_CMD, cmd, result);
 }
 
-int nvme_admin_passthru64(int fd, __u8 opcode, __u8 flags, __u16 rsvd,
+int nvme_admin_passthru64(struct dev_handle *hnd, __u8 opcode, __u8 flags, __u16 rsvd,
 			 __u32 nsid, __u32 cdw2, __u32 cdw3, __u32 cdw10,
 			 __u32 cdw11, __u32 cdw12, __u32 cdw13, __u32 cdw14,
 			 __u32 cdw15, __u32 data_len, void *data,
 			 __u32 metadata_len, void *metadata, __u32 timeout_ms,
 			 __u64 *result)
 {
-	return nvme_passthru64(fd, NVME_IOCTL_ADMIN64_CMD, opcode, flags, rsvd,
+	return nvme_passthru64(hnd, NVME_IOCTL_ADMIN64_CMD, opcode, flags, rsvd,
 			       nsid, cdw2, cdw3, cdw10, cdw11, cdw12, cdw13,
 			       cdw14, cdw15, data_len, data, metadata_len,
 			       metadata, timeout_ms, result);
 }
 
-int nvme_submit_admin_passthru(int fd, struct nvme_passthru_cmd *cmd, __u32 *result)
+int nvme_submit_admin_passthru(struct dev_handle *hnd, struct nvme_passthru_cmd *cmd, __u32 *result)
 {
-	return nvme_submit_passthru(fd, NVME_IOCTL_ADMIN_CMD, cmd, result);
+	return nvme_submit_passthru(hnd, NVME_IOCTL_ADMIN_CMD, cmd, result);
 }
 
-int nvme_admin_passthru(int fd, __u8 opcode, __u8 flags, __u16 rsvd,
+int nvme_admin_passthru(struct dev_handle *hnd, __u8 opcode, __u8 flags, __u16 rsvd,
 			__u32 nsid, __u32 cdw2, __u32 cdw3, __u32 cdw10,
 			__u32 cdw11, __u32 cdw12, __u32 cdw13, __u32 cdw14,
 			__u32 cdw15, __u32 data_len, void *data,
 			__u32 metadata_len, void *metadata, __u32 timeout_ms,
 			__u32 *result)
 {
-	return nvme_passthru(fd, NVME_IOCTL_ADMIN_CMD, opcode, flags, rsvd,
+	return nvme_passthru(hnd, NVME_IOCTL_ADMIN_CMD, opcode, flags, rsvd,
 			     nsid, cdw2, cdw3, cdw10, cdw11, cdw12, cdw13,
 			     cdw14, cdw15, data_len, data, metadata_len,
 			     metadata, timeout_ms, result);
@@ -367,6 +368,8 @@ enum features {
 	NVME_FEATURES_IOCSP_IOCSCI_MASK				= 0xff,
 };
 
+
+
 int nvme_identify(struct nvme_identify_args *args)
 {
 	__u32 cdw10 = NVME_SET(args->cntid, IDENTIFY_CDW10_CNTID) |
@@ -390,7 +393,7 @@ int nvme_identify(struct nvme_identify_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_get_log(struct nvme_get_log_args *args)
@@ -427,10 +430,10 @@ int nvme_get_log(struct nvme_get_log_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
-int nvme_get_log_page(int fd, __u32 xfer_len, struct nvme_get_log_args *args)
+int nvme_get_log_page(struct dev_handle *hnd, __u32 xfer_len, struct nvme_get_log_args *args)
 {
 	__u64 offset = 0, xfer, data_len = args->len;
 	__u64 start = args->lpo;
@@ -438,7 +441,7 @@ int nvme_get_log_page(int fd, __u32 xfer_len, struct nvme_get_log_args *args)
 	void *ptr = args->log;
 	int ret;
 
-	args->fd = fd;
+	args->hnd = hnd;
 
 	/*
 	 * 4k is the smallest possible transfer unit, so restricting to 4k
@@ -495,15 +498,15 @@ int nvme_set_features(struct nvme_set_features_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
-static int __nvme_set_features(int fd, __u8 fid, __u32 cdw11, bool save,
+static int __nvme_set_features(struct dev_handle *hnd, __u8 fid, __u32 cdw11, bool save,
 			       __u32 *result)
 {
 	struct nvme_set_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = fid,
 		.nsid = NVME_NSID_NONE,
 		.cdw11 = cdw11,
@@ -519,7 +522,7 @@ static int __nvme_set_features(int fd, __u8 fid, __u32 cdw11, bool save,
 	return nvme_set_features(&args);
 }
 
-int nvme_set_features_arbitration(int fd, __u8 ab, __u8 lpw, __u8 mpw,
+int nvme_set_features_arbitration(struct dev_handle *hnd, __u8 ab, __u8 lpw, __u8 mpw,
 				  __u8 hpw, bool save, __u32 *result)
 {
 	__u32 value = NVME_SET(ab, FEAT_ARBITRATION_BURST) |
@@ -527,27 +530,27 @@ int nvme_set_features_arbitration(int fd, __u8 ab, __u8 lpw, __u8 mpw,
 			NVME_SET(mpw, FEAT_ARBITRATION_MPW) |
 			NVME_SET(hpw, FEAT_ARBITRATION_HPW);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_ARBITRATION, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_ARBITRATION, value, save,
 				   result);
 }
 
-int nvme_set_features_power_mgmt(int fd, __u8 ps, __u8 wh, bool save,
+int nvme_set_features_power_mgmt(struct dev_handle *hnd, __u8 ps, __u8 wh, bool save,
 				 __u32 *result)
 {
 	__u32 value = NVME_SET(ps, FEAT_PWRMGMT_PS) |
 			NVME_SET(wh, FEAT_PWRMGMT_PS);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_POWER_MGMT, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_POWER_MGMT, value, save,
 				   result);
 }
 
-int nvme_set_features_lba_range(int fd, __u32 nsid, __u32 nr_ranges, bool save,
+int nvme_set_features_lba_range(struct dev_handle *hnd, __u32 nsid, __u32 nr_ranges, bool save,
 				struct nvme_lba_range_type *data, __u32 *result)
 {
 	return -1;
 }
 
-int nvme_set_features_temp_thresh(int fd, __u16 tmpth, __u8 tmpsel,
+int nvme_set_features_temp_thresh(struct dev_handle *hnd, __u16 tmpth, __u8 tmpsel,
 				  enum nvme_feat_tmpthresh_thsel thsel,
 				  bool save, __u32 *result)
 {
@@ -555,79 +558,79 @@ int nvme_set_features_temp_thresh(int fd, __u16 tmpth, __u8 tmpsel,
 			NVME_SET(tmpsel, FEAT_TT_TMPSEL) |
 			NVME_SET(thsel, FEAT_TT_THSEL);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_TEMP_THRESH, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_TEMP_THRESH, value, save,
 				   result);
 }
 
-int nvme_set_features_err_recovery(int fd, __u32 nsid, __u16 tler, bool dulbe,
+int nvme_set_features_err_recovery(struct dev_handle *hnd, __u32 nsid, __u16 tler, bool dulbe,
 				   bool save, __u32 *result)
 {
 	__u32 value = NVME_SET(tler, FEAT_ERROR_RECOVERY_TLER) |
 			NVME_SET(!!dulbe, FEAT_ERROR_RECOVERY_DULBE);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_ERR_RECOVERY, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_ERR_RECOVERY, value, save,
 				   result);
 }
 
-int nvme_set_features_volatile_wc(int fd, bool wce, bool save, __u32 *result)
+int nvme_set_features_volatile_wc(struct dev_handle *hnd, bool wce, bool save, __u32 *result)
 {
 	__u32 value = NVME_SET(!!wce, FEAT_VWC_WCE);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_VOLATILE_WC, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_VOLATILE_WC, value, save,
 				   result);
 }
 
-int nvme_set_features_irq_coalesce(int fd, __u8 thr, __u8 time, bool save,
+int nvme_set_features_irq_coalesce(struct dev_handle *hnd, __u8 thr, __u8 time, bool save,
 				   __u32 *result)
 {
 	__u32 value = NVME_SET(thr, FEAT_IRQC_TIME) |
 			NVME_SET(time, FEAT_IRQC_THR);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_IRQ_COALESCE, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_IRQ_COALESCE, value, save,
 				   result);
 }
 
-int nvme_set_features_irq_config(int fd, __u16 iv, bool cd, bool save,
+int nvme_set_features_irq_config(struct dev_handle *hnd, __u16 iv, bool cd, bool save,
 				 __u32 *result)
 {
 	__u32 value = NVME_SET(iv, FEAT_ICFG_IV) |
 			NVME_SET(!!cd, FEAT_ICFG_CD);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_IRQ_CONFIG, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_IRQ_CONFIG, value, save,
 				   result);
 }
 
-int nvme_set_features_write_atomic(int fd, bool dn, bool save, __u32 *result)
+int nvme_set_features_write_atomic(struct dev_handle *hnd, bool dn, bool save, __u32 *result)
 {
 	__u32 value = NVME_SET(!!dn, FEAT_WA_DN);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_WRITE_ATOMIC, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_WRITE_ATOMIC, value, save,
 				   result);
 }
 
-int nvme_set_features_async_event(int fd, __u32 events,
+int nvme_set_features_async_event(struct dev_handle *hnd, __u32 events,
 				  bool save, __u32 *result)
 {
-	return __nvme_set_features(fd, NVME_FEAT_FID_ASYNC_EVENT, events, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_ASYNC_EVENT, events, save,
 				   result);
 }
 
-int nvme_set_features_auto_pst(int fd, bool apste, bool save,
+int nvme_set_features_auto_pst(struct dev_handle *hnd, bool apste, bool save,
 			       struct nvme_feat_auto_pst *apst, __u32 *result)
 {
 	__u32 value = NVME_SET(!!apste, FEAT_APST_APSTE);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_AUTO_PST, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_AUTO_PST, value, save,
 				   result);
 }
 
-int nvme_set_features_timestamp(int fd, bool save, __u64 timestamp)
+int nvme_set_features_timestamp(struct dev_handle *hnd, bool save, __u64 timestamp)
 {
 	__le64 t = cpu_to_le64(timestamp);
 	struct nvme_timestamp ts;
 	struct nvme_set_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.nsid = NVME_NSID_NONE,
 		.cdw11 = 0,
 		.cdw12 = 0,
@@ -644,30 +647,30 @@ int nvme_set_features_timestamp(int fd, bool save, __u64 timestamp)
 	return nvme_set_features(&args);
 }
 
-int nvme_set_features_hctm(int fd, __u16 tmt2, __u16 tmt1,
+int nvme_set_features_hctm(struct dev_handle *hnd, __u16 tmt2, __u16 tmt1,
 			   bool save, __u32 *result)
 {
 	__u32 value = NVME_SET(tmt2, FEAT_HCTM_TMT2) |
 			NVME_SET(tmt1, FEAT_HCTM_TMT1);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_HCTM, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_HCTM, value, save,
 				   result);
 }
 
-int nvme_set_features_nopsc(int fd, bool noppme, bool save, __u32 *result)
+int nvme_set_features_nopsc(struct dev_handle *hnd, bool noppme, bool save, __u32 *result)
 {
 	__u32 value = NVME_SET(noppme, FEAT_NOPS_NOPPME);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_NOPSC, value, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_NOPSC, value, save,
 				   result);
 }
 
-int nvme_set_features_rrl(int fd, __u8 rrl, __u16 nvmsetid,
+int nvme_set_features_rrl(struct dev_handle *hnd, __u8 rrl, __u16 nvmsetid,
 			  bool save, __u32 *result)
 {
 	struct nvme_set_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_RRL,
 		.nsid = NVME_NSID_NONE,
 		.cdw11 = nvmsetid,
@@ -684,12 +687,12 @@ int nvme_set_features_rrl(int fd, __u8 rrl, __u16 nvmsetid,
 	return nvme_set_features(&args);
 }
 
-int nvme_set_features_plm_config(int fd, bool plm, __u16 nvmsetid, bool save,
+int nvme_set_features_plm_config(struct dev_handle *hnd, bool plm, __u16 nvmsetid, bool save,
 				 struct nvme_plm_config *data, __u32 *result)
 {
 	struct nvme_set_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_PLM_CONFIG,
 		.nsid = NVME_NSID_NONE,
 		.cdw11 = nvmsetid,
@@ -706,13 +709,13 @@ int nvme_set_features_plm_config(int fd, bool plm, __u16 nvmsetid, bool save,
 	return nvme_set_features(&args);
 }
 
-int nvme_set_features_plm_window(int fd, enum nvme_feat_plm_window_select sel,
+int nvme_set_features_plm_window(struct dev_handle *hnd, enum nvme_feat_plm_window_select sel,
 				 __u16 nvmsetid, bool save, __u32 *result)
 {
 	__u32 cdw12 = NVME_SET(sel, FEAT_PLMW_WS);
 	struct nvme_set_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_PLM_WINDOW,
 		.nsid = NVME_NSID_NONE,
 		.cdw11 = nvmsetid,
@@ -729,22 +732,22 @@ int nvme_set_features_plm_window(int fd, enum nvme_feat_plm_window_select sel,
 	return nvme_set_features(&args);
 }
 
-int nvme_set_features_lba_sts_interval(int fd, __u16 lsiri, __u16 lsipi,
+int nvme_set_features_lba_sts_interval(struct dev_handle *hnd, __u16 lsiri, __u16 lsipi,
 				       bool save, __u32 *result)
 {
 	__u32 value = NVME_SET(lsiri, FEAT_LBAS_LSIRI) |
 			NVME_SET(lsipi, FEAT_LBAS_LSIPI);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_LBA_STS_INTERVAL, value,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_LBA_STS_INTERVAL, value,
 				   save, result);
 }
 
-int nvme_set_features_host_behavior(int fd, bool save,
+int nvme_set_features_host_behavior(struct dev_handle *hnd, bool save,
 	struct nvme_feat_host_behavior *data)
 {
 	struct nvme_set_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_HOST_BEHAVIOR,
 		.nsid = NVME_NSID_NONE,
 		.cdw11 = 0,
@@ -761,35 +764,35 @@ int nvme_set_features_host_behavior(int fd, bool save,
 	return nvme_set_features(&args);
 }
 
-int nvme_set_features_sanitize(int fd, bool nodrm, bool save, __u32 *result)
+int nvme_set_features_sanitize(struct dev_handle *hnd, bool nodrm, bool save, __u32 *result)
 {
-	return __nvme_set_features(fd, NVME_FEAT_FID_SANITIZE, !!nodrm, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_SANITIZE, !!nodrm, save,
 				   result);
 }
 
-int nvme_set_features_endurance_evt_cfg(int fd, __u16 endgid, __u8 egwarn,
+int nvme_set_features_endurance_evt_cfg(struct dev_handle *hnd, __u16 endgid, __u8 egwarn,
 					bool save, __u32 *result)
 {
 	__u32 value = endgid | egwarn << 16;
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_ENDURANCE_EVT_CFG, value,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_ENDURANCE_EVT_CFG, value,
 				   save, result);
 }
 
-int nvme_set_features_sw_progress(int fd, __u8 pbslc, bool save,
+int nvme_set_features_sw_progress(struct dev_handle *hnd, __u8 pbslc, bool save,
 				  __u32 *result)
 {
-	return __nvme_set_features(fd, NVME_FEAT_FID_SW_PROGRESS, pbslc, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_SW_PROGRESS, pbslc, save,
 				   result);
 }
 
-int nvme_set_features_host_id(int fd, bool save, bool exhid, __u8 *hostid)
+int nvme_set_features_host_id(struct dev_handle *hnd, bool save, bool exhid, __u8 *hostid)
 {
 	__u32 len = exhid ? 16 : 8;
 	__u32 value = !!exhid;
 	struct nvme_set_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_HOST_ID,
 		.nsid = NVME_NSID_NONE,
 		.cdw11 = value,
@@ -806,30 +809,30 @@ int nvme_set_features_host_id(int fd, bool save, bool exhid, __u8 *hostid)
 	return nvme_set_features(&args);
 }
 
-int nvme_set_features_resv_mask(int fd, __u32 mask, bool save, __u32 *result)
+int nvme_set_features_resv_mask(struct dev_handle *hnd, __u32 mask, bool save, __u32 *result)
 {
-	return __nvme_set_features(fd, NVME_FEAT_FID_RESV_MASK, mask, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_RESV_MASK, mask, save,
 				   result);
 }
 
-int nvme_set_features_resv_persist(int fd, bool ptpl, bool save, __u32 *result)
+int nvme_set_features_resv_persist(struct dev_handle *hnd, bool ptpl, bool save, __u32 *result)
 {
-	return __nvme_set_features(fd, NVME_FEAT_FID_RESV_PERSIST, !!ptpl, save,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_RESV_PERSIST, !!ptpl, save,
 				   result);
 }
 
-int nvme_set_features_write_protect(int fd, enum nvme_feat_nswpcfg_state state,
+int nvme_set_features_write_protect(struct dev_handle *hnd, enum nvme_feat_nswpcfg_state state,
 				    bool save, __u32 *result)
 {
-	return __nvme_set_features(fd, NVME_FEAT_FID_WRITE_PROTECT, state,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_WRITE_PROTECT, state,
 				   save, result);
 }
 
-int nvme_set_features_iocs_profile(int fd, __u8 iocsi, bool save)
+int nvme_set_features_iocs_profile(struct dev_handle *hnd, __u8 iocsi, bool save)
 {
 	__u32 value = NVME_SET(iocsi, FEAT_IOCSP_IOCSCI);
 
-	return __nvme_set_features(fd, NVME_FEAT_FID_IOCS_PROFILE, value,
+	return __nvme_set_features(hnd, NVME_FEAT_FID_IOCS_PROFILE, value,
 				   save, NULL);
 }
 
@@ -854,15 +857,15 @@ int nvme_get_features(struct nvme_get_features_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
-static int __nvme_get_features(int fd, enum nvme_features_id fid,
+static int __nvme_get_features(struct dev_handle *hnd, enum nvme_features_id fid,
 			       enum nvme_get_features_sel sel, __u32 *result)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = fid,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -877,25 +880,25 @@ static int __nvme_get_features(int fd, enum nvme_features_id fid,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_arbitration(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_arbitration(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				  __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_ARBITRATION, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_ARBITRATION, sel, result);
 }
 
-int nvme_get_features_power_mgmt(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_power_mgmt(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				 __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_POWER_MGMT, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_POWER_MGMT, sel, result);
 }
 
-int nvme_get_features_lba_range(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_lba_range(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				struct nvme_lba_range_type *data,
 				__u32 *result)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_LBA_RANGE,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -910,44 +913,44 @@ int nvme_get_features_lba_range(int fd, enum nvme_get_features_sel sel,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_temp_thresh(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_temp_thresh(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				  __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_TEMP_THRESH, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_TEMP_THRESH, sel, result);
 }
 
-int nvme_get_features_err_recovery(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_err_recovery(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				   __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_ERR_RECOVERY, sel,
+	return __nvme_get_features(hnd, NVME_FEAT_FID_ERR_RECOVERY, sel,
 				   result);
 }
 
-int nvme_get_features_volatile_wc(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_volatile_wc(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				  __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_VOLATILE_WC, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_VOLATILE_WC, sel, result);
 }
 
-int nvme_get_features_num_queues(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_num_queues(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				 __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_NUM_QUEUES, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_NUM_QUEUES, sel, result);
 }
 
-int nvme_get_features_irq_coalesce(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_irq_coalesce(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				   __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_IRQ_COALESCE, sel,
+	return __nvme_get_features(hnd, NVME_FEAT_FID_IRQ_COALESCE, sel,
 				   result);
 }
 
-int nvme_get_features_irq_config(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_irq_config(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				 __u16 iv, __u32 *result)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_LBA_RANGE,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -962,25 +965,25 @@ int nvme_get_features_irq_config(int fd, enum nvme_get_features_sel sel,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_write_atomic(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_write_atomic(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				   __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_WRITE_ATOMIC, sel,
+	return __nvme_get_features(hnd, NVME_FEAT_FID_WRITE_ATOMIC, sel,
 				   result);
 }
 
-int nvme_get_features_async_event(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_async_event(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				  __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_ASYNC_EVENT, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_ASYNC_EVENT, sel, result);
 }
 
-int nvme_get_features_auto_pst(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_auto_pst(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 			       struct nvme_feat_auto_pst *apst, __u32 *result)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_LBA_RANGE,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -995,18 +998,18 @@ int nvme_get_features_auto_pst(int fd, enum nvme_get_features_sel sel,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_host_mem_buf(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_host_mem_buf(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				   __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_HOST_MEM_BUF, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_HOST_MEM_BUF, sel, result);
 }
 
-int nvme_get_features_timestamp(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_timestamp(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				struct nvme_timestamp *ts)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_TIMESTAMP,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -1021,33 +1024,33 @@ int nvme_get_features_timestamp(int fd, enum nvme_get_features_sel sel,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_kato(int fd, enum nvme_get_features_sel sel, __u32 *result)
+int nvme_get_features_kato(struct dev_handle *hnd, enum nvme_get_features_sel sel, __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_KATO, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_KATO, sel, result);
 }
 
-int nvme_get_features_hctm(int fd, enum nvme_get_features_sel sel, __u32 *result)
+int nvme_get_features_hctm(struct dev_handle *hnd, enum nvme_get_features_sel sel, __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_HCTM, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_HCTM, sel, result);
 }
 
-int nvme_get_features_nopsc(int fd, enum nvme_get_features_sel sel, __u32 *result)
+int nvme_get_features_nopsc(struct dev_handle *hnd, enum nvme_get_features_sel sel, __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_NOPSC, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_NOPSC, sel, result);
 }
 
-int nvme_get_features_rrl(int fd, enum nvme_get_features_sel sel, __u32 *result)
+int nvme_get_features_rrl(struct dev_handle *hnd, enum nvme_get_features_sel sel, __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_RRL, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_RRL, sel, result);
 }
 
-int nvme_get_features_plm_config(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_plm_config(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				 __u16 nvmsetid, struct nvme_plm_config *data,
 				 __u32 *result)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_PLM_CONFIG,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -1062,12 +1065,12 @@ int nvme_get_features_plm_config(int fd, enum nvme_get_features_sel sel,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_plm_window(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_plm_window(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				 __u16 nvmsetid, __u32 *result)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_PLM_WINDOW,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -1082,20 +1085,20 @@ int nvme_get_features_plm_window(int fd, enum nvme_get_features_sel sel,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_lba_sts_interval(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_lba_sts_interval(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				       __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_LBA_STS_INTERVAL, sel,
+	return __nvme_get_features(hnd, NVME_FEAT_FID_LBA_STS_INTERVAL, sel,
 				   result);
 }
 
-int nvme_get_features_host_behavior(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_host_behavior(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				    struct nvme_feat_host_behavior *data,
 				    __u32 *result)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_HOST_BEHAVIOR,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -1110,18 +1113,18 @@ int nvme_get_features_host_behavior(int fd, enum nvme_get_features_sel sel,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_sanitize(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_sanitize(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 			       __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_SANITIZE, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_SANITIZE, sel, result);
 }
 
-int nvme_get_features_endurance_event_cfg(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_endurance_event_cfg(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 					  __u16 endgid, __u32 *result)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_ENDURANCE_EVT_CFG,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -1136,18 +1139,18 @@ int nvme_get_features_endurance_event_cfg(int fd, enum nvme_get_features_sel sel
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_sw_progress(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_sw_progress(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				  __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_SW_PROGRESS, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_SW_PROGRESS, sel, result);
 }
 
-int nvme_get_features_host_id(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_host_id(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 			      bool exhid, __u32 len, __u8 *hostid)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_HOST_ID,
 		.nsid = NVME_NSID_NONE,
 		.sel = sel,
@@ -1162,25 +1165,25 @@ int nvme_get_features_host_id(int fd, enum nvme_get_features_sel sel,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_resv_mask(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_resv_mask(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				__u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_RESV_MASK, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_RESV_MASK, sel, result);
 }
 
-int nvme_get_features_resv_persist(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_resv_persist(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				   __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_RESV_PERSIST, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_RESV_PERSIST, sel, result);
 }
 
-int nvme_get_features_write_protect(int fd, __u32 nsid,
+int nvme_get_features_write_protect(struct dev_handle *hnd, __u32 nsid,
 				    enum nvme_get_features_sel sel,
 				    __u32 *result)
 {
 	struct nvme_get_features_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.fid = NVME_FEAT_FID_WRITE_PROTECT,
 		.nsid = nsid,
 		.sel = sel,
@@ -1195,10 +1198,10 @@ int nvme_get_features_write_protect(int fd, __u32 nsid,
 	return nvme_get_features(&args);
 }
 
-int nvme_get_features_iocs_profile(int fd, enum nvme_get_features_sel sel,
+int nvme_get_features_iocs_profile(struct dev_handle *hnd, enum nvme_get_features_sel sel,
 				   __u32 *result)
 {
-	return __nvme_get_features(fd, NVME_FEAT_FID_IOCS_PROFILE, sel, result);
+	return __nvme_get_features(hnd, NVME_FEAT_FID_IOCS_PROFILE, sel, result);
 }
 
 int nvme_format_nvm(struct nvme_format_nvm_args *args)
@@ -1230,7 +1233,7 @@ int nvme_format_nvm(struct nvme_format_nvm_args *args)
 		.timeout_ms	= args->timeout,
 	};
 
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_ns_mgmt(struct nvme_ns_mgmt_args *args)
@@ -1253,7 +1256,7 @@ int nvme_ns_mgmt(struct nvme_ns_mgmt_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_ns_attach(struct nvme_ns_attach_args *args)
@@ -1273,7 +1276,7 @@ int nvme_ns_attach(struct nvme_ns_attach_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_fw_download(struct nvme_fw_download_args *args)
@@ -1294,7 +1297,7 @@ int nvme_fw_download(struct nvme_fw_download_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_fw_commit(struct nvme_fw_commit_args *args)
@@ -1313,7 +1316,7 @@ int nvme_fw_commit(struct nvme_fw_commit_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_security_send(struct nvme_security_send_args *args)
@@ -1338,7 +1341,7 @@ int nvme_security_send(struct nvme_security_send_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_security_receive(struct nvme_security_receive_args *args)
@@ -1363,7 +1366,7 @@ int nvme_security_receive(struct nvme_security_receive_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_get_lba_status(struct nvme_get_lba_status_args *args)
@@ -1389,7 +1392,7 @@ int nvme_get_lba_status(struct nvme_get_lba_status_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_directive_send(struct nvme_directive_send_args *args)
@@ -1414,10 +1417,10 @@ int nvme_directive_send(struct nvme_directive_send_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-        return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+        return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
-int nvme_directive_send_id_endir(int fd, __u32 nsid, bool endir,
+int nvme_directive_send_id_endir(struct dev_handle *hnd, __u32 nsid, bool endir,
 				 enum nvme_directive_dtype dtype,
 				 struct nvme_id_directives *id)
 {
@@ -1425,7 +1428,7 @@ int nvme_directive_send_id_endir(int fd, __u32 nsid, bool endir,
 		NVME_SET(endir, DIRECTIVE_SEND_IDENTIFY_CDW12_ENDIR);
 	struct nvme_directive_send_args args = {
 		.args_size = sizeof(args),
-		.fd = fd,
+		.hnd = hnd,
 		.nsid = nsid,
 		.dspec = 0,
 		.dtype = NVME_DIRECTIVE_DTYPE_IDENTIFY,
@@ -1462,7 +1465,7 @@ int nvme_directive_recv(struct nvme_directive_recv_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_capacity_mgmt(struct nvme_capacity_mgmt_args *args)
@@ -1481,7 +1484,7 @@ int nvme_capacity_mgmt(struct nvme_capacity_mgmt_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_lockdown(struct nvme_lockdown_args *args)
@@ -1502,7 +1505,7 @@ int nvme_lockdown(struct nvme_lockdown_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_set_property(struct nvme_set_property_args *args)
@@ -1523,7 +1526,7 @@ int nvme_set_property(struct nvme_set_property_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_get_property(struct nvme_get_property_args *args)
@@ -1542,7 +1545,7 @@ int nvme_get_property(struct nvme_get_property_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru64(args->fd, &cmd, args->value);
+	return nvme_submit_admin_passthru64(args->hnd, &cmd, args->value);
 }
 
 int nvme_sanitize_nvm(struct nvme_sanitize_nvm_args *args)
@@ -1565,7 +1568,7 @@ int nvme_sanitize_nvm(struct nvme_sanitize_nvm_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_dev_self_test(struct nvme_dev_self_test_args *args)
@@ -1583,7 +1586,7 @@ int nvme_dev_self_test(struct nvme_dev_self_test_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_virtual_mgmt(struct nvme_virtual_mgmt_args *args)
@@ -1604,39 +1607,39 @@ int nvme_virtual_mgmt(struct nvme_virtual_mgmt_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }
 
-int nvme_submit_io_passthru64(int fd, struct nvme_passthru_cmd64 *cmd,
+int nvme_submit_io_passthru64(struct dev_handle *hnd, struct nvme_passthru_cmd64 *cmd,
 			      __u64 *result)
 {
-	return nvme_submit_passthru64(fd, NVME_IOCTL_IO64_CMD, cmd, result);
+	return nvme_submit_passthru64(hnd, NVME_IOCTL_IO64_CMD, cmd, result);
 }
 
-int nvme_io_passthru64(int fd, __u8 opcode, __u8 flags, __u16 rsvd,
+int nvme_io_passthru64(struct dev_handle *hnd, __u8 opcode, __u8 flags, __u16 rsvd,
 		       __u32 nsid, __u32 cdw2, __u32 cdw3, __u32 cdw10,
 		       __u32 cdw11, __u32 cdw12, __u32 cdw13, __u32 cdw14,
 		       __u32 cdw15, __u32 data_len, void *data, __u32 metadata_len,
 		       void *metadata, __u32 timeout_ms, __u64 *result)
 {
-	return nvme_passthru64(fd, NVME_IOCTL_IO64_CMD, opcode, flags, rsvd,
+	return nvme_passthru64(hnd, NVME_IOCTL_IO64_CMD, opcode, flags, rsvd,
 			       nsid, cdw2, cdw3, cdw10, cdw11, cdw12, cdw13,
 			       cdw14, cdw15, data_len, data, metadata_len, metadata,
 			       timeout_ms, result);
 }
 
-int nvme_submit_io_passthru(int fd, struct nvme_passthru_cmd *cmd, __u32 *result)
+int nvme_submit_io_passthru(struct dev_handle *hnd, struct nvme_passthru_cmd *cmd, __u32 *result)
 {
-	return nvme_submit_passthru(fd, NVME_IOCTL_IO_CMD, cmd, result);
+	return nvme_submit_passthru(hnd, NVME_IOCTL_IO_CMD, cmd, result);
 }
 
-int nvme_io_passthru(int fd, __u8 opcode, __u8 flags, __u16 rsvd,
+int nvme_io_passthru(struct dev_handle *hnd, __u8 opcode, __u8 flags, __u16 rsvd,
 		     __u32 nsid, __u32 cdw2, __u32 cdw3, __u32 cdw10,
 		     __u32 cdw11, __u32 cdw12, __u32 cdw13, __u32 cdw14,
 		     __u32 cdw15, __u32 data_len, void *data, __u32 metadata_len,
 		     void *metadata, __u32 timeout_ms, __u32 *result)
 {
-	return nvme_passthru(fd, NVME_IOCTL_IO_CMD, opcode, flags, rsvd, nsid,
+	return nvme_passthru(hnd, NVME_IOCTL_IO_CMD, opcode, flags, rsvd, nsid,
 			     cdw2, cdw3, cdw10, cdw11, cdw12, cdw13, cdw14,
 			     cdw15, data_len, data, metadata_len, metadata,
 			     timeout_ms, result);
@@ -1736,7 +1739,7 @@ int nvme_io(struct nvme_io_args *args, __u8 opcode)
 		.timeout_ms	= args->timeout,
 	};
 
-	return nvme_submit_io_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_dsm(struct nvme_dsm_args *args)
@@ -1755,7 +1758,7 @@ int nvme_dsm(struct nvme_dsm_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_io_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_copy(struct nvme_copy_args *args)
@@ -1802,7 +1805,7 @@ int nvme_copy(struct nvme_copy_args *args)
 		.timeout_ms	= args->timeout,
 	};
 
-	return nvme_submit_io_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_resv_acquire(struct nvme_resv_acquire_args *args)
@@ -1828,7 +1831,7 @@ int nvme_resv_acquire(struct nvme_resv_acquire_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_io_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_resv_register(struct nvme_resv_register_args *args)
@@ -1854,7 +1857,7 @@ int nvme_resv_register(struct nvme_resv_register_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_io_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_resv_release(struct nvme_resv_release_args *args)
@@ -1877,7 +1880,7 @@ int nvme_resv_release(struct nvme_resv_release_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_io_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_resv_report(struct nvme_resv_report_args *args)
@@ -1896,7 +1899,7 @@ int nvme_resv_report(struct nvme_resv_report_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_io_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_io_mgmt_recv(struct nvme_io_mgmt_recv_args *args)
@@ -1919,7 +1922,7 @@ int nvme_io_mgmt_recv(struct nvme_io_mgmt_recv_args *args)
 		return -1;
 	}
 
-	return nvme_submit_io_passthru(args->fd, &cmd, NULL);
+	return nvme_submit_io_passthru(args->hnd, &cmd, NULL);
 }
 
 int nvme_io_mgmt_send(struct nvme_io_mgmt_send_args *args)
@@ -1940,7 +1943,7 @@ int nvme_io_mgmt_send(struct nvme_io_mgmt_send_args *args)
 		return -1;
 	}
 
-	return nvme_submit_io_passthru(args->fd, &cmd, NULL);
+	return nvme_submit_io_passthru(args->hnd, &cmd, NULL);
 }
 
 int nvme_zns_mgmt_send(struct nvme_zns_mgmt_send_args *args)
@@ -1966,7 +1969,7 @@ int nvme_zns_mgmt_send(struct nvme_zns_mgmt_send_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_io_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_zns_mgmt_recv(struct nvme_zns_mgmt_recv_args *args)
@@ -1994,7 +1997,7 @@ int nvme_zns_mgmt_recv(struct nvme_zns_mgmt_recv_args *args)
 		errno = EINVAL;
 		return -1;
 	}
-	return nvme_submit_io_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru(args->hnd, &cmd, args->result);
 }
 
 int nvme_zns_append(struct nvme_zns_append_args *args)
@@ -2037,7 +2040,7 @@ int nvme_zns_append(struct nvme_zns_append_args *args)
 		.timeout_ms	= args->timeout,
 	};
 
-	return nvme_submit_io_passthru64(args->fd, &cmd, args->result);
+	return nvme_submit_io_passthru64(args->hnd, &cmd, args->result);
 }
 
 int nvme_dim_send(struct nvme_dim_args *args)
@@ -2057,5 +2060,5 @@ int nvme_dim_send(struct nvme_dim_args *args)
 		return -1;
 	}
 
-	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+	return nvme_submit_admin_passthru(args->hnd, &cmd, args->result);
 }

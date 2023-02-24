@@ -83,13 +83,13 @@ int nvme_scan_topology(struct nvme_root *r, nvme_scan_filter_t f, void *f_args)
 
 	if (!r)
 		return 0;
-
 	num_ctrls = nvme_scan_ctrls(&ctrls);
 	if (num_ctrls < 0) {
 		nvme_msg(r, LOG_DEBUG, "failed to scan ctrls: %s\n",
 			 strerror(errno));
 		return num_ctrls;
 	}
+
 
 	for (i = 0; i < num_ctrls; i++) {
 		nvme_ctrl_t c = nvme_scan_ctrl(r, ctrls[i]->d_name);
@@ -113,6 +113,7 @@ int nvme_scan_topology(struct nvme_root *r, nvme_scan_filter_t f, void *f_args)
 			 strerror(errno));
 		return num_subsys;
 	}
+
 
 	for (i = 0; i < num_subsys; i++) {
 		ret = nvme_scan_subsystem(r, subsys[i]->d_name, f, f_args);
@@ -173,7 +174,6 @@ int nvme_read_config(nvme_root_t r, const char *config_file)
 nvme_root_t nvme_scan(const char *config_file)
 {
 	nvme_root_t r = nvme_create_root(NULL, DEFAULT_LOGLEVEL);
-
 	nvme_scan_topology(r, NULL, NULL);
 	nvme_read_config(r, config_file);
 	return r;
@@ -353,9 +353,11 @@ nvme_path_t nvme_namespace_next_path(nvme_ns_t ns, nvme_path_t p)
 static void __nvme_free_ns(struct nvme_ns *n)
 {
 	list_del_init(&n->entry);
-	close(n->fd);
+	struct dev_handle *hnd = n->hnd;
+	close(hnd->fd);
 	free(n->generic_name);
 	free(n->name);
+	free(n->hnd);
 	free(n->sysfs_dir);
 	free(n);
 }
@@ -370,11 +372,9 @@ static void __nvme_free_subsystem(struct nvme_subsystem *s)
 {
 	struct nvme_ctrl *c, *_c;
 	struct nvme_ns *n, *_n;
-
 	list_del_init(&s->entry);
 	nvme_subsystem_for_each_ctrl_safe(s, c, _c)
 		__nvme_free_ctrl(c);
-
 	nvme_subsystem_for_each_ns_safe(s, n, _n)
 		__nvme_free_ns(n);
 
@@ -716,18 +716,18 @@ free_path:
 	return -1;
 }
 
-int nvme_ctrl_get_fd(nvme_ctrl_t c)
+void* nvme_ctrl_get_fd(nvme_ctrl_t c)
 {
 	nvme_root_t r = c->s && c->s->h ? c->s->h->r : NULL;
-
-	if (c->fd < 0) {
-		c->fd = nvme_open(c->name);
-		if (c->fd < 0)
+	struct dev_handle *hnd = c->hnd;
+	if (hnd->fd < 0) {
+		hnd->fd = nvme_open(c->name);
+		if (hnd->fd < 0)
 			nvme_msg(r, LOG_ERR,
 				 "Failed to open ctrl %s, errno %d\n",
 				 c->name, errno);
 	}
-	return c->fd;
+	return hnd;
 }
 
 nvme_subsystem_t nvme_ctrl_get_subsystem(nvme_ctrl_t c)
@@ -924,9 +924,10 @@ nvme_path_t nvme_ctrl_next_path(nvme_ctrl_t c, nvme_path_t p)
 	do { if (a) { free(a); (a) = NULL; } } while (0)
 void nvme_deconfigure_ctrl(nvme_ctrl_t c)
 {
-	if (c->fd >= 0) {
-		close(c->fd);
-		c->fd = -1;
+	struct dev_handle *hnd = c->hnd;
+	if (hnd!= NULL && hnd->fd >= 0) {
+		close(hnd->fd);
+		hnd->fd = -1;
 	}
 	FREE_CTRL_ATTR(c->name);
 	FREE_CTRL_ATTR(c->sysfs_dir);
@@ -971,9 +972,7 @@ static void __nvme_free_ctrl(nvme_ctrl_t c)
 {
 	struct nvme_path *p, *_p;
 	struct nvme_ns *n, *_n;
-
 	nvme_unlink_ctrl(c);
-
 	nvme_ctrl_for_each_path_safe(c, p, _p)
 		nvme_free_path(p);
 
@@ -1019,7 +1018,6 @@ struct nvme_ctrl *nvme_create_ctrl(nvme_root_t r,
 				   const char *host_iface, const char *trsvcid)
 {
 	struct nvme_ctrl *c;
-
 	if (!transport) {
 		nvme_msg(r, LOG_ERR, "No transport specified\n");
 		errno = EINVAL;
@@ -1042,7 +1040,7 @@ struct nvme_ctrl *nvme_create_ctrl(nvme_root_t r,
 		errno = ENOMEM;
 		return NULL;
 	}
-	c->fd = -1;
+	c->hnd = NULL;
 	nvmf_default_config(&c->cfg);
 	list_head_init(&c->namespaces);
 	list_head_init(&c->paths);
@@ -1188,7 +1186,6 @@ static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 {
 	DIR *d;
 	char *host_key;
-
 	d = opendir(path);
 	if (!d) {
 		nvme_msg(r, LOG_ERR, "Failed to open ctrl dir %s, error %d\n",
@@ -1198,7 +1195,7 @@ static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 	}
 	closedir(d);
 
-	c->fd = -1;
+	c->hnd = NULL;
 	c->name = strdup(name);
 	c->sysfs_dir = (char *)path;
 	c->firmware = nvme_get_ctrl_attr(c, "firmware_rev");
@@ -1453,13 +1450,11 @@ nvme_ctrl_t nvme_scan_ctrl(nvme_root_t r, const char *name)
 		errno = ENOMEM;
 		return NULL;
 	}
-
 	c = nvme_ctrl_alloc(r, s, path, name);
 	if (!c) {
 		free(path);
 		return NULL;
 	}
-
 	nvme_ctrl_scan_namespaces(r, c);
 	nvme_ctrl_scan_paths(r, c);
 	return c;
@@ -1491,9 +1486,9 @@ static int nvme_bytes_to_lba(nvme_ns_t n, off_t offset, size_t count,
 	return 0;
 }
 
-int nvme_ns_get_fd(nvme_ns_t n)
+void* nvme_ns_get_fd(nvme_ns_t n)
 {
-	return n->fd;
+	return n->hnd;
 }
 
 nvme_subsystem_t nvme_ns_get_subsystem(nvme_ns_t n)
@@ -1595,7 +1590,7 @@ int nvme_ns_verify(nvme_ns_t n, off_t offset, size_t count)
 {
 	struct nvme_io_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ns_get_fd(n),
+		.hnd = nvme_ns_get_fd(n),
 		.nsid = nvme_ns_get_nsid(n),
 		.control = 0,
 		.dsm = 0,
@@ -1622,7 +1617,7 @@ int nvme_ns_write_uncorrectable(nvme_ns_t n, off_t offset, size_t count)
 {
 	struct nvme_io_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ns_get_fd(n),
+		.hnd = nvme_ns_get_fd(n),
 		.nsid = nvme_ns_get_nsid(n),
 		.control = 0,
 		.dsm = 0,
@@ -1649,7 +1644,7 @@ int nvme_ns_write_zeros(nvme_ns_t n, off_t offset, size_t count)
 {
 	struct nvme_io_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ns_get_fd(n),
+		.hnd = nvme_ns_get_fd(n),
 		.nsid = nvme_ns_get_nsid(n),
 		.control = 0,
 		.dsm = 0,
@@ -1676,7 +1671,7 @@ int nvme_ns_write(nvme_ns_t n, void *buf, off_t offset, size_t count)
 {
 	struct nvme_io_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ns_get_fd(n),
+		.hnd = nvme_ns_get_fd(n),
 		.nsid = nvme_ns_get_nsid(n),
 		.control = 0,
 		.dsm = 0,
@@ -1703,7 +1698,7 @@ int nvme_ns_read(nvme_ns_t n, void *buf, off_t offset, size_t count)
 {
 	struct nvme_io_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ns_get_fd(n),
+		.hnd = nvme_ns_get_fd(n),
 		.nsid = nvme_ns_get_nsid(n),
 		.control = 0,
 		.dsm = 0,
@@ -1730,7 +1725,7 @@ int nvme_ns_compare(nvme_ns_t n, void *buf, off_t offset, size_t count)
 {
 	struct nvme_io_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ns_get_fd(n),
+		.hnd = nvme_ns_get_fd(n),
 		.nsid = nvme_ns_get_nsid(n),
 		.control = 0,
 		.dsm = 0,
@@ -1830,21 +1825,28 @@ static void nvme_ns_set_generic_name(struct nvme_ns *n, const char *name)
 static nvme_ns_t nvme_ns_open(const char *name)
 {
 	struct nvme_ns *n;
-
+	struct dev_handle *hnd;
 	n = calloc(1, sizeof(*n));
 	if (!n) {
 		errno = ENOMEM;
 		return NULL;
 	}
+	hnd = calloc(1, sizeof(*hnd));
+	if (!hnd) {
+                errno = ENOMEM;
+                return NULL;
+        }
 
+	n->hnd = hnd;
 	n->name = strdup(name);
-	n->fd = nvme_open(n->name);
-	if (n->fd < 0)
+	hnd->fd = nvme_open(n->name);
+	if (hnd->fd < 0)
 		goto free_ns;
 
 	nvme_ns_set_generic_name(n, name);
 
-	if (nvme_get_nsid(n->fd, &n->nsid) < 0)
+	hnd->dev_type = NVME_DEV_DIRECT; 
+	if (nvme_get_nsid(hnd, &n->nsid) < 0)
 		goto close_fd;
 
 	if (nvme_ns_init(n) != 0)
@@ -1852,14 +1854,14 @@ static nvme_ns_t nvme_ns_open(const char *name)
 
 	list_head_init(&n->paths);
 	list_node_init(&n->entry);
-
 	return n;
 
 close_fd:
-	close(n->fd);
+	close(hnd->fd);
 free_ns:
 	free(n->generic_name);
 	free(n->name);
+	free(n->hnd);
 	free(n);
 	return NULL;
 }

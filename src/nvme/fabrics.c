@@ -803,9 +803,9 @@ static struct nvmf_discovery_log *nvme_discovery_log(nvme_ctrl_t c,
 	const char *name = nvme_ctrl_get_name(c);
 	uint64_t genctr, numrec;
 	unsigned int size;
-	int fd = nvme_ctrl_get_fd(c);
+	struct dev_handle *hnd = nvme_ctrl_get_fd(c);
 
-	args->fd = fd;
+	args->hnd = hnd;
 
 	do {
 		size = sizeof(struct nvmf_discovery_log);
@@ -824,7 +824,7 @@ static struct nvmf_discovery_log *nvme_discovery_log(nvme_ctrl_t c,
 		args->rae = true;
 		args->len = size;
 		args->log = log;
-		ret = nvme_get_log_page(fd, 4096, args);
+		ret = nvme_get_log_page(hnd, 4096, args);
 		if (ret) {
 			nvme_msg(r, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
@@ -858,7 +858,7 @@ static struct nvmf_discovery_log *nvme_discovery_log(nvme_ctrl_t c,
 		args->rae = false;
 		args->len = size;
 		args->log = log;
-		ret = nvme_get_log_page(fd, 4096, args);
+		ret = nvme_get_log_page(hnd, 4096, args);
 
 		if (ret) {
 			nvme_msg(r, LOG_INFO,
@@ -919,7 +919,7 @@ int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 
 	struct nvme_get_log_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ctrl_get_fd(c),
+		.hnd = nvme_ctrl_get_fd(c),
 		.nsid = NVME_NSID_NONE,
 		.lsp = NVMF_LOG_DISC_LSP_NONE,
 		.lsi = NVME_LOG_LSI_NONE,
@@ -951,7 +951,7 @@ struct nvmf_discovery_log *nvmf_get_discovery_wargs(struct nvme_get_discovery_ar
 
 	struct nvme_get_log_args _args = {
 		.args_size = sizeof(_args),
-		.fd = nvme_ctrl_get_fd(args->c),
+		.hnd = nvme_ctrl_get_fd(args->c),
 		.nsid = NVME_NSID_NONE,
 		.lsp = args->lsp,
 		.lsi = NVME_LOG_LSI_NONE,
@@ -1283,7 +1283,7 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 
 	struct nvme_dim_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ctrl_get_fd(c),
+		.hnd = nvme_ctrl_get_fd(c),
 		.result = result,
 		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
 		.tas = tas
