@@ -408,7 +408,8 @@ void nvme_init_copy_range_f1(struct nvme_copy_range_f1 *copy, __u16 *nlbs,
 	for (i = 0; i < nr; i++) {
 		copy[i].nlb = cpu_to_le16(nlbs[i]);
 		copy[i].slba = cpu_to_le64(slbas[i]);
-		copy[i].elbt[2] = cpu_to_le64(eilbrts[i]);
+		copy[i].elbt_l = cpu_to_le64(eilbrts[i]);
+		copy[i].elbt_h = 0;
 		copy[i].elbatm = cpu_to_le16(elbatms[i]);
 		copy[i].elbat = cpu_to_le16(elbats[i]);
 	}  
