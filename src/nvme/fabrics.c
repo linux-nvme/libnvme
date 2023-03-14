@@ -39,9 +39,11 @@
 #include "private.h"
 
 #define NVMF_HOSTID_SIZE	37
+#define NVMF_HOSTKEY_SIZE	104
 
 #define NVMF_HOSTNQN_FILE	SYSCONFDIR "/nvme/hostnqn"
 #define NVMF_HOSTID_FILE	SYSCONFDIR "/nvme/hostid"
+#define NVMF_HOSTKEY_FILE	SYSCONFDIR "/nvme/hostkey"
 
 const char *nvmf_dev = "/dev/nvme-fabrics";
 
@@ -1166,6 +1168,11 @@ char *nvmf_hostnqn_from_file()
 char *nvmf_hostid_from_file()
 {
 	return nvmf_read_file(NVMF_HOSTID_FILE, NVMF_HOSTID_SIZE);
+}
+
+char *nvmf_hostkey_from_file()
+{
+	return nvmf_read_file(NVMF_HOSTKEY_FILE, NVMF_HOSTKEY_SIZE);
 }
 
 /**

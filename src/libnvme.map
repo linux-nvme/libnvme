@@ -1,4 +1,8 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
+LIBNVME_1_4 {
+	global:
+		nvmf_hostkey_from_file;
+};
 
 LIBNVME_1_3 {
 	global:

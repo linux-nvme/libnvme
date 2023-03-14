@@ -268,6 +268,14 @@ char *nvmf_hostnqn_from_file();
 char *nvmf_hostid_from_file();
 
 /**
+ * nvmf_hostkey_from_file() - Reads the host key from the config default
+ * 			      location in @SYSCONFDIR@/nvme/.
+ * Return: The host key, or NULL if unsuccessful. If found, the caller
+ * 	   is responsible to free the string.
+ */
+char *nvmf_hostkey_from_file();
+
+/**
  * nvmf_connect_disc_entry() - Connect controller based on the discovery log page entry
  * @h:		Host to which the controller should be connected
  * @e:		Discovery log page entry
