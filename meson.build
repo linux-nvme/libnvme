@@ -93,6 +93,17 @@ if openssl_dep.found()
            description: 'OpenSSL/LibreSSL API version @0@'.format(api_version))
 endif
 
+# Check for keyutils availability (optional)
+if cc.has_header('keyutils.h')
+  keyutils_dep = cc.find_library('keyutils',
+                                 required : false)
+  have_keyutils = keyutils_dep.found()
+else
+  keyutils_dep = []
+  have_keyutils = false
+endif
+conf.set('CONFIG_KEYUTILS', have_keyutils, description: 'Is libkeyutils available?')
+
 if get_option('libdbus').disabled()
     libdbus_dep = dependency('', required: false)
 else

@@ -10,6 +10,7 @@ LIBNVME_1_3 {
 		nvme_io_mgmt_send;
 		nvme_host_is_pdc_enabled;
 		nvme_host_set_pdc_enabled;
+		nvme_insert_tls_key;
 };
 
 LIBNVME_1_2 {
