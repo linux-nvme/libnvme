@@ -21,6 +21,11 @@
 #include <openssl/engine.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
+#include <openssl/kdf.h>
+
+#ifdef CONFIG_KEYUTILS
+#include <keyutils.h>
+#endif
 
 #ifdef CONFIG_OPENSSL_3
 #include <openssl/core_names.h>
@@ -470,9 +475,20 @@ int nvme_gen_dhchap_key(char *hostnqn, enum nvme_hmac_alg hmac,
 	memcpy(key, secret, key_len);
 	return 0;
 }
+
+long nvme_insert_tls_key(const char *keyring, const char *hostnqn,
+			 const char *subsysnqn, int hmac,
+			 unsigned char *configured_key, int key_len)
+{
+	nvme_msg(NULL, LOG_ERR, "TLS key operations not supported; "\
+		 "recompile with OpenSSL support.\n");
+	return -EOPNOTSUPP;
+}
+
 #endif /* !CONFIG_OPENSSL */
 
 #ifdef CONFIG_OPENSSL_1
+#ifdef CONFIG_KEYUTILS
 int nvme_gen_dhchap_key(char *hostnqn, enum nvme_hmac_alg hmac,
 			unsigned int key_len, unsigned char *secret,
 			unsigned char *key)
@@ -543,6 +559,177 @@ out:
 	HMAC_CTX_free(hmac_ctx);
 	return err;
 }
+
+static unsigned char *derive_retained_key(const EVP_MD *md, const char *hostnqn,
+					  unsigned char *generated_key,
+					  size_t key_len)
+{
+	unsigned char *retained_key;
+	EVP_PKEY_CTX *ctx;
+	size_t retained_len;
+	int err = -ENOKEY;
+
+	retained_key = malloc(key_len);
+	if (!retained_key)
+		return NULL;
+
+	retained_len = key_len;
+	ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+	if (!ctx)
+		goto out_free_retained_key;
+
+	if (EVP_PKEY_derive_init(ctx) <= 0)
+		goto out_free_retained_key;
+	if (EVP_PKEY_CTX_set_hkdf_md(ctx, md) <= 0)
+		goto out_free_retained_key;
+	if (EVP_PKEY_CTX_set1_hkdf_key(ctx, generated_key, key_len) <= 0)
+		goto out_free_retained_key;
+	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, "tls13 ", 6) <= 0)
+		goto out_free_retained_key;
+	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, "HostNQN", 7) <= 0)
+		goto out_free_retained_key;
+	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, hostnqn, strlen(hostnqn)) <= 0)
+		goto out_free_retained_key;
+
+	if (EVP_PKEY_derive(ctx, retained_key, &retained_len) > 0)
+		err = 0;
+
+out_free_retained_key:
+	if (err) {
+		free(retained_key);
+		retained_key = NULL;
+	}
+	EVP_PKEY_CTX_free(ctx);
+	return retained_key;
+}
+
+static key_serial_t derive_tls_key(const EVP_MD *md, key_serial_t keyring,
+				   const char *identity,
+				   unsigned char *retained_key, int key_len)
+{
+	key_serial_t key = -ENOKEY;
+	const char *key_type = "psk";
+	EVP_PKEY_CTX *ctx;
+	unsigned char *psk;
+	size_t psk_len;
+
+	psk = malloc(key_len);
+	if (!psk)
+		return -ENOMEM;
+	psk_len = key_len;
+
+	ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+	if (!ctx) {
+		key = -ENOMEM;
+		goto out_free_psk;
+	}
+
+	if (EVP_PKEY_derive_init(ctx) <= 0)
+		goto out_free_ctx;
+	if (EVP_PKEY_CTX_set_hkdf_md(ctx, md) <= 0)
+		goto out_free_ctx;
+	if (EVP_PKEY_CTX_set1_hkdf_key(ctx, retained_key, key_len) <= 0)
+		goto out_free_ctx;
+	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, "tls13 ", 6) <= 0)
+		goto out_free_ctx;
+	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, "nvme-tls-psk", 12) <= 0)
+		goto out_free_ctx;
+	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, identity,
+					strlen(identity)) <= 0)
+		goto out_free_ctx;
+
+	if (EVP_PKEY_derive(ctx, psk, &psk_len) <= 0)
+		goto out_free_ctx;
+
+	key = keyctl_search(keyring, key_type, identity, 0);
+	if (key >= 0) {
+		long err = keyctl_update(key, psk, psk_len);
+		if (err) {
+			nvme_msg(NULL, LOG_ERR,
+				 "updating %s key '%s' failed\n",
+				 key_type, identity);
+			key = err;
+		}
+	} else {
+		key = add_key(key_type, identity,
+			      psk, psk_len, keyring);
+		if (key < 0)
+			nvme_msg(NULL, LOG_ERR,
+				 "adding %s key '%s' failed, error %d\n",
+				 key_type, identity, errno);
+	}
+
+out_free_ctx:
+	EVP_PKEY_CTX_free(ctx);
+out_free_psk:
+	free(psk);
+
+	return key;
+}
+
+long nvme_insert_tls_key(const char *keyring, const char *hostnqn,
+			 const char *subsysnqn, int hmac,
+			 unsigned char *configured_key, int key_len)
+{
+	const EVP_MD *md;
+	key_serial_t keyring_id, key;
+	char *identity;
+	unsigned char *retained_key;
+
+	switch (hmac) {
+	case 1:
+		md = EVP_sha256();
+		break;
+	case 2:
+		md = EVP_sha384();
+		break;
+	default:
+		return 0;
+	}
+
+	keyring_id = find_key_by_type_and_desc("keyring", keyring, 0);
+	if (keyring_id < 0) {
+		nvme_msg(NULL, LOG_ERR,
+			 "keyring '%s' not available\n", keyring);
+		return 0;
+	}
+
+	identity = malloc(strlen(hostnqn) + strlen(subsysnqn) + 12);
+	if (!identity)
+		return 0;
+
+	sprintf(identity, "NVMeR%02d %s %s", md == EVP_sha256() ? 1 : 2,
+		hostnqn, subsysnqn);
+
+	retained_key = derive_retained_key(md, hostnqn,
+					   configured_key, key_len);
+	if (!retained_key) {
+		nvme_msg(NULL, LOG_DEBUG,
+			 "Failed to derive retained key\n");
+		free(identity);
+		return 0;
+	}
+
+	key = derive_tls_key(md, keyring_id, identity,
+			     retained_key, key_len);
+	if (key < 0) {
+		nvme_msg(NULL, LOG_DEBUG, "Failed to derive TLS key\n");
+		key = 0;
+	}
+
+	free(identity);
+	return key;
+}
+#else
+long nvme_insert_tls_key(const char *keyring, const char *hostnqn,
+			 const char *subsysnqn, int hmac,
+			 unsigned char *configured_key, int key_len)
+{
+	nvme_msg(NULL, LOG_ERR, "TLS key operations not supported; "\
+		 "recompile with keyutils support.\n");
+	return -EOPNOTSUPP;
+}
+#endif /* CONFIG_KEYUTILS */
 #endif /* !CONFIG_OPENSSL_1 */
 
 #ifdef CONFIG_OPENSSL_3
@@ -637,4 +824,13 @@ out:
 
 	return err;
 }
+
+long nvme_insert_tls_key(const char *keyring, const char *hostnqn,
+			 const char *subsysnqn, int hmac,
+			 unsigned char *configured_key, int key_len)
+{
+	errno = EOPNOTSUPP;
+	return -1;
+}
+
 #endif /* !CONFIG_OPENSSL_3 */

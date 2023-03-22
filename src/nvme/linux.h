@@ -194,4 +194,23 @@ int nvme_gen_dhchap_key(char *hostnqn, enum nvme_hmac_alg hmac,
 			unsigned int key_len, unsigned char *secret,
 			unsigned char *key);
 
+/**
+ * nvme_insert_tls_key() - Derive and insert TLS key
+ * @keyring:    Keyring to use
+ * @hostnqn:	Host NVMe Qualified Name
+ * @subsysnqn:	Subsystem NVMe Qualified Name
+ * @hmac:	HMAC algorithm
+ * @configured_key:	Configured key data to derive the key from
+ * @key_len:	Length of @configured_key
+ *
+ * Derives a 'retained' TLS key as specified in NVMe TCP 1.0a and
+ * stores it in the keyring specified by @keyring.
+ *
+ * Return: The key serial number if the key could be inserted into
+ * the keyring or 0 otherwise.
+ */
+long nvme_insert_tls_key(const char *keyring, const char *hostnqn,
+			 const char *subsysnqn, int hmac,
+			 unsigned char *configured_key, int key_len);
+
 #endif /* _LIBNVME_LINUX_H */
