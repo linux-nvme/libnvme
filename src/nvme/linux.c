@@ -686,13 +686,9 @@ long nvme_insert_tls_key(const char *keyring, const char *hostnqn,
 	default:
 		return 0;
 	}
-
-	keyring_id = find_key_by_type_and_desc("keyring", keyring, 0);
-	if (keyring_id < 0) {
-		nvme_msg(NULL, LOG_ERR,
-			 "keyring '%s' not available\n", keyring);
+	keyring_id = nvme_lookup_keyring(keyring);
+	if (keyring_id <= 0)
 		return 0;
-	}
 
 	identity = malloc(strlen(hostnqn) + strlen(subsysnqn) + 12);
 	if (!identity)
@@ -834,3 +830,41 @@ long nvme_insert_tls_key(const char *keyring, const char *hostnqn,
 }
 
 #endif /* !CONFIG_OPENSSL_3 */
+
+#ifdef CONFIG_KEYUTILS
+long nvme_lookup_keyring(const char *keyring)
+{
+	key_serial_t keyring_id;
+
+	keyring_id = find_key_by_type_and_desc("keyring", keyring, 0);
+	if (keyring_id < 0) {
+		nvme_msg(NULL, LOG_ERR,
+			 "keyring '%s' not available\n", keyring);
+		return 0;
+	}
+	return keyring_id;
+}
+
+char *nvme_describe_key_serial(long key_id)
+{
+	char *desc;
+
+	if (keyctl_describe_alloc(key_id, &desc) < 0)
+		desc = NULL;
+	return desc;
+}
+#else
+long nvme_lookup_keyring(const char *keyring)
+{
+	nvme_msg(NULL, LOG_ERR, "key operations not supported; "\
+		 "recompile with keyutils support.\n");
+	return 0;
+}
+
+char *nvme_describe_key_serial(long key_id)
+{
+	nvme_msg(NULL, LOG_ERR, "key operations not supported; "\
+		 "recompile with keyutils support.\n");
+	return NULL;
+}
+#endif

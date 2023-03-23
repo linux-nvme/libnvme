@@ -11,6 +11,8 @@ LIBNVME_1_3 {
 		nvme_host_is_pdc_enabled;
 		nvme_host_set_pdc_enabled;
 		nvme_insert_tls_key;
+		nvme_lookup_keyring;
+		nvme_describe_key_serial;
 };
 
 LIBNVME_1_2 {
