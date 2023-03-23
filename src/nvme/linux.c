@@ -845,6 +845,30 @@ long nvme_lookup_keyring(const char *keyring)
 	return keyring_id;
 }
 
+long nvme_lookup_key(const char *type, const char *identity)
+{
+	key_serial_t key;
+
+	key = keyctl_search(KEY_SPEC_SESSION_KEYRING, type, identity, 0);
+	if (key < 0) {
+		nvme_msg(NULL, LOG_ERR,
+			 "key '%s' type '%s' not found\n",
+			 identity, type);
+		return 0;
+	}
+	return key;
+}
+
+int nvme_set_keyring(long key_id)
+{
+	long err;
+
+	err = keyctl_link(key_id, KEY_SPEC_SESSION_KEYRING);
+	if (err < 0)
+		return -1;
+	return 0;
+}
+
 char *nvme_describe_key_serial(long key_id)
 {
 	char *desc;
@@ -853,11 +877,24 @@ char *nvme_describe_key_serial(long key_id)
 		desc = NULL;
 	return desc;
 }
+
 #else
 long nvme_lookup_keyring(const char *keyring)
 {
 	nvme_msg(NULL, LOG_ERR, "key operations not supported; "\
 		 "recompile with keyutils support.\n");
+	return 0;
+}
+
+long nvme_lookup_key(const char *type, const char *identity)
+{
+	nvme_msg(NULL, LOG_ERR, "key operations not supported; "\
+		 "recompile with keyutils support.\n");
+	return 0;
+}
+
+int nvme_set_keyring(long key_id)
+{
 	return 0;
 }
 

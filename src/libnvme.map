@@ -13,6 +13,8 @@ LIBNVME_1_3 {
 		nvme_insert_tls_key;
 		nvme_lookup_keyring;
 		nvme_describe_key_serial;
+		nvme_lookup_key;
+		nvme_set_keyring;
 };
 
 LIBNVME_1_2 {
