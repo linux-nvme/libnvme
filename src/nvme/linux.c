@@ -348,6 +348,56 @@ int nvme_get_ana_log_len(int fd, size_t *analen)
 	return 0;
 }
 
+static int nvme_get_instance(const char *name, int *instance,
+		int *head_instance)
+{
+	int ret;
+
+	if (!instance || !head_instance) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	ret = sscanf(name, "nvme%dn%d", instance, head_instance);
+	if (ret != 2) {
+		ret = sscanf(name, "ng%dn%d", instance, head_instance);
+		if (ret != 2) {
+			errno = EINVAL;
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+int nvme_get_logical_block_size_attr(const char *devname, int *blksize)
+{
+	int instance, head_instance;
+	int ret;
+	char *path;
+
+	if (!blksize) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	ret = nvme_get_instance(devname, &instance, &head_instance);
+	if (ret)
+		return ret;
+
+	ret = asprintf(&path, "%s/nvme%dn%d/queue", nvme_ns_sysfs_dir,
+			instance, head_instance);
+	if (ret < 0)
+		goto free;
+
+	*blksize = atoi(nvme_get_attr(path, "logical_block_size"));
+
+	ret = 0;
+free:
+	free(path);
+	return ret;
+}
+
 int nvme_get_logical_block_size(int fd, __u32 nsid, int *blksize)
 {
 	struct nvme_id_ns ns;

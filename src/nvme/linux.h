@@ -108,6 +108,15 @@ int nvme_get_new_host_telemetry(int fd,  struct nvme_telemetry_log **log,
 int nvme_get_ana_log_len(int fd, size_t *analen);
 
 /**
+ * nvme_get_logical_block_size_attr() - Retrieve block size from sysfs
+ * @devname:   The basename of the [block|generic] device (e.g., nvme0n1)
+ * @blksize:   Pointer to where the block size will be set on success
+ *
+ * Return: 0 on success or negative value with errno set otherwise.
+ */
+int nvme_get_logical_block_size_attr(const char *devname, int *blksize);
+
+/**
  * nvme_get_logical_block_size() - Retrieve block size
  * @fd:		File descriptor of nvme device
  * @nsid:	Namespace id
