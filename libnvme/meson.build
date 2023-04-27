@@ -22,7 +22,7 @@ if build_python_bindings
         'nvme.py',
         input:   ['nvme.i'],
         output:  ['nvme.py', 'nvme_wrap.c'],
-        command: [swig, '-python', '-py3', '-o', '@OUTPUT1@', '@INPUT0@'],
+        command: [swig, '-python', '-o', '@OUTPUT1@', '@INPUT0@'],
         install: true,
         install_dir: [python3.get_install_dir(pure: false, subdir: 'libnvme'), false],
     )
