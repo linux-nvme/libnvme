@@ -604,7 +604,7 @@ const char *nvme_get_version(enum nvme_version type);
  *
  * Return: Returns error code if type conversion fails.
  */
-int nvme_uuid_to_string(unsigned char uuid[NVME_UUID_LEN], char *str);
+int nvme_uuid_to_string(const unsigned char uuid[NVME_UUID_LEN], char *str);
 
 /**
  * nvme_uuid_from_string - Return encoded UUID represenation of string UUID
@@ -625,5 +625,14 @@ int nvme_uuid_from_string(const char *str, unsigned char uuid[NVME_UUID_LEN]);
  * Return: Returns error code if generating of random number fails.
  */
 int nvme_uuid_random(unsigned char uuid[NVME_UUID_LEN]);
+
+/**
+ * ipaddrs_eq - Check if 2 IP addresses are equal.
+ * @addr1: IP address (can be IPv4 or IPv6)
+ * @addr2: IP address (can be IPv4 or IPv6)
+ *
+ * Return: true if addr1 == addr2. false otherwise.
+ */
+bool ipaddrs_eq(const char *addr1, const char *addr2);
 
 #endif /* _LIBNVME_UTIL_H */
