@@ -1081,11 +1081,13 @@ nvme_ctrl_t __nvme_lookup_ctrl(nvme_subsystem_t s, const char *transport,
 		if (traddr && c->traddr &&
 		    strcasecmp(c->traddr, traddr))
 			continue;
-		if (host_traddr && c->cfg.host_traddr &&
-		    strcmp(c->cfg.host_traddr, host_traddr))
+		if (c->cfg.host_traddr != host_traddr &&
+		    (!c->cfg.host_traddr || !host_traddr ||
+		     strcasecmp(c->cfg.host_traddr, host_traddr)))
 			continue;
-		if (host_iface && c->cfg.host_iface &&
-		    strcmp(c->cfg.host_iface, host_iface))
+		if (c->cfg.host_iface != host_iface &&
+		    (!c->cfg.host_iface || !host_iface||
+		     strcmp(c->cfg.host_iface, host_iface)))
 			continue;
 		if (trsvcid && c->trsvcid &&
 		    strcmp(c->trsvcid, trsvcid))
