@@ -284,7 +284,7 @@ enum nvme_mi_dtyp {
  *
  * Configuration parameters for the MI Get/Set Configuration commands.
  *
- * See &nvme_mi_mi_config_get() and &nvme_mi_config_set().
+ * See &nvme_mi_get_mi_config() and &nvme_mi_config_set().
  */
 enum nvme_mi_config_id {
 	NVME_MI_CONFIG_SMBUS_FREQ = 0x1,
@@ -773,7 +773,7 @@ int nvme_mi_mi_subsystem_health_status_poll(nvme_mi_ep_t ep, bool clear,
 					    struct nvme_mi_nvm_ss_health_status *nshds);
 
 /**
- * nvme_mi_mi_config_get - query a configuration parameter
+ * nvme_mi_get_mi_config - query a configuration parameter
  * @ep: endpoint for MI communication
  * @dw0: management doubleword 0, containing configuration identifier, plus
  *       config-specific fields
@@ -792,7 +792,7 @@ int nvme_mi_mi_subsystem_health_status_poll(nvme_mi_ep_t ep, bool clear,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise..
  */
-int nvme_mi_mi_config_get(nvme_mi_ep_t ep, __u32 dw0, __u32 dw1,
+int nvme_mi_get_mi_config(nvme_mi_ep_t ep, __u32 dw0, __u32 dw1,
 			  __u32 *nmresp);
 
 /**
@@ -833,7 +833,7 @@ static inline int nvme_mi_mi_config_get_smbus_freq(nvme_mi_ep_t ep, __u8 port,
 
 	dw0 = port << 24 | NVME_MI_CONFIG_SMBUS_FREQ;
 
-	rc = nvme_mi_mi_config_get(ep, dw0, 0, &tmp);
+	rc = nvme_mi_get_mi_config(ep, dw0, 0, &tmp);
 	if (!rc)
 		*freq = (enum nvme_mi_config_smbus_freq)(tmp & 0x3);
 	return rc;
@@ -913,7 +913,7 @@ static inline int nvme_mi_mi_config_get_mctp_mtu(nvme_mi_ep_t ep, __u8 port,
 
 	dw0 = port << 24 | NVME_MI_CONFIG_MCTP_MTU;
 
-	rc = nvme_mi_mi_config_get(ep, dw0, 0, &tmp);
+	rc = nvme_mi_get_mi_config(ep, dw0, 0, &tmp);
 	if (!rc)
 		*mtu = tmp & 0xffff;
 	return rc;

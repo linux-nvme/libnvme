@@ -418,7 +418,7 @@ indicate the particular structure to query from the endpoint.
 
 Configuration parameters for the MI Get/Set Configuration commands.
 
-See :c:type:`nvme_mi_mi_config_get`() and :c:type:`nvme_mi_config_set`().
+See :c:type:`nvme_mi_get_mi_config`() and :c:type:`nvme_mi_config_set`().
 
 
 

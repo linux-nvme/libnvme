@@ -1475,7 +1475,7 @@ int nvme_mi_mi_subsystem_health_status_poll(nvme_mi_ep_t ep, bool clear,
 	return 0;
 }
 
-int nvme_mi_mi_config_get(nvme_mi_ep_t ep, __u32 dw0, __u32 dw1,
+int nvme_mi_get_mi_config(nvme_mi_ep_t ep, __u32 dw0, __u32 dw1,
 			  __u32 *nmresp)
 {
 	struct nvme_mi_mi_resp_hdr resp_hdr;
