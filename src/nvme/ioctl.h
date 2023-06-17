@@ -1244,7 +1244,7 @@ int nvme_get_log(struct nvme_get_log_args *args);
 int nvme_get_log_page(int fd, __u32 xfer_len, struct nvme_get_log_args *args);
 
 static inline int nvme_get_nsid_log(int fd, bool rae,
-			enum nvme_cmd_get_log_lid lid,
+			enum nvme_log_lid lid,
 			__u32 nsid, __u32 len, void *log)
 {
 	struct nvme_get_log_args args = {
@@ -1268,7 +1268,7 @@ static inline int nvme_get_nsid_log(int fd, bool rae,
 	return nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, &args);
 }
 
-static inline int nvme_get_log_simple(int fd, enum nvme_cmd_get_log_lid lid,
+static inline int nvme_get_log_simple(int fd, enum nvme_log_lid lid,
 				      __u32 len, void *log)
 {
 	return nvme_get_nsid_log(fd, false, lid, NVME_NSID_ALL, len, log);

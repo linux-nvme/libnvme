@@ -61,7 +61,7 @@ struct nvme_identify_args {
  * @args_size:	Length of the structure
  * @fd:		File descriptor of nvme device
  * @timeout:	Timeout in ms
- * @lid:	Log page identifier, see &enum nvme_cmd_get_log_lid for known
+ * @lid:	Log page identifier, see &enum nvme_log_lid for known
  *		values
  * @len:	Length of provided user buffer to hold the log data in bytes
  * @nsid:	Namespace identifier, if applicable
@@ -81,7 +81,7 @@ struct nvme_get_log_args {
 	int args_size;
 	int fd;
 	__u32 timeout;
-	enum nvme_cmd_get_log_lid lid;
+	enum nvme_log_lid lid;
 	__u32 len;
 	__u32 nsid;
 	enum nvme_csi csi;

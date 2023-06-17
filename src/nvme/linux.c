@@ -129,7 +129,7 @@ static int nvme_get_telemetry_log(int fd, bool create, bool ctrl, bool rae,
 	static const __u32 xfer = NVME_LOG_TELEM_BLOCK_SIZE;
 
 	struct nvme_telemetry_log *telem;
-	enum nvme_cmd_get_log_lid lid;
+	enum nvme_log_lid lid;
 	struct nvme_id_ctrl id_ctrl;
 	void *log, *tmp;
 	int err;

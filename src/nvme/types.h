@@ -6666,7 +6666,7 @@ enum nvme_identify_cns {
 };
 
 /**
- * enum nvme_cmd_get_log_lid -			Get Log Page -Log Page Identifiers
+ * enum nvme_log_lid -			Get Log Page -Log Page Identifiers
  * @NVME_LOG_LID_SUPPORTED_LOG_PAGES:		Supported Log Pages
  * @NVME_LOG_LID_ERROR:				Error Information
  * @NVME_LOG_LID_SMART:				SMART / Health Information
@@ -6697,7 +6697,7 @@ enum nvme_identify_cns {
  * @NVME_LOG_LID_SANITIZE:			Sanitize Status
  * @NVME_LOG_LID_ZNS_CHANGED_ZONES:		Changed Zone List
  */
-enum nvme_cmd_get_log_lid {
+enum nvme_log_lid {
 	NVME_LOG_LID_SUPPORTED_LOG_PAGES			= 0x00,
 	NVME_LOG_LID_ERROR					= 0x01,
 	NVME_LOG_LID_SMART					= 0x02,

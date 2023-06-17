@@ -1491,7 +1491,7 @@ int nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl, struct nvme_get_log_args *args);
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 static inline int nvme_mi_admin_get_nsid_log(nvme_mi_ctrl_t ctrl, bool rae,
-					     enum nvme_cmd_get_log_lid lid,
+					     enum nvme_log_lid lid,
 					     __u32 nsid, __u32 len, void *log)
 {
 	struct nvme_get_log_args args = {
@@ -1528,7 +1528,7 @@ static inline int nvme_mi_admin_get_nsid_log(nvme_mi_ctrl_t ctrl, bool rae,
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
 static inline int nvme_mi_admin_get_log_simple(nvme_mi_ctrl_t ctrl,
-					       enum nvme_cmd_get_log_lid lid,
+					       enum nvme_log_lid lid,
 					       __u32 len, void *log)
 {
 	return nvme_mi_admin_get_nsid_log(ctrl, false, lid, NVME_NSID_ALL,
