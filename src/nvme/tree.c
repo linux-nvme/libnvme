@@ -693,6 +693,7 @@ static int nvme_scan_subsystem(struct nvme_root *r, const char *name,
 				continue;
 			s = _s;
 			__nvme_scan_subsystem(r, s, f, f_args);
+			break;
 		}
 	}
 	if (!s) {
