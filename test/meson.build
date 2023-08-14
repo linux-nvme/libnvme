@@ -9,6 +9,7 @@
 # define as meson unit-tests, and therefore get run as part of the 'test'
 # target. However, they're available for developer use, when hardware is
 # available.
+
 main = executable(
     'main-test',
     ['test.c'],
@@ -67,6 +68,26 @@ uuid = executable(
 test('uuid', uuid)
 
 if conf.get('HAVE_NETDB')
+    # make sure python is available (not available with muon)
+    if find_program('python3').found()
+        python3 = import('python').find_installation('python3', required: false)
+        if python3.found()
+            test_tcp_ctrl_lkup_c = custom_target(
+                'test-tcp-ctrl-lkup.c',
+                input : 'test-tcp-ctrl-lkup.py',
+                output : 'test-tcp-ctrl-lkup.c',
+                command : [python3, '@INPUT@', '--out', '@OUTPUT0@']
+            )
+            test_tcp_ctrl_lkup = executable(
+                'test-tcp-ctrl-lkup',
+                [test_tcp_ctrl_lkup_c],
+                dependencies: libnvme_dep,
+                include_directories: [incdir, internal_incdir]
+            )
+            test('Test TCP controller lookup', test_tcp_ctrl_lkup)
+        endif
+    endif
+
     tree = executable(
         'tree',
         ['tree.c'],

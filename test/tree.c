@@ -235,19 +235,19 @@ static void test_lookup_2(void)
 
 	c2 = nvme_lookup_ctrl(s, "tcp", "192.168.1.1", "192.168.1.20",
 			      "eth0", NULL, NULL);
-	assert(c1 == c2);
+	assert(c1 != c2);
 	printf("%10s %10s    ", "eth0", "-");
 	show_ctrl(c2);
 
 	c3 = nvme_lookup_ctrl(s, "tcp", "192.168.1.1", "192.168.1.20",
 			      NULL, "4420", NULL);
-	assert(c1 == c3);
+	assert(c1 != c3);
 	printf("%10s %10s    ", "-", "4420");
 	show_ctrl(c3);
 
 	c4 = nvme_lookup_ctrl(s, "tcp", "192.168.1.1", "192.168.1.20",
 			      "eth0", "4420", NULL);
-	assert(c1 == c4);
+	assert(c1 != c4);
 	printf("%10s %10s    ", "eth0", "4420");
 	show_ctrl(c4);
 

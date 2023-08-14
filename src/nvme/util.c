@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <ifaddrs.h>
 
 #include <ccan/endian/endian.h>
 
@@ -906,6 +907,46 @@ int nvme_uuid_random(unsigned char uuid[NVME_UUID_LEN])
 }
 
 #ifdef HAVE_NETDB
+static bool _nvme_ipaddrs_eq(struct sockaddr *addr1, struct sockaddr *addr2)
+{
+	struct sockaddr_in *sockaddr_v4;
+	struct sockaddr_in6 *sockaddr_v6;
+
+	if (addr1->sa_family == AF_INET && addr2->sa_family == AF_INET) {
+		struct sockaddr_in *sockaddr1 = (struct sockaddr_in *)addr1;
+		struct sockaddr_in *sockaddr2 = (struct sockaddr_in *)addr2;
+		return sockaddr1->sin_addr.s_addr == sockaddr2->sin_addr.s_addr;
+	}
+
+	if (addr1->sa_family == AF_INET6 && addr2->sa_family == AF_INET6) {
+		struct sockaddr_in6 *sockaddr1 = (struct sockaddr_in6 *)addr1;
+		struct sockaddr_in6 *sockaddr2 = (struct sockaddr_in6 *)addr2;
+		return !memcmp(&sockaddr1->sin6_addr, &sockaddr2->sin6_addr, sizeof(struct in6_addr));
+	}
+
+	switch (addr1->sa_family) {
+	case AF_INET:
+		sockaddr_v6 = (struct sockaddr_in6 *)addr2;
+		if (IN6_IS_ADDR_V4MAPPED(&sockaddr_v6->sin6_addr)) {
+			sockaddr_v4 = (struct sockaddr_in *)addr1;
+			return sockaddr_v4->sin_addr.s_addr == sockaddr_v6->sin6_addr.s6_addr32[3];
+		}
+		break;
+
+	case AF_INET6:
+		sockaddr_v6 = (struct sockaddr_in6 *)addr1;
+		if (IN6_IS_ADDR_V4MAPPED(&sockaddr_v6->sin6_addr)) {
+			sockaddr_v4 = (struct sockaddr_in *)addr2;
+			return sockaddr_v4->sin_addr.s_addr == sockaddr_v6->sin6_addr.s6_addr32[3];
+		}
+		break;
+
+	default: ;
+	}
+
+	return false;
+}
+
 bool nvme_ipaddrs_eq(const char *addr1, const char *addr2)
 {
 	bool result = false;
@@ -924,37 +965,7 @@ bool nvme_ipaddrs_eq(const char *addr1, const char *addr2)
 	if (getaddrinfo(addr2, 0, &hint2, &info2) || !info2)
 		goto ipaddrs_eq_fail;
 
-	if (info1->ai_family == AF_INET && info2->ai_family == AF_INET) {
-		struct sockaddr_in *sockaddr1 = (struct sockaddr_in *)(info1->ai_addr);
-		struct sockaddr_in *sockaddr2 = (struct sockaddr_in *)(info2->ai_addr);
-		result = sockaddr1->sin_addr.s_addr == sockaddr2->sin_addr.s_addr;
-	} else if (info1->ai_family == AF_INET6 && info2->ai_family == AF_INET6) {
-		struct sockaddr_in6 *sockaddr1 = (struct sockaddr_in6 *)(info1->ai_addr);
-		struct sockaddr_in6 *sockaddr2 = (struct sockaddr_in6 *)(info2->ai_addr);
-		result = !memcmp(&sockaddr1->sin6_addr, &sockaddr2->sin6_addr, sizeof(struct in6_addr));
-	} else {
-		struct sockaddr_in *sockaddr_v4;
-		struct sockaddr_in6 *sockaddr_v6;
-		switch (info1->ai_family) {
-		case AF_INET:
-			sockaddr_v6 = (struct sockaddr_in6 *)(info2->ai_addr);
-			if (IN6_IS_ADDR_V4MAPPED(&sockaddr_v6->sin6_addr)) {
-				sockaddr_v4 = (struct sockaddr_in *)(info1->ai_addr);
-				result = sockaddr_v4->sin_addr.s_addr == sockaddr_v6->sin6_addr.s6_addr32[3];
-			}
-			break;
-
-		case AF_INET6:
-			sockaddr_v6 = (struct sockaddr_in6 *)(info1->ai_addr);
-			if (IN6_IS_ADDR_V4MAPPED(&sockaddr_v6->sin6_addr)) {
-				sockaddr_v4 = (struct sockaddr_in *)(info2->ai_addr);
-				result = sockaddr_v4->sin_addr.s_addr == sockaddr_v6->sin6_addr.s6_addr32[3];
-			}
-			break;
-
-		default: ;
-		}
-	}
+	result = _nvme_ipaddrs_eq(info1->ai_addr, info2->ai_addr);
 
 ipaddrs_eq_fail:
 	if (info1)
@@ -971,4 +982,112 @@ bool nvme_ipaddrs_eq(const char *addr1, const char *addr2)
 
 	return false;
 }
+#endif /* HAVE_NETDB */
+
+
+#ifdef HAVE_NETDB
+void *nvme_iface_list()
+{
+	struct ifaddrs *ifaces = NULL;
+
+	if (getifaddrs(&ifaces) == -1)
+		return NULL;
+
+	return ifaces;
+}
+
+void nvme_iface_list_free(void *iface_list)
+{
+	freeifaddrs((struct ifaddrs *)iface_list); /* NULL safe */
+}
+
+const char *nvme_iface_matching_addr(const void *iface_list, const char *addr)
+{
+	struct ifaddrs *iface_it;
+	struct addrinfo *info = NULL, hint = { .ai_flags = AI_NUMERICHOST, .ai_family = AF_UNSPEC };
+	const char *iface_name = NULL;
+
+	if (!addr || getaddrinfo(addr, 0, &hint, &info) || !info)
+		return NULL;
+
+	/* Walk through the linked list */
+	for (iface_it = (struct ifaddrs *)iface_list;
+	     iface_it != NULL;
+	     iface_it = iface_it->ifa_next) {
+		struct sockaddr *ifaddr = iface_it->ifa_addr;
+
+		if (ifaddr && (ifaddr->sa_family == AF_INET || ifaddr->sa_family == AF_INET6) &&
+		    _nvme_ipaddrs_eq(info->ai_addr, ifaddr)) {
+			iface_name = iface_it->ifa_name;
+			break;
+		}
+	}
+
+	freeaddrinfo(info);
+
+	return iface_name;
+}
+
+bool nvme_iface_primary_addr_matches(const void *iface_list, const char *iface, const char *addr)
+{
+	struct ifaddrs *iface_it;
+	struct addrinfo *info = NULL, hint = { .ai_flags = AI_NUMERICHOST, .ai_family = AF_UNSPEC };
+	bool match_found = false;
+
+	if (!addr || getaddrinfo(addr, 0, &hint, &info) || !info)
+		return false;
+
+	/* Walk through the linked list */
+	for (iface_it = (struct ifaddrs *)iface_list; iface_it != NULL; iface_it = iface_it->ifa_next) {
+		if (strcmp(iface, iface_it->ifa_name))
+			continue; /* Not the interface we're looking for*/
+
+		/* The interface list is ordered in a way that the primary
+		 * address is listed first. As soon as the parsed address
+		 * matches the family of the address we're looking for, we
+		 * have found the primary address for that family.
+		 */
+		if (iface_it->ifa_addr && (iface_it->ifa_addr->sa_family == info->ai_addr->sa_family)) {
+			match_found = _nvme_ipaddrs_eq(info->ai_addr, iface_it->ifa_addr);
+			break;
+		}
+	}
+
+	freeaddrinfo(info);
+
+	return match_found;
+}
+
+#else /* HAVE_NETDB */
+
+void *nvme_iface_list()
+{
+	nvme_msg(NULL, LOG_ERR, "no support for interface lookup; " \
+		"recompile with libnss support.\n");
+
+	return NULL;
+}
+
+void nvme_iface_list_free(void *iface_list)
+{
+	nvme_msg(NULL, LOG_ERR, "no support for interface lookup; " \
+		"recompile with libnss support.\n");
+}
+
+const char *nvme_iface_matching_addr(const void *iface_list, const char *addr)
+{
+	nvme_msg(NULL, LOG_ERR, "no support for interface lookup; " \
+		"recompile with libnss support.\n");
+
+	return NULL;
+}
+
+bool nvme_iface_primary_addr_matches(const void *iface_list, const char *iface, const char *addr)
+{
+	nvme_msg(NULL, LOG_ERR, "no support for interface lookup; " \
+		"recompile with libnss support.\n");
+
+	return false;
+}
+
 #endif /* HAVE_NETDB */

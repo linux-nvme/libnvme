@@ -639,4 +639,50 @@ int nvme_uuid_random(unsigned char uuid[NVME_UUID_LEN]);
  */
 bool nvme_ipaddrs_eq(const char *addr1, const char *addr2);
 
+/**
+ * nvme_iface_list - Get the list of interfaces (for tcp/rdma)
+ *
+ * The list must be freed by nvme_iface_list_free().
+ *
+ * Return: Return the interfaces as an opaque list
+ */
+void* nvme_iface_list();
+
+/**
+ * nvme_iface_list_free - Free a list of interfaces
+ * @iface_list: Interface list returned by nvme_iface_list()
+ *
+ * It is safe to call this function with NULL.
+ *
+ * Free the memory allocated by nvme_iface_list().
+ */
+void nvme_iface_list_free(void *iface_list);
+
+/**
+ * nvme_iface_matching_addr - Get interface matching @addr
+ * @iface_list: Interface list returned by nvme_iface_list()
+ * @addr: Address to match
+ *
+ * Parse the interface list pointed to by @iface_list looking
+ * for the interface that has @addr as one of its assigned
+ * addresses.
+ *
+ * Return: The name of the interface that owns @addr or NULL.
+ */
+const char* nvme_iface_matching_addr(const void *iface_list, const char *addr);
+
+/**
+ * nvme_iface_primary_addr_matches - Check that interface's primary address matches
+ * @iface_list: Interface list returned by nvme_iface_list()
+ * @iface: Interface to match
+ * @addr: Address to match
+ *
+ * Parse the interface list pointed to by @iface_list and looking for
+ * interface @iface. The get its primary address and check if it matches
+ * @addr.
+ *
+ * Return: true if a match is found, false otherwise.
+ */
+bool nvme_iface_primary_addr_matches(const void *iface_list, const char *iface, const char *addr);
+
 #endif /* _LIBNVME_UTIL_H */
