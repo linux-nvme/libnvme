@@ -260,7 +260,7 @@ LIBNVME_1_0 {
 		nvme_ns_get_csi;
 		nvme_ns_get_ctrl;
 		nvme_ns_get_eui64;
-		nvme_ns_get_fd;
+		nvme_ns_get_hdl;
 		nvme_ns_get_firmware;
 		nvme_ns_get_generic_name;
 		nvme_ns_get_lba_count;

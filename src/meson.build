@@ -22,6 +22,7 @@ mi_sources = [
     'nvme/log.c',
     'nvme/mi.c',
     'nvme/mi-mctp.c',
+    'nvme/handle.c',
 ]
 
 if json_c_dep.found()
@@ -131,6 +132,7 @@ install_headers([
         'nvme/types.h',
         'nvme/util.h',
         'nvme/mi.h',
+	'nvme/handle.h',
     ],
     subdir: 'nvme',
     install_mode: mode,

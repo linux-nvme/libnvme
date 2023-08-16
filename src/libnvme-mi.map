@@ -57,6 +57,8 @@ LIBNVME_MI_1_1 {
 		nvme_mi_open_mctp;
 		nvme_mi_scan_mctp;
 		nvme_mi_scan_ep;
+		get_dev;
+		dev_close;
 	local:
 		*;
 };
