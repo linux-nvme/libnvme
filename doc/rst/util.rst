@@ -74,24 +74,6 @@ libnvme utility functions
   connect attempt is ignored due to configuration
 
 
-.. c:function:: __u8 nvme_status_to_errno (int status, bool fabrics)
-
-   Converts nvme return status to errno
-
-**Parameters**
-
-``int status``
-  Return status from an nvme passthrough command
-
-``bool fabrics``
-  Set to true if :c:type:`status` is to a fabrics target.
-
-**Return**
-
-An errno representing the nvme status if it is an nvme status field,
-or unchanged status is < 0 since errno is already set.
-
-
 .. c:function:: const char * nvme_status_to_string (int status, bool fabrics)
 
    Returns string describing nvme return status.

@@ -66,16 +66,6 @@ enum nvme_connect_err {
 };
 
 /**
- * nvme_status_to_errno() - Converts nvme return status to errno
- * @status:  Return status from an nvme passthrough command
- * @fabrics: Set to true if &status is to a fabrics target.
- *
- * Return: An errno representing the nvme status if it is an nvme status field,
- * or unchanged status is < 0 since errno is already set.
- */
-__u8 nvme_status_to_errno(int status, bool fabrics);
-
-/**
  * nvme_status_to_string() - Returns string describing nvme return status.
  * @status:  Return status from an nvme passthrough command
  * @fabrics: Set to true if &status is to a fabrics target.
