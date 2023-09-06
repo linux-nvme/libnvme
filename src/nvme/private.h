@@ -169,7 +169,16 @@ struct nvme_root {
 	struct nvme_fabric_options *options;
 };
 
+struct nvme_quirk {
+	__u16 vid;
+	__u16 did;
+	unsigned int flags;
+};
+
 int nvme_set_attr(const char *dir, const char *attr, const char *value);
+
+struct json_object;
+struct json_object *parse_json(nvme_root_t r, int fd);
 
 int json_read_config(nvme_root_t r, const char *config_file);
 

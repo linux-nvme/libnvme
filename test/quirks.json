@@ -1,0 +1,7 @@
+[
+	{
+		"vid" : "0x1234",
+		"did" : "0x5678",
+		"quirks" : [ "NS_ID_DESC_LIST" ]
+	}
+]

@@ -26,8 +26,10 @@ mi_sources = [
 
 if json_c_dep.found()
     sources += 'nvme/json.c'
+    sources += 'nvme/quirks.c'
 else
     sources += 'nvme/no-json.c'
+    sources += 'nvme/no-quirks.c'
 endif
 
 deps = [

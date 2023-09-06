@@ -189,7 +189,7 @@ static void json_parse_host(nvme_root_t r, struct json_object *host_obj)
 	}
 }
 
-static struct json_object *parse_json(nvme_root_t r, int fd)
+struct json_object *parse_json(nvme_root_t r, int fd)
 {
 	char buf[JSON_FILE_BUF_SIZE];
 	struct json_object *obj = NULL;
@@ -219,7 +219,7 @@ static struct json_object *parse_json(nvme_root_t r, int fd)
 	tok->flags = JSON_TOKENER_STRICT;
 
 	obj = json_tokener_parse_ex(tok, str, len);
-	if (!obj)
+	if (!obj && r)
 		nvme_msg(r, LOG_DEBUG, "JSON parsing failed: %s\n",
 			 json_util_get_last_err());
 out:

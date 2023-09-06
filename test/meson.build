@@ -90,5 +90,14 @@ if conf.get('HAVE_NETDB')
     test('Test util.c', test_util)
 endif
 
+quirks = executable(
+    'test-quirks',
+    ['quirks.c'],
+    dependencies: libnvme_dep,
+    include_directories: [incdir, internal_incdir]
+)
+test('quirks', quirks, env: ['NVME_CONFIG_QUIRKS='+
+                             meson.current_source_dir() + '/quirks.json'])
+
 subdir('ioctl')
 subdir('nbft')
