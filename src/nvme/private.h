@@ -90,6 +90,7 @@ struct nvme_ctrl {
 	bool discovered;
 	bool persistent;
 	struct nvme_fabrics_config cfg;
+	unsigned int quirk_flags;
 };
 
 struct nvme_subsystem {

@@ -34,6 +34,7 @@
 #include "fabrics.h"
 #include "log.h"
 #include "private.h"
+#include "quirks.h"
 
 /**
  * struct candidate_args - Used to look for a controller matching these parameters
@@ -1667,6 +1668,24 @@ static char *nvme_ctrl_lookup_phy_slot(nvme_root_t r, const char *address)
 	return NULL;
 }
 
+static void nvme_configure_ctrl_quirks(nvme_ctrl_t c)
+{
+	struct nvme_id_ctrl *id;
+
+	/* Some ctrl really want the buffer to be page aligned and write always 4k. */
+	if(posix_memalign((void*)&id, getpagesize(), 0x1000))
+		return;
+
+	/* We should read this value from sysfs but currently it's not available */
+	if (nvme_ctrl_identify(c, id))
+		return;
+
+	c->quirk_flags = nvme_quirks_get(le16_to_cpu(id->vid),
+					 le16_to_cpu(id->ssvid));
+
+	free(id);
+}
+
 static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 			       const char *name)
 {
@@ -1709,6 +1728,8 @@ static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 	c->cntrltype = nvme_get_ctrl_attr(c, "cntrltype");
 	c->dctype = nvme_get_ctrl_attr(c, "dctype");
 	c->phy_slot = nvme_ctrl_lookup_phy_slot(r, c->address);
+
+	nvme_configure_ctrl_quirks(c);
 
 	errno = 0; /* cleanup after nvme_get_ctrl_attr() */
 	return 0;
@@ -2309,7 +2330,8 @@ static int nvme_ns_init(struct nvme_ns *n)
 	n->lba_util = le64_to_cpu(ns.nuse);
 	n->meta_size = le16_to_cpu(ns.lbaf[flbas].ms);
 
-	if (!nvme_ns_identify_descs(n, descs))
+	if (!(n->c->quirk_flags & NVME_QUIRKS_NS_ID_DESC_LIST) &&
+	    !nvme_ns_identify_descs(n, descs))
 		nvme_ns_parse_descriptors(n, descs);
 
 	return 0;
