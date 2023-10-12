@@ -48,3 +48,19 @@ rpm: ${BUILD-DIR}
 	tar rf libnvme.tar ${BUILD-DIR}/libnvme.spec
 	gzip -f -9 libnvme.tar
 	rpmbuild -ta libnvme.tar.gz -v
+
+# Retrieve and Invoke Linux kernel's checkpatch script on modified source files
+ifeq (checkpatch,$(strip $(filter $(MAKECMDGOALS),checkpatch)))
+  MODIFIED-FILES := $(strip $(shell ./scripts/get-modified-src-files.py))
+endif
+
+${BUILD-DIR}/checkpatch.pl: ${BUILD-DIR}
+	wget "https://raw.githubusercontent.com/torvalds/linux/master/scripts/checkpatch.pl" -O $@
+	chmod +x $@
+
+.PHONY: checkpatch
+checkpatch: ${BUILD-DIR}/checkpatch.pl
+ifneq (,${MODIFIED-FILES})
+	${BUILD-DIR}/checkpatch.pl -no-tree ${MODIFIED-FILES}
+endif
+
