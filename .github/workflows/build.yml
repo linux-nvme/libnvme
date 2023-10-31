@@ -23,6 +23,12 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.x'
+      - name: "install/update dependencies"
+        run: |
+          apt update
+          apt-get install --yes --quiet python3-pip
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade meson ninja
       - name: build
         run: |
           scripts/build.sh -b ${{ matrix.buildtype }} -c ${{ matrix.compiler }}
@@ -74,6 +80,12 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.x'
+      - name: "install/update dependencies"
+        run: |
+          apt update
+          apt-get install --yes --quiet python3-pip
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade meson ninja
       - name: build
         run: |
           scripts/build.sh -b release -c gcc libdbus
@@ -96,6 +108,12 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.x'
+      - name: "install/update dependencies"
+        run: |
+          apt update
+          apt-get install --yes --quiet python3-pip
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade meson ninja
       - name: build
         run: |
           scripts/build.sh -b release -c gcc fallback
