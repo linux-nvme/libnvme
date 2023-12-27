@@ -4059,4 +4059,17 @@ void nvme_set_debug(bool debug);
  * Return: false if disabled or true if enabled.
  */
 bool nvme_get_debug(void);
+
+/**
+ * nvme_set_latency - Set NVMe command latency output
+ * @latency:	true to enable or false to disable
+ */
+void nvme_set_latency(bool latency);
+
+/**
+ * nvme_get_latency - Get NVMe command latency output
+ *
+ * Return: false if disabled or true if enabled.
+ */
+bool nvme_get_latency(void);
 #endif /* _LIBNVME_IOCTL_H */

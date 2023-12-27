@@ -26,6 +26,7 @@
 #include "util.h"
 
 static bool nvme_debug;
+static bool nvme_latency;
 
 static int nvme_verify_chr(int fd)
 {
@@ -90,8 +91,7 @@ static int nvme_submit_passthru64(int fd, unsigned long ioctl_cmd,
 	return err;
 }
 
-static void nvme_show_command(struct nvme_passthru_cmd *cmd, int err, struct timeval start,
-			      struct timeval end)
+static void nvme_show_command(struct nvme_passthru_cmd *cmd, int err)
 {
 	printf("opcode       : %02x\n", cmd->opcode);
 	printf("flags        : %02x\n", cmd->flags);
@@ -112,8 +112,136 @@ static void nvme_show_command(struct nvme_passthru_cmd *cmd, int err, struct tim
 	printf("timeout_ms   : %08x\n", cmd->timeout_ms);
 	printf("result       : %08x\n", cmd->result);
 	printf("err          : %d\n", err);
-	printf("latency      : %lu us\n",
-	       (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec));
+}
+
+const char *nvme_admin_to_string(__u8 opcode)
+{
+	switch (opcode) {
+	case nvme_admin_delete_sq:
+		return "Delete I/O Submission Queue";
+	case nvme_admin_create_sq:
+		return "Create I/O Submission Queue";
+	case nvme_admin_get_log_page:
+		return "Get Log Page";
+	case nvme_admin_delete_cq:
+		return "Delete I/O Completion Queue";
+	case nvme_admin_create_cq:
+		return "Create I/O Completion Queue";
+	case nvme_admin_identify:
+		return "Identify";
+	case nvme_admin_abort_cmd:
+		return "Abort";
+	case nvme_admin_set_features:
+		return "Set Features";
+	case nvme_admin_get_features:
+		return "Get Features";
+	case nvme_admin_async_event:
+		return "Asynchronous Event Request";
+	case nvme_admin_ns_mgmt:
+		return "Namespace Management";
+	case nvme_admin_fw_commit:
+		return "Firmware Commit";
+	case nvme_admin_fw_download:
+		return "Firmware Image Download";
+	case nvme_admin_dev_self_test:
+		return "Device Self-test";
+	case nvme_admin_ns_attach:
+		return "Namespace Attachment";
+	case nvme_admin_keep_alive:
+		return "Keep Alive";
+	case nvme_admin_directive_send:
+		return "Directive Send";
+	case nvme_admin_directive_recv:
+		return "Directive Receive";
+	case nvme_admin_virtual_mgmt:
+		return "Virtualization Management";
+	case nvme_admin_nvme_mi_send:
+		return "NVMe-MI Send";
+	case nvme_admin_nvme_mi_recv:
+		return "NVMe-MI Receive";
+	case nvme_admin_dbbuf:
+		return "Doorbell Buffer Config";
+	case nvme_admin_format_nvm:
+		return "Format NVM";
+	case nvme_admin_security_send:
+		return "Security Send";
+	case nvme_admin_security_recv:
+		return "Security Receive";
+	case nvme_admin_sanitize_nvm:
+		return "Sanitize";
+	case nvme_admin_get_lba_status:
+		return "Get LBA Status";
+	default:
+		break;
+	}
+
+	return NULL;
+}
+
+const char *nvme_nvm_to_string(__u8 opcode)
+{
+	switch (opcode) {
+	case nvme_cmd_flush:
+		return "Flush";
+	case nvme_cmd_write:
+		return "Write";
+	case nvme_cmd_read:
+		return "Read";
+	case nvme_cmd_write_uncor:
+		return "Write Uncorrectable";
+	case nvme_cmd_compare:
+		return "Compare";
+	case nvme_cmd_write_zeroes:
+		return "Write Zeroes";
+	case nvme_cmd_dsm:
+		return "Dataset Management";
+	case nvme_cmd_resv_register:
+		return "Reservation Register";
+	case nvme_cmd_resv_report:
+		return "Reservation Report";
+	case nvme_cmd_resv_acquire:
+		return "Reservation Acquire";
+	case nvme_cmd_resv_release:
+		return "Reservation Release";
+	case nvme_cmd_verify:
+		return "Verify";
+	case nvme_cmd_copy:
+		return "Copy";
+	case nvme_zns_cmd_mgmt_send:
+		return "Zone Management Send";
+	case nvme_zns_cmd_mgmt_recv:
+		return "Zone Management Receive";
+	case nvme_zns_cmd_append:
+		return "Zone Append";
+	default:
+		break;
+	}
+
+	return NULL;
+}
+
+const char *nvme_cmd_to_string(bool admin, __u8 opcode)
+{
+	const char *cmd_name;
+
+	if (admin)
+		cmd_name = nvme_admin_to_string(opcode);
+	else
+		cmd_name = nvme_nvm_to_string(opcode);
+
+	if (!cmd_name)
+		return "Unknown";
+
+	return cmd_name;
+}
+
+static void nvme_show_latency(bool admin, __u8 opcode, struct timeval *start, struct timeval *end)
+{
+	struct timeval latency;
+
+	timersub(end, start, &latency);
+	printf("%s Command opcode: %02x (%s) latency: %lu us\n", admin ? "Admin" : "IO", opcode,
+	       nvme_cmd_to_string(admin, opcode), latency.tv_sec * 1000000 + latency.tv_usec);
 }
 
 void nvme_set_debug(bool debug)
@@ -126,6 +254,16 @@ bool nvme_get_debug(void)
 	return nvme_debug;
 }
 
+void nvme_set_latency(bool latency)
+{
+	nvme_latency = latency;
+}
+
+bool nvme_get_latency(void)
+{
+	return nvme_latency;
+}
+
 static int nvme_submit_passthru(int fd, unsigned long ioctl_cmd,
 				struct nvme_passthru_cmd *cmd, __u32 *result)
 {
@@ -133,15 +271,18 @@ static int nvme_submit_passthru(int fd, unsigned long ioctl_cmd,
 	struct timeval end;
 	int err;
 
-	if (nvme_get_debug())
+	if (nvme_get_latency())
 		gettimeofday(&start, NULL);
 
 	err = ioctl(fd, ioctl_cmd, cmd);
 
-	if (nvme_get_debug()) {
+	if (nvme_get_latency()) {
 		gettimeofday(&end, NULL);
-		nvme_show_command(cmd, err, start, end);
+		nvme_show_latency(ioctl_cmd == NVME_IOCTL_ADMIN_CMD, cmd->opcode, &start, &end);
 	}
+
+	if (nvme_get_debug())
+		nvme_show_command(cmd, err);
 
 	if (err >= 0 && result)
 		*result = cmd->result;
