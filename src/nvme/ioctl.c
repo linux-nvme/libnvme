@@ -220,7 +220,7 @@ const char *nvme_nvm_to_string(__u8 opcode)
 	return NULL;
 }
 
-const char *nvme_cmd_to_string(bool admin, __u8 opcode)
+static const char *nvme_cmd_to_string(bool admin, __u8 opcode)
 {
 	const char *cmd_name;
 

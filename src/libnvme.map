@@ -7,6 +7,8 @@ LIBNVME_1_7 {
 		nvme_generate_tls_key_identity;
 		nvme_set_latency;
 		nvme_get_latency;
+		nvme_admin_to_string;
+		nvme_nvm_to_string;
 };
 
 LIBNVME_1_6 {

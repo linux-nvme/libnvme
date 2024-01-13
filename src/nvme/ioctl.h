@@ -4049,7 +4049,7 @@ int nvme_dim_send(struct nvme_dim_args *args);
 
 /**
  * nvme_set_debug - Set NVMe command debugging output
- * @debug:	true to enable or false to disable
+ * @debug: true to enable or false to disable
  */
 void nvme_set_debug(bool debug);
 
@@ -4062,7 +4062,7 @@ bool nvme_get_debug(void);
 
 /**
  * nvme_set_latency - Set NVMe command latency output
- * @latency:	true to enable or false to disable
+ * @latency: true to enable or false to disable
  */
 void nvme_set_latency(bool latency);
 
@@ -4072,4 +4072,22 @@ void nvme_set_latency(bool latency);
  * Return: false if disabled or true if enabled.
  */
 bool nvme_get_latency(void);
+
+/**
+ * nvme_admin_to_string - Returns string describing nvme admin opcode
+ * @opcode:  Admin opcode for an nvme command
+ *
+ * Return: representation of the admin opcode if it is an admin opcode field,
+ * or NULL if opcode is unknown.
+ */
+const char *nvme_admin_to_string(__u8 opcode);
+
+/**
+ * nvme_nvm_to_string - Returns string describing nvme nvm opcode
+ * @opcode:  NVM opcode for an nvme command
+ *
+ * Return: representation of the nvm opcode if it is an nvm opcode field,
+ * or NULL if opcode is unknown.
+ */
+const char *nvme_nvm_to_string(__u8 opcode);
 #endif /* _LIBNVME_IOCTL_H */
