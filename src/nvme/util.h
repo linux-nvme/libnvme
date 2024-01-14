@@ -702,4 +702,21 @@ const char *nvme_iface_matching_addr(const struct ifaddrs *iface_list, const cha
  */
 bool nvme_iface_primary_addr_matches(const struct ifaddrs *iface_list, const char *iface, const char *addr);
 
+/**
+ * nvme_admin_to_string - Returns string describing nvme admin opcode
+ * @opcode:  Admin opcode for an nvme command
+ *
+ * Return: representation of the admin opcode if it is an admin opcode field,
+ * or NULL if opcode is unknown.
+ */
+const char *nvme_admin_to_string(__u8 opcode);
+
+/**
+ * nvme_nvm_to_string - Returns string describing nvme nvm opcode
+ * @opcode:  NVM opcode for an nvme command
+ *
+ * Return: representation of the nvm opcode if it is an nvm opcode field,
+ * or NULL if opcode is unknown.
+ */
+const char *nvme_nvm_to_string(__u8 opcode);
 #endif /* _LIBNVME_UTIL_H */

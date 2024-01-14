@@ -1116,3 +1116,68 @@ void *__nvme_alloc(size_t len)
 	memset(p, 0, _len);
 	return p;
 }
+
+static const char * const admin_opcode[] = {
+	[nvme_admin_delete_sq] = "Delete I/O Submission Queue",
+	[nvme_admin_create_sq] = "Create I/O Submission Queue",
+	[nvme_admin_get_log_page] = "Get Log Page",
+	[nvme_admin_delete_cq] = "Delete I/O Completion Queue",
+	[nvme_admin_create_cq] = "Create I/O Completion Queue",
+	[nvme_admin_identify] = "Identify",
+	[nvme_admin_abort_cmd] = "Abort",
+	[nvme_admin_set_features] = "Set Features",
+	[nvme_admin_get_features] = "Get Features",
+	[nvme_admin_async_event] = "Asynchronous Event Request",
+	[nvme_admin_ns_mgmt] = "Namespace Management",
+	[nvme_admin_fw_commit] = "Firmware Commit",
+	[nvme_admin_fw_download] = "Firmware Image Download",
+	[nvme_admin_dev_self_test] = "Device Self-test",
+	[nvme_admin_ns_attach] = "Namespace Attachment",
+	[nvme_admin_keep_alive] = "Keep Alive",
+	[nvme_admin_directive_send] = "Directive Send",
+	[nvme_admin_directive_recv] = "Directive Receive",
+	[nvme_admin_virtual_mgmt] = "Virtualization Management",
+	[nvme_admin_nvme_mi_send] = "NVMe-MI Send",
+	[nvme_admin_nvme_mi_recv] = "NVMe-MI Receive",
+	[nvme_admin_dbbuf] = "Doorbell Buffer Config",
+	[nvme_admin_format_nvm] = "Format NVM",
+	[nvme_admin_security_send] = "Security Send",
+	[nvme_admin_security_recv] = "Security Receive",
+	[nvme_admin_sanitize_nvm] = "Sanitize",
+	[nvme_admin_get_lba_status] = "Get LBA Status",
+};
+
+static const char * const nvm_opcode[] = {
+	[nvme_cmd_flush] = "Flush",
+	[nvme_cmd_write] = "Write",
+	[nvme_cmd_read] = "Read",
+	[nvme_cmd_write_uncor] = "Write Uncorrectable",
+	[nvme_cmd_compare] = "Compare",
+	[nvme_cmd_write_zeroes] = "Write Zeroes",
+	[nvme_cmd_dsm] = "Dataset Management",
+	[nvme_cmd_resv_register] = "Reservation Register",
+	[nvme_cmd_resv_report] = "Reservation Report",
+	[nvme_cmd_resv_acquire] = "Reservation Acquire",
+	[nvme_cmd_resv_release] = "Reservation Release",
+	[nvme_cmd_verify] = "Verify",
+	[nvme_cmd_copy] = "Copy",
+	[nvme_zns_cmd_mgmt_send] = "Zone Management Send",
+	[nvme_zns_cmd_mgmt_recv] = "Zone Management Receive",
+	[nvme_zns_cmd_append] = "Zone Append",
+};
+
+const char *nvme_admin_to_string(__u8 opcode)
+{
+	if (opcode < ARRAY_SIZE(admin_opcode))
+		return admin_opcode[opcode];
+
+	return NULL;
+}
+
+const char *nvme_nvm_to_string(__u8 opcode)
+{
+	if (opcode < ARRAY_SIZE(nvm_opcode))
+		return nvm_opcode[opcode];
+
+	return NULL;
+}
