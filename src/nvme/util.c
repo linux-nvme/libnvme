@@ -1181,3 +1181,29 @@ const char *nvme_nvm_to_string(__u8 opcode)
 
 	return NULL;
 }
+
+const char *nvme_ioctl_to_string(unsigned long req)
+{
+	switch (req) {
+	case NVME_IOCTL_ID:
+		return "ID";
+	case NVME_IOCTL_RESET:
+		return "Reset";
+	case NVME_IOCTL_SUBSYS_RESET:
+		return "Subsystem reset";
+	case NVME_IOCTL_RESCAN:
+		return "Rescan";
+	case NVME_IOCTL_ADMIN_CMD:
+		return "Admin command";
+	case NVME_IOCTL_IO_CMD:
+		return "IO command";
+	case NVME_IOCTL_ADMIN64_CMD:
+		return "Admin64 command";
+	case NVME_IOCTL_IO64_CMD:
+		return "IO64 command";
+	default:
+		break;
+	}
+
+	return NULL;
+}

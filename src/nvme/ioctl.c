@@ -14,6 +14,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <stdarg.h>
 
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -43,6 +44,102 @@ static int nvme_verify_chr(int fd)
 	return 0;
 }
 
+static bool nvme_ioctl_cmd_admin(unsigned long req)
+{
+	return req == NVME_IOCTL_ADMIN_CMD || req == NVME_IOCTL_ADMIN64_CMD;
+}
+
+static bool nvme_ioctl_cmd_64(unsigned long req)
+{
+	return req == NVME_IOCTL_ADMIN64_CMD || req == NVME_IOCTL_IO64_CMD;
+}
+
+static const char *nvme_cmd_to_string(unsigned long req, __u8 opcode)
+{
+	const char *cmd_name;
+
+	if (nvme_ioctl_cmd_admin(req))
+		cmd_name = nvme_admin_to_string(opcode);
+	else
+		cmd_name = nvme_nvm_to_string(opcode);
+
+	if (!cmd_name)
+		return "Unknown";
+
+	return cmd_name;
+}
+
+static void nvme_show_latency(unsigned long req, __u8 *opcode, struct timeval *start,
+			      struct timeval *end)
+{
+	struct timeval latency;
+
+	timersub(end, start, &latency);
+
+	if (opcode)
+		printf("%s%s Command opcode: %02x (%s) ",
+		       nvme_ioctl_cmd_admin(req) ? "Admin" : "IO",
+		       nvme_ioctl_cmd_64(req) ? "64" : "", *opcode,
+		       nvme_cmd_to_string(req, *opcode));
+	else
+		printf("ioctl: %lx (%s) ", req, nvme_ioctl_to_string(req));
+
+	printf("latency: %lu us\n", latency.tv_sec * 1000000 + latency.tv_usec);
+}
+
+static bool nvme_ioctl_cmd(unsigned long req)
+{
+	bool ioctl_cmd = false;
+
+	switch (req) {
+	case NVME_IOCTL_ADMIN_CMD:
+		fallthrough;
+	case NVME_IOCTL_IO_CMD:
+		fallthrough;
+	case NVME_IOCTL_ADMIN64_CMD:
+		fallthrough;
+	case NVME_IOCTL_IO64_CMD:
+		ioctl_cmd = true;
+		break;
+	default:
+		break;
+	}
+
+	return ioctl_cmd;
+}
+
+static int nvme_ioctl(int fd, unsigned long req, ...)
+{
+	struct timeval start;
+	struct timeval end;
+	int err;
+	va_list ap;
+	__u8 *opcode = NULL;
+	void *ioctl_cmd = NULL;
+
+	if (nvme_ioctl_cmd(req)) {
+		va_start(ap, req);
+		ioctl_cmd = va_arg(ap, void *);
+		va_end(ap);
+		if (nvme_ioctl_cmd_64(req))
+			opcode = &((struct nvme_passthru_cmd64 *)ioctl_cmd)->opcode;
+		else
+			opcode = &((struct nvme_passthru_cmd *)ioctl_cmd)->opcode;
+	}
+
+	if (nvme_get_latency())
+		gettimeofday(&start, NULL);
+
+	err = ioctl_cmd ? ioctl(fd, req, ioctl_cmd) : ioctl(fd, req);
+
+	if (nvme_get_latency()) {
+		gettimeofday(&end, NULL);
+		nvme_show_latency(req, opcode, &start, &end);
+	}
+
+	return err;
+}
+
 int nvme_subsystem_reset(int fd)
 {
 	int ret;
@@ -50,7 +147,7 @@ int nvme_subsystem_reset(int fd)
 	ret = nvme_verify_chr(fd);
 	if (ret)
 		return ret;
-	return ioctl(fd, NVME_IOCTL_SUBSYS_RESET);
+	return nvme_ioctl(fd, NVME_IOCTL_SUBSYS_RESET);
 }
 
 int nvme_ctrl_reset(int fd)
@@ -60,7 +157,7 @@ int nvme_ctrl_reset(int fd)
 	ret = nvme_verify_chr(fd);
 	if (ret)
 		return ret;
-	return ioctl(fd, NVME_IOCTL_RESET);
+	return nvme_ioctl(fd, NVME_IOCTL_RESET);
 }
 
 int nvme_ns_rescan(int fd)
@@ -70,13 +167,13 @@ int nvme_ns_rescan(int fd)
 	ret = nvme_verify_chr(fd);
 	if (ret)
 		return ret;
-	return ioctl(fd, NVME_IOCTL_RESCAN);
+	return nvme_ioctl(fd, NVME_IOCTL_RESCAN);
 }
 
 int nvme_get_nsid(int fd, __u32 *nsid)
 {
 	errno = 0;
-	*nsid = ioctl(fd, NVME_IOCTL_ID);
+	*nsid = nvme_ioctl(fd, NVME_IOCTL_ID);
 	return -1 * (errno != 0);
 }
 
@@ -84,7 +181,7 @@ static int nvme_submit_passthru64(int fd, unsigned long ioctl_cmd,
 				  struct nvme_passthru_cmd64 *cmd,
 				  __u64 *result)
 {
-	int err = ioctl(fd, ioctl_cmd, cmd);
+	int err = nvme_ioctl(fd, ioctl_cmd, cmd);
 
 	if (err >= 0 && result)
 		*result = cmd->result;
@@ -114,30 +211,6 @@ static void nvme_show_command(struct nvme_passthru_cmd *cmd, int err)
 	printf("err          : %d\n", err);
 }
 
-static const char *nvme_cmd_to_string(bool admin, __u8 opcode)
-{
-	const char *cmd_name;
-
-	if (admin)
-		cmd_name = nvme_admin_to_string(opcode);
-	else
-		cmd_name = nvme_nvm_to_string(opcode);
-
-	if (!cmd_name)
-		return "Unknown";
-
-	return cmd_name;
-}
-
-static void nvme_show_latency(bool admin, __u8 opcode, struct timeval *start, struct timeval *end)
-{
-	struct timeval latency;
-
-	timersub(end, start, &latency);
-	printf("%s Command opcode: %02x (%s) latency: %lu us\n", admin ? "Admin" : "IO", opcode,
-	       nvme_cmd_to_string(admin, opcode), latency.tv_sec * 1000000 + latency.tv_usec);
-}
-
 void nvme_set_debug(bool debug)
 {
 	nvme_debug = debug;
@@ -161,19 +234,9 @@ bool nvme_get_latency(void)
 static int nvme_submit_passthru(int fd, unsigned long ioctl_cmd,
 				struct nvme_passthru_cmd *cmd, __u32 *result)
 {
-	struct timeval start;
-	struct timeval end;
 	int err;
 
-	if (nvme_get_latency())
-		gettimeofday(&start, NULL);
-
-	err = ioctl(fd, ioctl_cmd, cmd);
-
-	if (nvme_get_latency()) {
-		gettimeofday(&end, NULL);
-		nvme_show_latency(ioctl_cmd == NVME_IOCTL_ADMIN_CMD, cmd->opcode, &start, &end);
-	}
+	err = nvme_ioctl(fd, ioctl_cmd, cmd);
 
 	if (nvme_get_debug())
 		nvme_show_command(cmd, err);
