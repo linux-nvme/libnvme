@@ -177,38 +177,47 @@ int nvme_get_nsid(int fd, __u32 *nsid)
 	return -1 * (errno != 0);
 }
 
+static void nvme_show_command(unsigned long ioctl_cmd, void *cmd, int err)
+{
+	struct nvme_passthru_cmd *cmd32 = cmd;
+	struct nvme_passthru_cmd64 *cmd64 = cmd;
+
+	printf("opcode       : %02x\n", cmd32->opcode);
+	printf("flags        : %02x\n", cmd32->flags);
+	printf("rsvd1        : %04x\n", cmd32->rsvd1);
+	printf("nsid         : %08x\n", cmd32->nsid);
+	printf("cdw2         : %08x\n", cmd32->cdw2);
+	printf("cdw3         : %08x\n", cmd32->cdw3);
+	printf("data_len     : %08x\n", cmd32->data_len);
+	printf("metadata_len : %08x\n", cmd32->metadata_len);
+	printf("addr         : %"PRIx64"\n", (uint64_t)(uintptr_t)cmd32->addr);
+	printf("metadata     : %"PRIx64"\n", (uint64_t)(uintptr_t)cmd32->metadata);
+	printf("cdw10        : %08x\n", cmd32->cdw10);
+	printf("cdw11        : %08x\n", cmd32->cdw11);
+	printf("cdw12        : %08x\n", cmd32->cdw12);
+	printf("cdw13        : %08x\n", cmd32->cdw13);
+	printf("cdw14        : %08x\n", cmd32->cdw14);
+	printf("cdw15        : %08x\n", cmd32->cdw15);
+	printf("timeout_ms   : %08x\n", cmd32->timeout_ms);
+	if (nvme_ioctl_cmd_64(ioctl_cmd))
+		printf("result       : %"PRIx64"\n", (uint64_t)(uintptr_t)cmd64->result);
+	else
+		printf("result       : %08x\n", cmd32->result);
+	printf("err          : %d\n", err);
+}
+
 static int nvme_submit_passthru64(int fd, unsigned long ioctl_cmd,
 				  struct nvme_passthru_cmd64 *cmd,
 				  __u64 *result)
 {
 	int err = nvme_ioctl(fd, ioctl_cmd, cmd);
 
+	if (nvme_get_debug())
+		nvme_show_command(ioctl_cmd, cmd, err);
+
 	if (err >= 0 && result)
 		*result = cmd->result;
 	return err;
-}
-
-static void nvme_show_command(struct nvme_passthru_cmd *cmd, int err)
-{
-	printf("opcode       : %02x\n", cmd->opcode);
-	printf("flags        : %02x\n", cmd->flags);
-	printf("rsvd1        : %04x\n", cmd->rsvd1);
-	printf("nsid         : %08x\n", cmd->nsid);
-	printf("cdw2         : %08x\n", cmd->cdw2);
-	printf("cdw3         : %08x\n", cmd->cdw3);
-	printf("data_len     : %08x\n", cmd->data_len);
-	printf("metadata_len : %08x\n", cmd->metadata_len);
-	printf("addr         : %"PRIx64"\n", (uint64_t)(uintptr_t)cmd->addr);
-	printf("metadata     : %"PRIx64"\n", (uint64_t)(uintptr_t)cmd->metadata);
-	printf("cdw10        : %08x\n", cmd->cdw10);
-	printf("cdw11        : %08x\n", cmd->cdw11);
-	printf("cdw12        : %08x\n", cmd->cdw12);
-	printf("cdw13        : %08x\n", cmd->cdw13);
-	printf("cdw14        : %08x\n", cmd->cdw14);
-	printf("cdw15        : %08x\n", cmd->cdw15);
-	printf("timeout_ms   : %08x\n", cmd->timeout_ms);
-	printf("result       : %08x\n", cmd->result);
-	printf("err          : %d\n", err);
 }
 
 void nvme_set_debug(bool debug)
@@ -239,7 +248,7 @@ static int nvme_submit_passthru(int fd, unsigned long ioctl_cmd,
 	err = nvme_ioctl(fd, ioctl_cmd, cmd);
 
 	if (nvme_get_debug())
-		nvme_show_command(cmd, err);
+		nvme_show_command(ioctl_cmd, cmd, err);
 
 	if (err >= 0 && result)
 		*result = cmd->result;
