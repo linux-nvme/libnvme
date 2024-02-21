@@ -282,6 +282,7 @@ static void json_update_port(struct json_object *ctrl_array, nvme_ctrl_t c)
 	struct nvme_fabrics_config *cfg = nvme_ctrl_get_config(c);
 	struct json_object *port_obj = json_object_new_object();
 	const char *transport, *value;
+	_cleanup_free_ char *keyring_str = NULL;
 
 	transport = nvme_ctrl_get_transport(c);
 	json_object_object_add(port_obj, "transport",
@@ -338,21 +339,29 @@ static void json_update_port(struct json_object *ctrl_array, nvme_ctrl_t c)
 	 * Store the keyring description in the JSON config file.
 	 */
 	if (cfg->keyring) {
-		_cleanup_free_ char *desc =
-			nvme_describe_key_serial(cfg->keyring);
+		keyring_str = nvme_describe_key_serial(cfg->keyring);
 
-		if (desc) {
+		if (keyring_str) {
 			json_object_object_add(port_obj, "keyring",
-					       json_object_new_string(desc));
+					       json_object_new_string(keyring_str));
 		}
 	}
+	/*
+	 * Store the TLS key in PSK interchange format
+	 */
 	if (cfg->tls_key) {
-		_cleanup_free_ char *desc =
-			nvme_describe_key_serial(cfg->tls_key);
+		int key_len;
+		_cleanup_free_ unsigned char *key_data =
+			nvme_read_key(keyring_str,
+				      cfg->tls_key, &key_len);
 
-		if (desc) {
-			json_object_object_add(port_obj, "tls_key",
-					       json_object_new_string(desc));
+		if (key_data) {
+			_cleanup_free_ char *tls_str =
+				nvme_export_tls_key(key_data, key_len);
+
+			if (tls_str)
+				json_object_object_add(port_obj, "tls_key",
+						       json_object_new_string(tls_str));
 		}
 	}
 
@@ -487,6 +496,8 @@ static void json_dump_ctrl(struct json_object *ctrl_array, nvme_ctrl_t c)
 	if (value)
 		json_object_object_add(ctrl_obj, "dhchap_ctrl_key",
 				       json_object_new_string(value));
+	if (strcmp(transport, "tcp"))
+		JSON_INT_OPTION(cfg, ctrl_obj, tls_key, 0);
 	JSON_INT_OPTION(cfg, ctrl_obj, nr_io_queues, 0);
 	JSON_INT_OPTION(cfg, ctrl_obj, nr_write_queues, 0);
 	JSON_INT_OPTION(cfg, ctrl_obj, nr_poll_queues, 0);
