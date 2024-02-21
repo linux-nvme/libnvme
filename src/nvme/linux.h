@@ -351,4 +351,17 @@ char *nvme_generate_tls_key_identity(const char *hostnqn, const char *subsysnqn,
 				     int version, int hmac,
 				     unsigned char *configured_key, int key_len);
 
+/**
+ * nvme_export_tls_key() - Export a TLS key
+ * @key_data:	Raw data of the key
+ * @key_len:	Length of @key_data
+ *
+ * Returns @key_data in the PSK Interchange format as defined in section
+ * 3.6.1.5 of the NVMe TCP Transport specification.
+ *
+ * Return: The string containing the TLS identity. It is the responsibility
+ * of the caller to free the returned string.
+ */
+char *nvme_export_tls_key(const unsigned char *key_data, int key_len);
+
 #endif /* _LIBNVME_LINUX_H */

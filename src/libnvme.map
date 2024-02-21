@@ -2,6 +2,7 @@
 LIBNVME_1_9 {
 	global:
 		nvme_read_key;
+		nvme_export_tls_key;
 };
 
 LIBNVME_1_8 {
