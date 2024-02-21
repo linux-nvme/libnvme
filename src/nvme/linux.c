@@ -1193,6 +1193,37 @@ int nvme_set_keyring(long key_id)
 	return 0;
 }
 
+unsigned char *nvme_read_key(const char *keyring, long key_id, int *len)
+{
+	long keyring_id;
+	void *buffer;
+	int ret;
+
+	keyring_id = nvme_lookup_keyring(keyring);
+	if (!keyring_id) {
+		nvme_msg(NULL, LOG_ERR, "Failed to lookup keyring '%s'\n",
+			 keyring);
+		errno = ENOKEY;
+		return NULL;
+	}
+	ret = nvme_set_keyring(keyring_id);
+	if (ret < 0) {
+		nvme_msg(NULL, LOG_ERR,
+			 "Failed to link keyring '%s' (%lx) error %d\n",
+			 keyring, keyring_id, errno);
+		return NULL;
+	}
+	ret = keyctl_read_alloc(key_id, &buffer);
+	if (ret < 0) {
+		nvme_msg(NULL, LOG_ERR, "Failed to read key %08lx, error %d\n",
+			 key_id, errno);
+		buffer = NULL;
+	} else
+		*len = ret;
+
+	return buffer;
+}
+
 long nvme_insert_tls_key_versioned(const char *keyring, const char *key_type,
 				   const char *hostnqn, const char *subsysnqn,
 				   int version, int hmac,
@@ -1273,6 +1304,12 @@ int nvme_set_keyring(long key_id)
 		 "recompile with keyutils support.\n");
 	errno = ENOTSUP;
 	return -1;
+}
+
+unsigned char *nvme_read_key(const char *keyring, long key_id, int *len)
+{
+	errno = ENOTSUP;
+	return NULL;
 }
 
 long nvme_insert_tls_key_versioned(const char *keyring, const char *key_type,
