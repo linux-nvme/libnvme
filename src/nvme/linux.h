@@ -364,4 +364,19 @@ char *nvme_generate_tls_key_identity(const char *hostnqn, const char *subsysnqn,
  */
 char *nvme_export_tls_key(const unsigned char *key_data, int key_len);
 
+/**
+ * nvme_import_tls_key() - Import a TLS key
+ * @key_data:	TLS key in PSK interchange format
+ * @key_len:	Length of the resulting key data
+ * @hmac:	HMAC algorithm
+ *
+ * Imports @key_data in the PSK Interchange format as defined in section
+ * 3.6.1.5 of the NVMe TCP Transport specification.
+ *
+ * Return: The raw data of the PSK or NULL with errno set on error. It is
+ * the responsibility of the caller to free the returned string.
+ */
+unsigned char *nvme_import_tls_key(const char *key_data, int *key_len,
+				   unsigned int *hmac);
+
 #endif /* _LIBNVME_LINUX_H */

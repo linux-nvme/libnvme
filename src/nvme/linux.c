@@ -1371,3 +1371,79 @@ char *nvme_export_tls_key(const unsigned char *key_data, int key_len)
 
 	return encoded_key;
 }
+
+unsigned char *nvme_import_tls_key(const char *key_data, int *key_len,
+				   unsigned int *hmac)
+{
+	unsigned char decoded_key[128], *secret;
+	unsigned int crc = crc32(0L, NULL, 0);
+	unsigned int key_crc;
+	int err, decoded_len;
+
+	if (sscanf(key_data, "NVMeTLSkey-1:%02x:*s", &err) != 1) {
+		nvme_msg(NULL, LOG_ERR,
+			 "Invalid key format '%s'\n", key_data);
+		errno = EINVAL;
+		return NULL;
+	}
+	switch (err) {
+	case 1:
+		if (strlen(key_data) != 65) {
+			nvme_msg(NULL, LOG_ERR,
+				 "Invalid key length %zu for SHA(256)",
+				 strlen(key_data));
+			errno = EINVAL;
+			return NULL;
+		}
+		break;
+	case 2:
+		if (strlen(key_data) != 89) {
+			nvme_msg(NULL, LOG_ERR,
+				 "Invalid key length %zu for SHA(384)",
+				 strlen(key_data));
+			errno = EINVAL;
+			return NULL;
+		}
+		break;
+	default:
+		nvme_msg(NULL, LOG_ERR, "Invalid HMAC identifier %d", err);
+		errno = EINVAL;
+		return NULL;
+	}
+
+	*hmac = err;
+	err = base64_decode(key_data + 16, strlen(key_data) - 17, decoded_key);
+	if (err < 0) {
+		nvme_msg(NULL, LOG_ERR, "Base64 decoding failed (%s, error %d)",
+				key_data + 16, err);
+		return NULL;
+	}
+	decoded_len = err;
+	decoded_len -= 4;
+	if (decoded_len != 32 && decoded_len != 48) {
+		nvme_msg(NULL, LOG_ERR, "Invalid key length %d", decoded_len);
+		errno = EINVAL;
+		return NULL;
+	}
+	crc = crc32(crc, decoded_key, decoded_len);
+	key_crc = ((u_int32_t)decoded_key[decoded_len]) |
+		((u_int32_t)decoded_key[decoded_len + 1] << 8) |
+		((u_int32_t)decoded_key[decoded_len + 2] << 16) |
+		((u_int32_t)decoded_key[decoded_len + 3] << 24);
+	if (key_crc != crc) {
+		nvme_msg(NULL, LOG_ERR, "CRC mismatch (key %08x, crc %08x)",
+			 key_crc, crc);
+		errno = EINVAL;
+		return NULL;
+	}
+
+	secret = malloc(decoded_len);
+	if (!secret) {
+		errno = ENOMEM;
+		return NULL;
+	}
+	memcpy(secret, decoded_key, decoded_len);
+
+	*key_len = decoded_len;
+	return secret;
+}
