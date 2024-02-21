@@ -1237,17 +1237,27 @@ long nvme_insert_tls_key_versioned(const char *keyring, const char *key_type,
 	int ret = -1;
 
 	keyring_id = nvme_lookup_keyring(keyring);
-	if (keyring_id == 0)
-		return -1;
+	if (keyring_id == 0) {
+		errno = ENOKEY;
+		return 0;
+	}
+
+	ret = nvme_set_keyring(keyring_id);
+	if (ret < 0) {
+		nvme_msg(NULL, LOG_ERR,
+			 "Failed to link keyring '%s' (%lx) error %d\n",
+			 keyring, (long)keyring_id, errno);
+		return 0;
+	}
 
 	identity_len = nvme_identity_len(hmac, version, hostnqn, subsysnqn);
 	if (identity_len < 0)
-		return -1;
+		return 0;
 
 	identity = malloc(identity_len);
 	if (!identity) {
 		errno = ENOMEM;
-		return -1;
+		return 0;
 	}
 
 	psk = malloc(key_len);
@@ -1258,19 +1268,28 @@ long nvme_insert_tls_key_versioned(const char *keyring, const char *key_type,
 	memset(psk, 0, key_len);
 	ret = derive_nvme_keys(hostnqn, subsysnqn, identity, version, hmac,
 			       configured_key, psk, key_len);
-	if (ret != key_len)
+	if (ret != key_len) {
+		errno = ENOKEY;
 		return 0;
+	}
 
 	key = keyctl_search(keyring_id, key_type, identity, 0);
 	if (key > 0) {
-		if (keyctl_update(key, psk, key_len) < 0)
-			key = 0;
-	} else {
-		key = add_key(key_type, identity,
-			      psk, key_len, keyring_id);
-		if (key < 0)
-			key = 0;
+		if (keyctl_revoke(key) < 0) {
+			nvme_msg(NULL, LOG_ERR,
+				 "Failed to revoke key '%s' error %d\n",
+				 identity, errno);
+		}
 	}
+	key = add_key(key_type, identity,
+		      psk, key_len, keyring_id);
+	if (key < 0) {
+		nvme_msg(NULL, LOG_ERR,
+			 "Failed to add key '%s' error %d\n",
+			 identity, errno);
+		key = 0;
+	}
+
 	return key;
 }
 
