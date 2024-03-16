@@ -281,6 +281,7 @@ LIBNVME_1_0 {
 		nvme_resv_report;
 		nvme_sanitize_nvm;
 		nvme_scan;
+		nvme_scan_no_id;
 		nvme_scan_ctrl;
 		nvme_scan_ctrls;
 		nvme_scan_ctrl_namespace_paths;

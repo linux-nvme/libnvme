@@ -215,6 +215,7 @@ nvme_root_t nvme_create_root(FILE *fp, int log_level)
 		r->fp = fp;
 	list_head_init(&r->hosts);
 	list_head_init(&r->endpoints);
+	r->identify = true;
 	nvme_set_root(r);
 	return r;
 }
@@ -244,13 +245,25 @@ int nvme_read_config(nvme_root_t r, const char *config_file)
 	return err;
 }
 
-nvme_root_t nvme_scan(const char *config_file)
+static nvme_root_t nvme_scan_with_id_flag(const char *config_file, bool identify)
 {
 	nvme_root_t r = nvme_create_root(NULL, DEFAULT_LOGLEVEL);
+
+	r->identify = identify;
 
 	nvme_scan_topology(r, NULL, NULL);
 	nvme_read_config(r, config_file);
 	return r;
+}
+
+nvme_root_t nvme_scan(const char *config_file)
+{
+	return nvme_scan_with_id_flag(config_file, true);
+}
+
+nvme_root_t nvme_scan_no_id(const char *config_file)
+{
+	return nvme_scan_with_id_flag(config_file, false);
 }
 
 int nvme_update_config(nvme_root_t r)
@@ -2430,12 +2443,13 @@ struct sysfs_attr_table {
 	int (*parse)(const char *str, void *res);
 	bool mandatory;
 	const char *name;
+	bool identify;
 };
 
 #define GETSHIFT(x) (__builtin_ffsll(x) - 1)
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-static int parse_attrs(const char *path, struct sysfs_attr_table *tbl, int size)
+static int parse_attrs(const char *path, struct sysfs_attr_table *tbl, int size, bool identify)
 {
 	char *str;
 	int ret, i;
@@ -2443,6 +2457,8 @@ static int parse_attrs(const char *path, struct sysfs_attr_table *tbl, int size)
 	for (i = 0; i < size; i++) {
 		struct sysfs_attr_table *e = &tbl[i];
 
+		if (!identify && e->identify)
+			continue;
 		str = nvme_get_attr(path, e->name);
 		if (!str) {
 			if (!e->mandatory)
@@ -2458,7 +2474,7 @@ static int parse_attrs(const char *path, struct sysfs_attr_table *tbl, int size)
 	return 0;
 }
 
-static int nvme_ns_init(const char *path, struct nvme_ns *ns)
+static int nvme_ns_init(const char *path, struct nvme_ns *ns, bool identify)
 {
 	_cleanup_free_ char *attr = NULL;
 	struct stat sb;
@@ -2473,7 +2489,7 @@ static int nvme_ns_init(const char *path, struct nvme_ns *ns)
 		{ ns->uuid,       nvme_strtouuid, false, "uuid" }
 	};
 
-	ret = parse_attrs(path, base, ARRAY_SIZE(base));
+	ret = parse_attrs(path, base, ARRAY_SIZE(base), identify);
 	if (ret)
 		return ret;
 
@@ -2486,15 +2502,14 @@ static int nvme_ns_init(const char *path, struct nvme_ns *ns)
 		/* only available on kernels >= 6.8 */
 		struct sysfs_attr_table ext[] = {
 			{ &ns->csi,       nvme_strtoi,	 true, "csi" },
-			{ &ns->lba_util,  nvme_strtou64, true, "nuse" },
+			{ &ns->lba_util,  nvme_strtou64, true, "nuse", true },
 			{ &ns->meta_size, nvme_strtoi,	 true, "metadata_bytes"},
-
 		};
 
-		ret = parse_attrs(path, ext, ARRAY_SIZE(ext));
+		ret = parse_attrs(path, ext, ARRAY_SIZE(ext), identify);
 		if (ret)
 			return ret;
-	} else {
+	} else if (identify) {
 		struct nvme_id_ns *id;
 		uint8_t flbas;
 
@@ -2529,7 +2544,7 @@ static void nvme_ns_set_generic_name(struct nvme_ns *n, const char *name)
 	n->generic_name = strdup(generic_name);
 }
 
-static nvme_ns_t nvme_ns_open(const char *sys_path, const char *name)
+static nvme_ns_t nvme_ns_open(const char *sys_path, const char *name, bool identify)
 {
 	struct nvme_ns *n;
 
@@ -2544,7 +2559,7 @@ static nvme_ns_t nvme_ns_open(const char *sys_path, const char *name)
 
 	nvme_ns_set_generic_name(n, name);
 
-	if (nvme_ns_init(sys_path, n) != 0)
+	if (nvme_ns_init(sys_path, n, identify) != 0)
 		goto free_ns;
 
 	list_head_init(&n->paths);
@@ -2584,7 +2599,7 @@ static char *nvme_ns_generic_to_blkdev(const char *generic)
 	return strdup(blkdev);
 }
 
-static struct nvme_ns *__nvme_scan_namespace(const char *sysfs_dir, const char *name)
+static struct nvme_ns *__nvme_scan_namespace(const char *sysfs_dir, const char *name, bool identify)
 {
 	struct nvme_ns *n;
 	_cleanup_free_ char *path = NULL;
@@ -2603,7 +2618,7 @@ static struct nvme_ns *__nvme_scan_namespace(const char *sysfs_dir, const char *
 		return NULL;
 	}
 
-	n = nvme_ns_open(path, blkdev);
+	n = nvme_ns_open(path, blkdev, identify);
 	if (!n)
 		return NULL;
 
@@ -2617,7 +2632,7 @@ nvme_ns_t nvme_scan_namespace(const char *name)
 {
 	_cleanup_free_ char *ns_dir = nvme_ns_sysfs_dir();
 
-	return __nvme_scan_namespace(ns_dir, name);
+	return __nvme_scan_namespace(ns_dir, name, true);
 }
 
 static int nvme_ctrl_scan_namespace(nvme_root_t r, struct nvme_ctrl *c,
@@ -2632,7 +2647,7 @@ static int nvme_ctrl_scan_namespace(nvme_root_t r, struct nvme_ctrl *c,
 		errno = EINVAL;
 		return -1;
 	}
-	n = __nvme_scan_namespace(c->sysfs_dir, name);
+	n = __nvme_scan_namespace(c->sysfs_dir, name, r->identify);
 	if (!n) {
 		nvme_msg(r, LOG_DEBUG, "failed to scan namespace %s\n", name);
 		return -1;
@@ -2681,7 +2696,7 @@ static int nvme_subsystem_scan_namespace(nvme_root_t r, nvme_subsystem_t s,
 
 	nvme_msg(r, LOG_DEBUG, "scan subsystem %s namespace %s\n",
 		 s->name, name);
-	n = __nvme_scan_namespace(s->sysfs_dir, name);
+	n = __nvme_scan_namespace(s->sysfs_dir, name, r->identify);
 	if (!n) {
 		nvme_msg(r, LOG_DEBUG, "failed to scan namespace %s\n", name);
 		return -1;

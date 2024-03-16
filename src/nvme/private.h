@@ -168,6 +168,7 @@ struct nvme_root {
 	bool modified;
 	bool mi_probe_enabled;
 	struct nvme_fabric_options *options;
+	bool identify;
 };
 
 int nvme_set_attr(const char *dir, const char *attr, const char *value);

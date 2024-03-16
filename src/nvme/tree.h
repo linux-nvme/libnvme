@@ -1304,6 +1304,14 @@ void nvme_free_host(nvme_host_t h);
 nvme_root_t nvme_scan(const char *config_file);
 
 /**
+ * nvme_scan_no_id() - Scan NVMe topology without nvme identify namespace
+ * @config_file:	Configuration file
+ *
+ * Return: nvme_root_t object of found elements
+ */
+nvme_root_t nvme_scan_no_id(const char *config_file);
+
+/**
  * nvme_read_config() - Read NVMe JSON configuration file
  * @r:			nvme_root_t object
  * @config_file:	JSON configuration file
