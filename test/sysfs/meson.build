@@ -15,6 +15,7 @@ sysfs = executable(
 
 test_cases = [
     'tw-carbon-6.8.0-rc1+',
+    'empty',
 ]
 
 setup = find_program('setup.sh')
