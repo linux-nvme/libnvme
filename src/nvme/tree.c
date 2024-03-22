@@ -34,6 +34,7 @@
 #include "util.h"
 #include "fabrics.h"
 #include "log.h"
+#include "sysfs.h"
 #include "private.h"
 
 /**

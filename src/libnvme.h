@@ -23,6 +23,7 @@ extern "C" {
 #include "nvme/tree.h"
 #include "nvme/util.h"
 #include "nvme/log.h"
+#include "nvme/sysfs.h"
 
 #ifdef __cplusplus
 }

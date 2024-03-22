@@ -132,6 +132,7 @@ install_headers([
         'nvme/types.h',
         'nvme/util.h',
         'nvme/mi.h',
+        'nvme/sysfs.h',
     ],
     subdir: 'nvme',
     install_mode: mode,
