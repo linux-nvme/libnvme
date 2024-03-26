@@ -16,9 +16,7 @@
 #include "fabrics.h"
 #include "mi.h"
 
-
 const char *nvme_subsys_sysfs_dir(void);
-const char *nvme_ctrl_sysfs_dir(void);
 const char *nvme_ns_sysfs_dir(void);
 const char *nvme_slots_sysfs_dir(void);
 const char *nvme_uuid_ibm_filename(void);
