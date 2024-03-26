@@ -6,6 +6,7 @@
  * Authors: Keith Busch <keith.busch@wdc.com>
  * 	    Chaitanya Kulkarni <chaitanya.kulkarni@wdc.com>
  */
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
@@ -77,8 +78,15 @@ int nvme_subsys_filter(const struct dirent *d)
 int nvme_scan_subsystems(struct dirent ***subsys)
 {
 	const char *dir = nvme_subsys_sysfs_dir();
+	int ret = scandir(dir, subsys, nvme_subsys_filter, alphasort);
 
-	return scandir(dir, subsys, nvme_subsys_filter, alphasort);
+	/* If nvme_core isn't loaded, /sys/class/nvme-subsystem won't exist.
+	 * Exit successfully with no NVMe subsystems.
+	 */
+	if (ret < 0 && errno == ENOENT)
+		return 0;
+
+	return ret;
 }
 
 int nvme_scan_subsystem_namespaces(nvme_subsystem_t s, struct dirent ***ns)
@@ -90,8 +98,15 @@ int nvme_scan_subsystem_namespaces(nvme_subsystem_t s, struct dirent ***ns)
 int nvme_scan_ctrls(struct dirent ***ctrls)
 {
 	const char *dir = nvme_ctrl_sysfs_dir();
+	int ret = scandir(dir, ctrls, nvme_ctrls_filter, alphasort);
 
-	return scandir(dir, ctrls, nvme_ctrls_filter, alphasort);
+	/* If nvme_core isn't loaded, /sys/class/nvme won't exist.
+	 * Exit successfully with no NVMe controllers.
+	 */
+	if (ret < 0 && errno == ENOENT)
+		return 0;
+
+	return ret;
 }
 
 int nvme_scan_ctrl_namespace_paths(nvme_ctrl_t c, struct dirent ***paths)
