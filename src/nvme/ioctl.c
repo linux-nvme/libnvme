@@ -322,9 +322,12 @@ int nvme_get_log_page(int fd, __u32 xfer_len, struct nvme_get_log_args *args)
 	__u64 start = args->lpo;
 	bool retain = args->rae;
 	void *ptr = args->log;
-	int ret;
+	u32 result;
+	int ret, retries = 0;
 
 	args->fd = fd;
+	if (!args->result)
+		args->result = &result;
 
 	/*
 	 * 4k is the smallest possible transfer unit, so restricting to 4k
@@ -347,6 +350,15 @@ int nvme_get_log_page(int fd, __u32 xfer_len, struct nvme_get_log_args *args)
 		ret = nvme_get_log(args);
 		if (ret)
 			return ret;
+
+		if (*args->result) {
+			if ((*args->result & NVME_SC_DNR) ||
+			    (++retries >= args->max_retries)) {
+				errno = EPROTO;
+				return -1;
+			}
+			continue;
+		}
 
 		offset += xfer;
 		ptr += xfer;
