@@ -2356,7 +2356,7 @@ static int nvme_strtou64(const char *str, void *res)
 		return -EINVAL;
 	}
 
-	*(__u64 *)res = v;
+	memcpy(res, &v, sizeof(__u64));
 	return 0;
 }
 
