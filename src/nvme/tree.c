@@ -377,14 +377,17 @@ void nvme_free_tree(nvme_root_t r)
 {
 	struct nvme_host *h, *_h;
 
-	free(r->options);
-	nvme_for_each_host_safe(r, h, _h)
-		__nvme_free_host(h);
-	if (r->config_file)
-		free(r->config_file);
-	if (r->application)
-		free(r->application);
-	free(r);
+	if (r) {
+		if (r->options)
+			free(r->options);
+		nvme_for_each_host_safe(r, h, _h)
+			__nvme_free_host(h);
+		if (r->config_file)
+			free(r->config_file);
+		if (r->application)
+			free(r->application);
+		free(r);
+	}
 }
 
 void nvme_root_release_fds(nvme_root_t r)
