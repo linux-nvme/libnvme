@@ -1784,6 +1784,10 @@ static char *nvme_ctrl_lookup_phy_slot(nvme_root_t r, const char *address)
 				return NULL;
 			}
 			addr = nvme_get_attr(path, "address");
+
+			/* some directories don't have an address entry */
+			if (!addr)
+				continue;
 			if (strcmp(addr, target_addr) == 0)
 				return strdup(entry->d_name);
 		}
