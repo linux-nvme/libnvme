@@ -8351,6 +8351,32 @@ enum nvme_io_opcode {
 };
 
 /**
+ * enum nvme_io_opcode - Opcodes for I/O Commands
+ * @nvme_cmd_flush:		Flush
+ * @nvm_kv_cmd_store:		Store
+ * @nvm_kv_cmd_retrieve:	Retrieve
+ * @nvm_kv_cmd_list:		List
+ * @nvme_cmd_resv_register:	Reservation Register
+ * @nvme_cmd_resv_report:	Reservation Report
+ * @nvm_kv_cmd_delete:		Delete
+ * @nvme_cmd_resv_acquire:	Reservation Acquire
+ * @nvm_kv_cmd_exist:		Exist
+ * @nvme_cmd_resv_release:	Reservation Release
+ */
+enum nvme_kv_opcode {
+	nvme_cmd_flush		= 0x00,
+	nvm_kv_cmd_store	= 0x01,
+	nvm_kv_cmd_retrieve	= 0x02,
+	nvm_kv_cmd_list		= 0x06,
+	nvme_cmd_resv_register	= 0x0d,
+	nvme_cmd_resv_report	= 0x0e,
+	nvm_kv_cmd_delete	= 0x10,
+	nvme_cmd_resv_acquire	= 0x11,
+	nvm_kv_cmd_exist	= 0x14,
+	nvme_cmd_resv_release	= 0x15,
+};
+
+/**
  * enum nvme_io_control_flags - I/O control flags
  * @NVME_IO_DTYPE_STREAMS:	Directive Type Streams
  * @NVME_IO_STC:		Storage Tag Check
