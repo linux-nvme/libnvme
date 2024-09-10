@@ -8364,15 +8364,15 @@ enum nvme_io_opcode {
  * @nvme_kv_cmd_resv_release:		Reservation Release
  */
 enum nvme_kv_commands {
-	nvme_kv_cmd_flush		= 0x00,
-	nvme_kv_cmd_store	= 0x01,
-	nvme_kv_cmd_retrieve	= 0x02,
-	nvme_kv_cmd_list		= 0x06,
+	nvme_kv_cmd_flush			= 0x00,
+	nvme_kv_cmd_store			= 0x01,
+	nvme_kv_cmd_retrieve		= 0x02,
+	nvme_kv_cmd_list			= 0x06,
 	nvme_kv_cmd_resv_register	= 0x0d,
-	nvme_kv_cmd_resv_report	= 0x0e,
-	nvme_kv_cmd_delete	= 0x10,
+	nvme_kv_cmd_resv_report		= 0x0e,
+	nvme_kv_cmd_delete			= 0x10,
 	nvme_kv_cmd_resv_acquire	= 0x11,
-	nvme_kv_cmd_exist	= 0x14,
+	nvme_kv_cmd_exist			= 0x14,
 	nvme_kv_cmd_resv_release	= 0x15,
 };
 
