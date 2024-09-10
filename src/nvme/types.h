@@ -8351,7 +8351,7 @@ enum nvme_io_opcode {
 };
 
 /**
- * enum nvme_io_opcode - Opcodes for I/O Commands
+ * enum nvme_kv_opcode - Opcodes for KV Commands
  * @nvme_cmd_flush:		Flush
  * @nvm_kv_cmd_store:		Store
  * @nvm_kv_cmd_retrieve:	Retrieve
@@ -8363,17 +8363,17 @@ enum nvme_io_opcode {
  * @nvm_kv_cmd_exist:		Exist
  * @nvme_cmd_resv_release:	Reservation Release
  */
-enum nvme_kv_opcode {
-	nvme_cmd_flush		= 0x00,
-	nvm_kv_cmd_store	= 0x01,
-	nvm_kv_cmd_retrieve	= 0x02,
-	nvm_kv_cmd_list		= 0x06,
-	nvme_cmd_resv_register	= 0x0d,
-	nvme_cmd_resv_report	= 0x0e,
-	nvm_kv_cmd_delete	= 0x10,
-	nvme_cmd_resv_acquire	= 0x11,
-	nvm_kv_cmd_exist	= 0x14,
-	nvme_cmd_resv_release	= 0x15,
+enum nvme_kv_commands {
+	nvme_kv_cmd_flush		= 0x00,
+	nvme_kv_cmd_store	= 0x01,
+	nvme_kv_cmd_retrieve	= 0x02,
+	nvme_kv_cmd_list		= 0x06,
+	nvme_kv_cmd_resv_register	= 0x0d,
+	nvme_kv_cmd_resv_report	= 0x0e,
+	nvme_kv_cmd_delete	= 0x10,
+	nvme_kv_cmd_resv_acquire	= 0x11,
+	nvme_kv_cmd_exist	= 0x14,
+	nvme_kv_cmd_resv_release	= 0x15,
 };
 
 /**
