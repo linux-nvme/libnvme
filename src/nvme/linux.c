@@ -1511,19 +1511,22 @@ char *nvme_export_tls_key_versioned(unsigned char version, unsigned char hmac,
 	unsigned long crc = crc32(0L, NULL, 0);
 
 	switch (hmac) {
+	case NVME_HMAC_ALG_NONE:
+		if (key_len != 32 && key_len != 48)
+			goto err_inval;
+		break;
 	case NVME_HMAC_ALG_SHA2_256:
 		if (key_len != 32)
 			goto err_inval;
-		raw_len = 32;
 		break;
 	case NVME_HMAC_ALG_SHA2_384:
 		if (key_len != 48)
 			goto err_inval;
-		raw_len = 48;
 		break;
 	default:
 		goto err_inval;
 	}
+	raw_len = key_len;
 
 	memcpy(raw_secret, key_data, raw_len);
 	crc = crc32(crc, raw_secret, raw_len);
@@ -1573,6 +1576,7 @@ unsigned char *nvme_import_tls_key_versioned(const char *encoded_key,
 	unsigned int crc = crc32(0L, NULL, 0);
 	unsigned int key_crc;
 	int err, _version, _hmac, decoded_len;
+	size_t len;
 
 	if (sscanf(encoded_key, "NVMeTLSkey-%d:%02x:*s",
 		   &_version, &_hmac) != 2) {
@@ -1586,18 +1590,19 @@ unsigned char *nvme_import_tls_key_versioned(const char *encoded_key,
 	}
 	*version = _version;
 
+	len = strlen(encoded_key);
 	switch (_hmac) {
+	case NVME_HMAC_ALG_NONE:
+		if (len != 65 && len != 89)
+			goto err_inval;
+		break;
 	case NVME_HMAC_ALG_SHA2_256:
-		if (strlen(encoded_key) != 65) {
-			errno = EINVAL;
-			return NULL;
-		}
+		if (len != 65)
+			goto err_inval;
 		break;
 	case NVME_HMAC_ALG_SHA2_384:
-		if (strlen(encoded_key) != 89) {
-			errno = EINVAL;
-			return NULL;
-		}
+		if (len != 89)
+			goto err_inval;
 		break;
 	default:
 		errno = EINVAL;
@@ -1605,8 +1610,7 @@ unsigned char *nvme_import_tls_key_versioned(const char *encoded_key,
 	}
 	*hmac = _hmac;
 
-	err = base64_decode(encoded_key + 16, strlen(encoded_key) - 17,
-			    decoded_key);
+	err = base64_decode(encoded_key + 16, len - 17, decoded_key);
 	if (err < 0) {
 		errno = ENOKEY;
 		return NULL;
@@ -1638,6 +1642,10 @@ unsigned char *nvme_import_tls_key_versioned(const char *encoded_key,
 
 	*key_len = decoded_len;
 	return key_data;
+
+err_inval:
+	errno = EINVAL;
+	return NULL;
 }
 
 unsigned char *nvme_import_tls_key(const char *encoded_key, int *key_len,
