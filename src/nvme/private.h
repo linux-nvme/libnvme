@@ -13,6 +13,10 @@
 #include <poll.h>
 #include <sys/socket.h>
 
+#ifdef CONFIG_KEYUTILS
+#include <keyutils.h>
+#endif
+
 #include "fabrics.h"
 #include "mi.h"
 
@@ -85,6 +89,8 @@ struct nvme_ctrl {
 	char *trsvcid;
 	char *dhchap_key;
 	char *dhchap_ctrl_key;
+	char *keyring;
+	char *tls_key;
 	char *cntrltype;
 	char *cntlid;
 	char *dctype;
@@ -296,5 +302,15 @@ void __nvme_mi_mctp_set_ops(const struct __mi_mctp_socket_ops *newops);
 
 #define SECTOR_SIZE	512
 #define SECTOR_SHIFT	9
+
+#ifdef CONFIG_KEYUTILS
+long __nvme_insert_tls_key_versioned(key_serial_t keyring_id, const char *key_type,
+				     const char *hostnqn, const char *subsysnqn,
+				     int version, int hmac,
+				     unsigned char *configured_key, int key_len);
+#else
+#define __nvme_insert_tls_key_versioned(keyring_id, key_type, hostnqn, subsysnqn, \
+					version, hmac, configured_key, key_len) 0
+#endif
 
 #endif /* _LIBNVME_PRIVATE_H */

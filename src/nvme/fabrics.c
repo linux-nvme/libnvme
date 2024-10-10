@@ -545,13 +545,58 @@ static bool traddr_is_hostname(nvme_root_t r, nvme_ctrl_t c)
 	return true;
 }
 
+static long insert_tls_key(nvme_host_t h, nvme_ctrl_t c,
+			   long keyring_id, const char *encoded_key)
+{
+	const char *hostnqn = nvme_host_get_hostnqn(h);
+	const char *subsysnqn = nvme_ctrl_get_subsysnqn(c);
+	_cleanup_free_ unsigned char *key_data = NULL;
+	unsigned char version;
+	unsigned char hmac;
+	size_t key_len;
+	long key_id;
+
+	if (!hostnqn || !subsysnqn) {
+		nvme_msg(h->r, LOG_ERR, "Invalid NQNs (%s, %s)\n",
+			 hostnqn, subsysnqn);
+		return -1;
+	}
+
+	if (nvme_set_keyring(keyring_id) < 0) {
+		nvme_msg(h->r, LOG_ERR, "Failed to set keyring\n");
+		return -1;
+	}
+
+	key_data = nvme_import_tls_key_versioned(encoded_key, &version,
+						 &hmac, &key_len);
+	if (!key_data) {
+		nvme_msg(h->r, LOG_ERR, "Failed to decode TLS Key '%s'\n",
+			encoded_key);
+		return -1;
+	}
+
+	key_id = __nvme_insert_tls_key_versioned(keyring_id, "psk",
+						 hostnqn, subsysnqn,
+						 version, hmac, key_data, key_len);
+	if (key_id <= 0) {
+		nvme_msg(h->r, LOG_ERR, "Failed to insert TLS KEY, error %d\n",
+			 errno);
+		return -1;
+	}
+
+	return key_id;
+}
+
 static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 {
 	struct nvme_fabrics_config *cfg = nvme_ctrl_get_config(c);
 	const char *transport = nvme_ctrl_get_transport(c);
 	const char *hostnqn, *hostid, *hostkey, *ctrlkey;
+	const char *tls_key, *keyring;
 	bool discover = false, discovery_nqn = false;
 	nvme_root_t r = h->r;
+	long keyring_id = 0;
+	long key_id = 0;
 
 	if (!transport) {
 		nvme_msg(h->r, LOG_ERR, "need a transport (-t) argument\n");
@@ -573,19 +618,41 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 		errno = ENOMEM;
 		return -1;
 	}
+
 	if (!strcmp(nvme_ctrl_get_subsysnqn(c), NVME_DISC_SUBSYS_NAME)) {
 		nvme_ctrl_set_discovery_ctrl(c, true);
 		nvme_ctrl_set_unique_discovery_ctrl(c, false);
 		discovery_nqn = true;
 	}
+
 	if (nvme_ctrl_is_discovery_ctrl(c))
 		discover = true;
+
 	hostnqn = nvme_host_get_hostnqn(h);
 	hostid = nvme_host_get_hostid(h);
 	hostkey = nvme_host_get_dhchap_key(h);
 	if (!hostkey)
 		hostkey = nvme_ctrl_get_dhchap_host_key(c);
+
 	ctrlkey = nvme_ctrl_get_dhchap_key(c);
+
+	keyring = nvme_ctrl_get_keyring(c);
+	if (keyring)
+		keyring_id = nvme_lookup_keyring(keyring);
+	else
+		keyring_id = cfg->keyring;
+
+	tls_key = nvme_ctrl_get_tls_key(c);
+	if (tls_key) {
+		key_id = insert_tls_key(h, c, keyring_id, tls_key);
+		if (key_id < 0) {
+			errno = ENVME_CONNECT_INVAL;
+			return -1;
+		}
+	} else {
+		key_id = cfg->tls_key;
+	}
+
 	if (add_argument(r, argstr, transport, transport) ||
 	    add_argument(r, argstr, traddr,
 			 nvme_ctrl_get_traddr(c)) ||
@@ -627,9 +694,9 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 			      cfg->fast_io_fail_tmo, false)) ||
 	    (strcmp(transport, "loop") &&
 	     add_int_argument(r, argstr, tos, cfg->tos, true)) ||
-	    add_int_argument(r, argstr, keyring, cfg->keyring, false) ||
+	    add_int_argument(r, argstr, keyring, keyring_id, false) ||
 	    (!strcmp(transport, "tcp") &&
-	     add_int_argument(r, argstr, tls_key, cfg->tls_key, false)) ||
+	     add_int_argument(r, argstr, tls_key, key_id, false)) ||
 	    add_bool_argument(r, argstr, duplicate_connect,
 			      cfg->duplicate_connect) ||
 	    add_bool_argument(r, argstr, disable_sqflow,
