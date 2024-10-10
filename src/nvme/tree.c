@@ -1151,6 +1151,36 @@ void nvme_ctrl_set_dhchap_key(nvme_ctrl_t c, const char *key)
 		c->dhchap_ctrl_key = strdup(key);
 }
 
+const char *nvme_ctrl_get_keyring(nvme_ctrl_t c)
+{
+	return c->keyring;
+}
+
+void nvme_ctrl_set_keyring(nvme_ctrl_t c, const char *keyring)
+{
+	if (c->keyring) {
+		free(c->keyring);
+		c->keyring = NULL;
+	}
+	if (keyring)
+		c->keyring = strdup(keyring);
+}
+
+const char *nvme_ctrl_get_tls_key(nvme_ctrl_t c)
+{
+	return c->tls_key;
+}
+
+void nvme_ctrl_set_tls_key(nvme_ctrl_t c, const char *key)
+{
+	if (c->tls_key) {
+		free(c->tls_key);
+		c->tls_key = NULL;
+	}
+	if (key)
+		c->tls_key = strdup(key);
+}
+
 void nvme_ctrl_set_discovered(nvme_ctrl_t c, bool discovered)
 {
 	c->discovered = discovered;

@@ -1099,6 +1099,37 @@ const char *nvme_ctrl_get_dhchap_key(nvme_ctrl_t c);
 void nvme_ctrl_set_dhchap_key(nvme_ctrl_t c, const char *key);
 
 /**
+ * nvme_ctrl_get_keyring() - Return keyring
+ * @c:	Controller to be used for the lookup
+ *
+ * Return: Keyring or NULL if not set
+ */
+const char *nvme_ctrl_get_keyring(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_keyring() - Set keyring
+ * @c:		Controller for which the keyring should be set
+ * @keyring:	Keyring name
+ */
+void nvme_ctrl_set_keyring(nvme_ctrl_t c, const char *keyring);
+
+/**
+ * nvme_ctrl_get_tls_key() - Return TLS key
+ * @c:	Controller to be used for the lookup
+ *
+ * Return: PSK in interchange format or NULL if not set
+ */
+const char *nvme_ctrl_get_tls_key(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_tls_key() - Set TLS key
+ * @c:		Controller for which the key should be set
+ * @key:	Key in interchange format to set or NULL to
+ *		clear existing key
+ */
+void nvme_ctrl_set_tls_key(nvme_ctrl_t c, const char *key);
+
+/**
  * nvme_ctrl_get_config() - Fabrics configuration of a controller
  * @c:	Controller instance
  *
