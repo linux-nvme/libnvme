@@ -1337,26 +1337,16 @@ int nvme_scan_tls_keys(const char *keyring, nvme_scan_tls_keys_cb_t cb,
 	return ret;
 }
 
-long nvme_insert_tls_key_versioned(const char *keyring, const char *key_type,
-				   const char *hostnqn, const char *subsysnqn,
-				   int version, int hmac,
-				   unsigned char *configured_key, int key_len)
+long __nvme_insert_tls_key_versioned(key_serial_t keyring_id, const char *key_type,
+				     const char *hostnqn, const char *subsysnqn,
+				     int version, int hmac,
+				     unsigned char *configured_key, int key_len)
 {
 	_cleanup_free_ unsigned char *psk = NULL;
 	_cleanup_free_ char *identity = NULL;
-	key_serial_t keyring_id, key;
 	size_t identity_len;
+	key_serial_t key;
 	int ret;
-
-	keyring_id = nvme_lookup_keyring(keyring);
-	if (keyring_id == 0) {
-		errno = ENOKEY;
-		return 0;
-	}
-
-	ret = nvme_set_keyring(keyring_id);
-	if (ret < 0)
-		return 0;
 
 	identity_len = nvme_identity_len(hmac, version, hostnqn, subsysnqn);
 	if (identity_len < 0)
@@ -1385,6 +1375,29 @@ long nvme_insert_tls_key_versioned(const char *keyring, const char *key_type,
 	key = nvme_update_key(keyring_id, key_type, identity,
 			      psk, key_len);
 	return key;
+}
+
+long nvme_insert_tls_key_versioned(const char *keyring, const char *key_type,
+				   const char *hostnqn, const char *subsysnqn,
+				   int version, int hmac,
+				   unsigned char *configured_key, int key_len)
+{
+	key_serial_t keyring_id;
+	int ret;
+
+	keyring_id = nvme_lookup_keyring(keyring);
+	if (keyring_id == 0) {
+		errno = ENOKEY;
+		return 0;
+	}
+
+	ret = nvme_set_keyring(keyring_id);
+	if (ret < 0)
+		return 0;
+	return __nvme_insert_tls_key_versioned(keyring_id, key_type,
+					       hostnqn, subsysnqn,
+					       version, hmac,
+					       configured_key, key_len);
 }
 
 long nvme_revoke_tls_key(const char *keyring, const char *key_type,

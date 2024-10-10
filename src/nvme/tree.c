@@ -1916,10 +1916,9 @@ static char *nvme_ctrl_lookup_phy_slot(nvme_root_t r, const char *address)
 static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 			       const char *name)
 {
-	DIR *d;
+	_cleanup_free_ char *tls_key = NULL;
 	char *host_key, *ctrl_key;
-
-	_cleanup_free_ char *tls_psk = NULL;
+	DIR *d;
 
 	d = opendir(path);
 	if (!d) {
@@ -1963,14 +1962,20 @@ static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 		c->dhchap_ctrl_key = ctrl_key;
 	}
 
-	tls_psk = nvme_get_ctrl_attr(c, "tls_key");
-	if (tls_psk) {
+	tls_key = nvme_get_ctrl_attr(c, "tls_key");
+	if (tls_key) {
 		char *endptr;
-		long key_id = strtol(tls_psk, &endptr, 16);
+		long key_id = strtol(tls_key, &endptr, 16);
 
-		if (endptr != tls_psk) {
+		if (endptr != tls_key) {
 			c->cfg.tls_key = key_id;
 			c->cfg.tls = true;
+
+			if (!nvme_ctrl_get_tls_key(c)) {
+				tls_key = nvme_describe_key_serial(c->cfg.tls_key);
+				if (tls_key)
+					nvme_ctrl_set_tls_key(c, tls_key);
+			}
 		}
 	}
 
