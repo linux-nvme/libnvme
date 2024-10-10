@@ -60,4 +60,22 @@ if diff.found()
         depends : test_hostnqn_order,
     )
 
+    test_psk_json = executable(
+        'test-psk-json',
+        ['psk-json.c'],
+        dependencies: libnvme_dep,
+        include_directories: [incdir],
+    )
+    test(
+        'psk-json',
+        config_diff,
+        args : [
+            test_psk_json.full_path(),
+            builddir,
+            srcdir + '/data/psk.out',
+            '--config-json', srcdir + '/data/psk.json',
+        ],
+        depends : test_psk_json,
+    )
+
 endif
