@@ -46,6 +46,24 @@
 	(((__u32)(value) & NVME_##name##_MASK) << NVME_##name##_SHIFT)
 
 /**
+ * NVME_CHECK() - check value to compare field value
+ * @value: The value to be checked
+ * @name: The name of the sub-field within an nvme value
+ * @check: The sub-field value to check
+ *
+ * Returns: The result of compare the value and the sub-field value
+ */
+#define NVME_CHECK(value, name, check) ((value) == NVME_##name##_##check)
+
+/**
+ * NVME_VAL() - get mask value shifted
+ * @name: The name of the sub-field within an nvme value
+ *
+ * Returns: The mask value shifted
+ */
+#define NVME_VAL(name) (NVME_##name##_MASK << NVME_##name##_SHIFT)
+
+/**
  * enum nvme_constants - A place to stash various constant nvme values
  * @NVME_NSID_ALL:		A broadcast value that is used to specify all
  *				namespaces
@@ -1342,6 +1360,39 @@ struct nvme_id_psd {
  *	       total number of outstanding I/O commands across all I/O queues
  *	       on the controller for optimal operation.
  * @rsvd568:   Reserved
+ * @cmmrtd:    Controller Maximum Memory Range Tracking Descriptors indicates
+ *             the maximum number of Memory Range Tracking Descriptors the
+ *             controller supports.
+ * @nmmrtd:    NVM Subsystem Maximum Memory Range Tracking Descriptors
+ *             indicates the maximum number of Memory Range Tracking Descriptors
+ *             the NVM subsystem supports.
+ * @minmrtg:   Minimum Memory Range Tracking Granularity indicates the minimum
+ *             value supported in the Requested Memory Range Tracking
+ *             Granularity (RMRTG) field of the Track Memory Ranges data
+ *             structure.
+ * @maxmrtg:   Maximum Memory Range Tracking Granularity indicates the maximum
+ *             value supported in the Requested Memory Range Tracking
+ *             Granularity (RMRTG) field of the Track Memory Ranges data
+ *             structure.
+ * @trattr:    Tracking Attributes indicates supported attributes for the
+ *             Track Send command and Track Receive command.
+ * @rsvd577:   Reserved
+ * @mcudmq:    Maximum Controller User Data Migration Queues indicates the
+ *             maximum number of User Data Migration Queues supported by the
+ *             controller.
+ * @mnsudmq:   Maximum NVM Subsystem User Data Migration Queues indicates the
+ *             maximum number of User Data Migration Queues supported by the NVM
+ *             subsystem.
+ * @mcmr:      Maximum CDQ Memory Ranges indicates the maximum number of
+ *             memory ranges allowed to be specified by the PRP1 field of a
+ *             Controller Data Queue command.
+ * @nmcmr:     NVM Subsystem Maximum CDQ Memory Ranges indicates the maximum
+ *             number of memory ranges for all Controller Data Queues in the
+ *             NVM subsystem.
+ * @mcdqpc:    Maximum Controller Data Queue PRP Count indicates the maximum
+ *             number of PRPs allowed to be specified in the PRP list in the
+ *             Controller Data Queue command.
+ * @rsvd588:   Reserved
  * @subnqn:    NVM Subsystem NVMe Qualified Name, UTF-8 null terminated string
  * @rsvd1024:  Reserved
  * @ioccsz:    I/O Queue Command Capsule Supported Size, defines the maximum
@@ -1448,7 +1499,19 @@ struct nvme_id_ctrl {
 	__u8			maxdna[16];
 	__le32			maxcna;
 	__le32			oaqd;
-	__u8			rsvd568[200];
+	__u8			rsvd568[2];
+	__u16			cmmrtd;
+	__u16			nmmrtd;
+	__u8			minmrtg;
+	__u8			maxmrtg;
+	__u8			trattr;
+	__u8			rsvd577;
+	__u16			mcudmq;
+	__u16			mnsudmq;
+	__u16			mcmr;
+	__u16			nmcmr;
+	__u16			mcdqpc;
+	__u8			rsvd588[180];
 	char			subnqn[NVME_NQN_LENGTH];
 	__u8			rsvd1024[768];
 
@@ -1528,29 +1591,88 @@ enum nvme_id_ctrl_cmic {
 
 /**
  * enum nvme_id_ctrl_oaes - Optional Asynchronous Events Supported
+ * @NVME_CTRL_OAES_NA_SHIFT: Shift amount to get the Namespace Attribute Notices event supported
+ * @NVME_CTRL_OAES_FA_SHIFT: Shift amount to get the Firmware Activation Notices event supported
+ * @NVME_CTRL_OAES_ANA_SHIFT: Shift amount to get the ANA Change Notices supported
+ * @NVME_CTRL_OAES_PLEA_SHIFT: Shift amount to get the Predictable Latency Event Aggregate Log
+ *                             Change Notices event supported
+ * @NVME_CTRL_OAES_LBAS_SHIFT: Shift amount to get the LBA Status Information Notices event
+ *                             supported
+ * @NVME_CTRL_OAES_EGE_SHIFT: Shift amount to get the Endurance Group Events Aggregate Log Change
+ *                            Notices event supported
+ * @NVME_CTRL_OAES_NS_SHIFT: Shift amount to get the Normal NVM Subsystem Shutdown event supported
+ * @NVME_CTRL_OAES_TTH_SHIFT: Shift amount to get the Temperature Threshold Hysteresis Recovery
+ *                            event supported
+ * @NVME_CTRL_OAES_ZD_SHIFT: Shift amount to get the Zone Descriptor Change Notifications supported
+ * @NVME_CTRL_OAES_DL_SHIFT: Shift amount to get the Discover Log Page Change Notifications
+ *                           supported
+ * @NVME_CTRL_OAES_NA_MASK: Mask to get the Namespace Attribute Notices event supported
+ * @NVME_CTRL_OAES_FA_MASK: Mask to get the Firmware Activation Notices event supported
+ * @NVME_CTRL_OAES_ANA_MASK: Mask to get the ANA Change Notices supported
+ * @NVME_CTRL_OAES_PLEA_MASK: Mask to get the Predictable Latency Event Aggregate Log Change Notices
+ *                            event supported
+ * @NVME_CTRL_OAES_LBAS_MASK: Mask to get the LBA Status Information Notices event supported
+ * @NVME_CTRL_OAES_EGE_MASK: Mask to get the Endurance Group Events Aggregate Log Change Notices
+ *                           event supported
+ * @NVME_CTRL_OAES_NS_MASK: Mask to get the Normal NVM Subsystem Shutdown event supported
+ * @NVME_CTRL_OAES_TTH_MASK: Mask to get the Temperature Threshold Hysteresis Recovery event
+ *                           supported
+ * @NVME_CTRL_OAES_ZD_MASK: Mask to get the Zone Descriptor Change Notifications supported
+ * @NVME_CTRL_OAES_DL_MASK: Mask to get the Discover Log Page Change Notifications supported
  * @NVME_CTRL_OAES_NA: Namespace Attribute Notices event supported
  * @NVME_CTRL_OAES_FA: Firmware Activation Notices event supported
  * @NVME_CTRL_OAES_ANA: ANA Change Notices supported
- * @NVME_CTRL_OAES_PLEA: Predictable Latency Event Aggregate Log
- *			 Change Notices event supported
+ * @NVME_CTRL_OAES_PLEA: Predictable Latency Event Aggregate Log Change Notices event supported
  * @NVME_CTRL_OAES_LBAS: LBA Status Information Notices event supported
- * @NVME_CTRL_OAES_EGE: Endurance Group Events Aggregate Log Change
- *			Notices event supported
+ * @NVME_CTRL_OAES_EGE: Endurance Group Events Aggregate Log Change Notices event supported
  * @NVME_CTRL_OAES_NS: Normal NVM Subsystem Shutdown event supported
+ * @NVME_CTRL_OAES_TTH: Temperature Threshold Hysteresis Recovery event supported
  * @NVME_CTRL_OAES_ZD: Zone Descriptor Change Notifications supported
  * @NVME_CTRL_OAES_DL: Discover Log Page Change Notifications supported
  */
 enum nvme_id_ctrl_oaes {
-	NVME_CTRL_OAES_NA			= 1 << 8,
-	NVME_CTRL_OAES_FA			= 1 << 9,
-	NVME_CTRL_OAES_ANA			= 1 << 11,
-	NVME_CTRL_OAES_PLEA			= 1 << 12,
-	NVME_CTRL_OAES_LBAS			= 1 << 13,
-	NVME_CTRL_OAES_EGE			= 1 << 14,
-	NVME_CTRL_OAES_NS			= 1 << 15,
-	NVME_CTRL_OAES_ZD			= 1 << 27,
-	NVME_CTRL_OAES_DL			= 1 << 31,
+	NVME_CTRL_OAES_NA_SHIFT		= 8,
+	NVME_CTRL_OAES_FA_SHIFT		= 9,
+	NVME_CTRL_OAES_ANA_SHIFT	= 11,
+	NVME_CTRL_OAES_PLEA_SHIFT	= 12,
+	NVME_CTRL_OAES_LBAS_SHIFT	= 13,
+	NVME_CTRL_OAES_EGE_SHIFT	= 14,
+	NVME_CTRL_OAES_NS_SHIFT		= 15,
+	NVME_CTRL_OAES_TTH_SHIFT	= 16,
+	NVME_CTRL_OAES_ZD_SHIFT		= 27,
+	NVME_CTRL_OAES_DL_SHIFT		= 31,
+	NVME_CTRL_OAES_NA_MASK		= 0x1,
+	NVME_CTRL_OAES_FA_MASK		= 0x1,
+	NVME_CTRL_OAES_ANA_MASK		= 0x1,
+	NVME_CTRL_OAES_PLEA_MASK	= 0x1,
+	NVME_CTRL_OAES_LBAS_MASK	= 0x1,
+	NVME_CTRL_OAES_EGE_MASK		= 0x1,
+	NVME_CTRL_OAES_NS_MASK		= 0x1,
+	NVME_CTRL_OAES_TTH_MASK		= 0x1,
+	NVME_CTRL_OAES_ZD_MASK		= 0x1,
+	NVME_CTRL_OAES_DL_MASK		= 0x1,
+	NVME_CTRL_OAES_NA		= NVME_VAL(CTRL_OAES_NA),
+	NVME_CTRL_OAES_FA		= NVME_VAL(CTRL_OAES_FA),
+	NVME_CTRL_OAES_ANA		= NVME_VAL(CTRL_OAES_ANA),
+	NVME_CTRL_OAES_PLEA		= NVME_VAL(CTRL_OAES_PLEA),
+	NVME_CTRL_OAES_LBAS		= NVME_VAL(CTRL_OAES_LBAS),
+	NVME_CTRL_OAES_EGE		= NVME_VAL(CTRL_OAES_EGE),
+	NVME_CTRL_OAES_NS		= NVME_VAL(CTRL_OAES_NS),
+	NVME_CTRL_OAES_TTH		= NVME_VAL(CTRL_OAES_TTH),
+	NVME_CTRL_OAES_ZD		= NVME_VAL(CTRL_OAES_ZD),
+	NVME_CTRL_OAES_DL		= NVME_VAL(CTRL_OAES_DL),
 };
+
+#define NVME_CTRL_OAES_NAN(oaes)	NVME_GET(oaes, CTRL_OAES_NA)
+#define NVME_CTRL_OAES_FAN(oaes)	NVME_GET(oaes, CTRL_OAES_FA)
+#define NVME_CTRL_OAES_ANACN(oaes)	NVME_GET(oaes, CTRL_OAES_ANA)
+#define NVME_CTRL_OAES_PLEALCN(oaes)	NVME_GET(oaes, CTRL_OAES_PLEA)
+#define NVME_CTRL_OAES_LBASIAN(oaes)	NVME_GET(oaes, CTRL_OAES_LBAS)
+#define NVME_CTRL_OAES_EGEALPCN(oaes)	NVME_GET(oaes, CTRL_OAES_EGE)
+#define NVME_CTRL_OAES_NNVMSS(oaes)	NVME_GET(oaes, CTRL_OAES_NS)
+#define NVME_CTRL_OAES_TTHR(oaes)	NVME_GET(oaes, CTRL_OAES_TTH)
+#define NVME_CTRL_OAES_ZDCN(oaes)	NVME_GET(oaes, CTRL_OAES_ZD)
+#define NVME_CTRL_OAES_DLPCN(oaes)	NVME_GET(oaes, CTRL_OAES_DL)
 
 /**
  * enum nvme_id_ctrl_ctratt - Controller attributes
@@ -1974,6 +2096,14 @@ enum nvme_id_ctrl_fuses {
 /**
  * enum nvme_id_ctrl_fna - This field indicates attributes for the Format NVM
  *			   command.
+ * @NVME_CTRL_FNA_FMT_ALL_NS_SHIFT:   Shift amount to get the format applied to all namespaces
+ * @NVME_CTRL_FNA_SEC_ALL_NS_SHIFT:   Shift amount to get the secure erase applied to all namespaces
+ * @NVME_CTRL_FNA_CES_SHIFT:          Shift amount to get the cryptographic erase supported
+ * @NVME_CTRL_FNA_NSID_ALL_F_SHIFT:   Shift amount to get the format supported an NSID FFFFFFFFh
+ * @NVME_CTRL_FNA_FMT_ALL_NS_MASK:    Mask to get the format applied to all namespaces
+ * @NVME_CTRL_FNA_SEC_ALL_NS_MASK:    Mask to get the secure erase applied to all namespaces
+ * @NVME_CTRL_FNA_CES_MASK:           Mask to get the cryptographic erase supported
+ * @NVME_CTRL_FNA_NSID_ALL_F_MASK:    Mask to get the format supported an NSID FFFFFFFFh
  * @NVME_CTRL_FNA_FMT_ALL_NAMESPACES: If set, then all namespaces in an NVM
  *				      subsystem shall be configured with the
  *				      same attributes and a format (excluding
@@ -1998,11 +2128,24 @@ enum nvme_id_ctrl_fuses {
  *				      FFFFFFFFh.
  */
 enum nvme_id_ctrl_fna {
-	NVME_CTRL_FNA_FMT_ALL_NAMESPACES	= 1 << 0,
-	NVME_CTRL_FNA_SEC_ALL_NAMESPACES	= 1 << 1,
-	NVME_CTRL_FNA_CRYPTO_ERASE		= 1 << 2,
-	NVME_CTRL_FNA_NSID_FFFFFFFF		= 1 << 3,
+	NVME_CTRL_FNA_FMT_ALL_NS_SHIFT		= 0,
+	NVME_CTRL_FNA_SEC_ALL_NS_SHIFT		= 1,
+	NVME_CTRL_FNA_CES_SHIFT			= 2,
+	NVME_CTRL_FNA_NSID_ALL_F_SHIFT		= 3,
+	NVME_CTRL_FNA_FMT_ALL_NS_MASK		= 0x1,
+	NVME_CTRL_FNA_SEC_ALL_NS_MASK		= 0x1,
+	NVME_CTRL_FNA_CES_MASK			= 0x1,
+	NVME_CTRL_FNA_NSID_ALL_F_MASK		= 0x1,
+	NVME_CTRL_FNA_FMT_ALL_NAMESPACES	= NVME_VAL(CTRL_FNA_FMT_ALL_NS),
+	NVME_CTRL_FNA_SEC_ALL_NAMESPACES	= NVME_VAL(CTRL_FNA_SEC_ALL_NS),
+	NVME_CTRL_FNA_CRYPTO_ERASE		= NVME_VAL(CTRL_FNA_CES),
+	NVME_CTRL_FNA_NSID_FFFFFFFF		= NVME_VAL(CTRL_FNA_NSID_ALL_F),
 };
+
+#define NVME_CTRL_FNA_FMT_ALL_NS(fna)	NVME_GET(fna, CTRL_FNA_FMT_ALL_NS)
+#define NVME_CTRL_FNA_SEC_ALL_NS(fna)	NVME_GET(fna, CTRL_FNA_SEC_ALL_NS)
+#define NVME_CTRL_FNA_CES(fna)		NVME_GET(fna, CTRL_FNA_CES)
+#define NVME_CTRL_FNA_NSID_ALL_F(fna)	NVME_GET(fna, CTRL_FNA_NSID_ALL_F)
 
 /**
  * enum nvme_id_ctrl_vwc - Volatile write cache
@@ -6984,6 +7127,20 @@ struct nvme_mi_vpd_hdr {
  *				      Originator field does not match the
  *				      Host NQN used by the DDC to connect
  *				      to the CDC.
+ * @NVME_SC_INVALID_CONTROLER_DATA_QUEUE: This error indicates that the
+ *				      specified Controller Data Queue
+ *				      Identifier is invalid for the controller
+ *				      processing the command.
+ * @NVME_SC_NOT_ENOUGH_RESOURCES:     This error indicates that there is not
+ *				      enough resources in the controller to
+ *				      process the command.
+ * @NVME_SC_CONTROLLER_SUSPENDED:     The operation requested is not allowed if
+ *				      the specified controller is suspended.
+ * @NVME_SC_CONTROLLER_NOT_SUSPENDED: The operation requested is not allowed if
+ *				      the specified controller is not
+ *				      suspended.
+ * @NVME_SC_CONTROLLER_DATA_QUEUE_FULL: The controller detected that a
+ *				      Controller Data Queue became full.
  * @NVME_SC_BAD_ATTRIBUTES:	      Conflicting Dataset Management Attributes
  * @NVME_SC_INVALID_PI:		      Invalid Protection Information
  * @NVME_SC_READ_ONLY:		      Attempted Write to Read Only Range
@@ -7240,6 +7397,15 @@ enum nvme_status_field {
 	NVME_SC_INSUFFICIENT_DISC_RES		= 0x32,
 	NVME_SC_REQSTD_FUNCTION_DISABLED	= 0x33,
 	NVME_SC_ZONEGRP_ORIGINATOR_INVLD	= 0x34,
+
+	/*
+	 * Command Set Specific - Live Migration
+	 */
+	NVME_SC_INVALID_CONTROLER_DATA_QUEUE	= 0x37,
+	NVME_SC_NOT_ENOUGH_RESOURCES		= 0x38,
+	NVME_SC_CONTROLLER_SUSPENDED		= 0x39,
+	NVME_SC_CONTROLLER_NOT_SUSPENDED	= 0x3A,
+	NVME_SC_CONTROLLER_DATA_QUEUE_FULL	= 0x3B,
 
 	/*
 	 * I/O Command Set Specific - NVM commands:
@@ -7519,6 +7685,9 @@ enum nvme_admin_opcode {
  * @NVME_IDENTIFY_CNS_CSI_ID_NS_DATA_STRUCTURE:	I/O Command Set specific ID Namespace
  *						Data Structure for Allocated Namespace ID
  * @NVME_IDENTIFY_CNS_COMMAND_SET_STRUCTURE:	Base Specification 2.0a section 5.17.2.21
+ * @NVME_IDENTIFY_CNS_SUPPORTED_CTRL_STATE_FORMATS:	Supported Controller State Formats
+ *							identifying the supported NVMe Controller
+ *							State data structures
  */
 enum nvme_identify_cns {
 	NVME_IDENTIFY_CNS_NS					= 0x00,
@@ -7545,6 +7714,7 @@ enum nvme_identify_cns {
 	NVME_IDENTIFY_CNS_CSI_ALLOCATED_NS_LIST			= 0x1A,
 	NVME_IDENTIFY_CNS_CSI_ID_NS_DATA_STRUCTURE		= 0x1B,
 	NVME_IDENTIFY_CNS_COMMAND_SET_STRUCTURE			= 0x1C,
+	NVME_IDENTIFY_CNS_SUPPORTED_CTRL_STATE_FORMATS		= 0x20,
 };
 
 /**
@@ -8087,12 +8257,14 @@ enum nvme_directive_send_identify_endir {
  * @NVME_SANITIZE_SANACT_START_BLOCK_ERASE:  Start a Block Erase sanitize operation.
  * @NVME_SANITIZE_SANACT_START_OVERWRITE:    Start an Overwrite sanitize operation.
  * @NVME_SANITIZE_SANACT_START_CRYPTO_ERASE: Start a Crypto Erase sanitize operation.
+ * @NVME_SANITIZE_SANACT_EXIT_MEDIA_VERIF:   Exit Media Verification State
  */
 enum nvme_sanitize_sanact {
 	NVME_SANITIZE_SANACT_EXIT_FAILURE			= 1,
 	NVME_SANITIZE_SANACT_START_BLOCK_ERASE			= 2,
 	NVME_SANITIZE_SANACT_START_OVERWRITE			= 3,
 	NVME_SANITIZE_SANACT_START_CRYPTO_ERASE			= 4,
+	NVME_SANITIZE_SANACT_EXIT_MEDIA_VERIF			= 5,
 };
 
 /**
@@ -8348,6 +8520,32 @@ enum nvme_io_opcode {
 	nvme_zns_cmd_mgmt_send	= 0x79,
 	nvme_zns_cmd_mgmt_recv	= 0x7a,
 	nvme_zns_cmd_append	= 0x7d,
+};
+
+/**
+ * enum nvme_kv_opcode - Opcodes for KV Commands
+ * @nvme_kv_cmd_flush:				Flush
+ * @nvme_kv_cmd_store:				Store
+ * @nvme_kv_cmd_retrieve:			Retrieve
+ * @nvme_kv_cmd_list:				List
+ * @nvme_kv_cmd_resv_register:			Reservation Register
+ * @nvme_kv_cmd_resv_report:			Reservation Report
+ * @nvme_kv_cmd_delete:				Delete
+ * @nvme_kv_cmd_resv_acquire:			Reservation Acquire
+ * @nvme_kv_cmd_exist:				Exist
+ * @nvme_kv_cmd_resv_release:			Reservation Release
+ */
+enum nvme_kv_opcode {
+	nvme_kv_cmd_flush			= 0x00,
+	nvme_kv_cmd_store			= 0x01,
+	nvme_kv_cmd_retrieve			= 0x02,
+	nvme_kv_cmd_list			= 0x06,
+	nvme_kv_cmd_resv_register		= 0x0d,
+	nvme_kv_cmd_resv_report			= 0x0e,
+	nvme_kv_cmd_delete			= 0x10,
+	nvme_kv_cmd_resv_acquire		= 0x11,
+	nvme_kv_cmd_exist			= 0x14,
+	nvme_kv_cmd_resv_release		= 0x15,
 };
 
 /**
