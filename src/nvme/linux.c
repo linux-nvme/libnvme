@@ -1572,7 +1572,8 @@ long nvme_insert_tls_key(const char *keyring, const char *key_type,
 					     configured_key, key_len);
 }
 
-char *nvme_export_tls_key(const unsigned char *key_data, int key_len)
+char *nvme_export_tls_key_and_hmac(const unsigned char *key_data, int key_len,
+				   unsigned char hmac)
 {
 	unsigned char raw_secret[52];
 	char *encoded_key;
@@ -1602,13 +1603,27 @@ char *nvme_export_tls_key(const unsigned char *key_data, int key_len)
 		return NULL;
 	}
 	memset(encoded_key, 0, encoded_len);
-	len = sprintf(encoded_key, "NVMeTLSkey-1:%02x:",
-		      key_len == 32 ? 1 : 2);
+	len = sprintf(encoded_key, "NVMeTLSkey-1:%02x:", hmac);
 	len += base64_encode(raw_secret, raw_len, encoded_key + len);
 	encoded_key[len++] = ':';
 	encoded_key[len++] = '\0';
 
 	return encoded_key;
+}
+
+char *nvme_export_tls_key(const unsigned char *key_data, int key_len)
+{
+	unsigned char hmac = 0;
+
+	if (key_len == 32)
+		hmac = 1;
+	else if (key_len == 48)
+		hmac = 2;
+	else {
+		errno = EINVAL;
+		return NULL;
+	}
+	return nvme_export_tls_key_and_hmac(key_data, key_len, hmac);
 }
 
 unsigned char *nvme_import_tls_key(const char *encoded_key, int *key_len,
@@ -1624,6 +1639,13 @@ unsigned char *nvme_import_tls_key(const char *encoded_key, int *key_len,
 		return NULL;
 	}
 	switch (err) {
+	case 0:
+		if (strlen(encoded_key) != 65 &&
+		    strlen(encoded_key) != 89) {
+			errno = EINVAL;
+			return NULL;
+		}
+		break;
 	case 1:
 		if (strlen(encoded_key) != 65) {
 			errno = EINVAL;

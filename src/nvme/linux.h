@@ -437,6 +437,23 @@ long nvme_revoke_tls_key(const char *keyring, const char *key_type,
 char *nvme_export_tls_key(const unsigned char *key_data, int key_len);
 
 /**
+ * nvme_export_tls_key_and_hmac() - Export a TLS key with HMAC information
+ * @key_data:	Raw data of the key
+ * @key_len:	Length of @key_data
+ * @hmac:	HMAC number to use
+ *
+ * Returns @key_data in the PSK Interchange format as defined in section
+ * 3.6.1.5 of the NVMe TCP Transport specification. @hmac is the HMAC
+ * number to use or '0' if not key transformation should happen.
+ *
+ * Return: The string containing the TLS identity or NULL with errno set
+ * on error. It is the responsibility of the caller to free the returned
+ * string.
+ */
+char *nvme_export_tls_key_and_hmac(const unsigned char *key_data, int key_len,
+				   unsigned char hmac);
+
+/**
  * nvme_import_tls_key() - Import a TLS key
  * @encoded_key:	TLS key in PSK interchange format
  * @key_len:		Length of the resulting key data
