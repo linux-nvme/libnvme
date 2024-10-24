@@ -692,8 +692,10 @@ int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
 
 	/* limit the response size, specify offset */
 	admin_req->flags = 0x3;
-	admin_req->dlen = cpu_to_le32(resp.data_len & 0xffffffff);
-	admin_req->doff = cpu_to_le32(resp_data_offset & 0xffffffff);
+	admin_req->dlen = req_data_size ? req_data_size: 
+			cpu_to_le32(resp.data_len & 0xffffffff);
+	admin_req->doff = req_data_size ? 0: 
+			cpu_to_le32(resp_data_offset & 0xffffffff);
 
 	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
 	if (rc)
