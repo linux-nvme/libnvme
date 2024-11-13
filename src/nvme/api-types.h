@@ -962,4 +962,104 @@ struct nvme_dim_args {
 	__u8	tas;
 };
 
+/**
+ * struct nvme_lm_cdq_args - Arguments for Controller Data Queue (CDQ) command
+ * @result:	Set on completion to the command's CQE DWORD 0 controller response
+ * @data:	Pointer to data
+ * @args_size:	Length of structure
+ * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @sel:	Select (SEL): This field specifies the type of management operation to perform.
+ * @sz:		Size of CDQ in dwords
+ * @cntlid:	Controller ID: This field specifies the ID of the controller to be used by the
+ *		specified Select (SEL) field.
+ * @cdqid:	Controller Data Queue ID (CDQID): This field specifies the ID of the CDQ to be used
+ *		for the specified Select (SEL) field.
+ */
+struct nvme_lm_cdq_args {
+	__u32	*result;
+	void	*data;
+	int	args_size;
+	int	fd;
+	__u32	timeout;
+	__u8	sel;
+	__u8	sz;
+	__u8	qt;
+	__u16	cntlid;
+	__u16	cdqid;
+};
+
+/**
+ * struct nvme_lm_track_send_args - Arguments for the Track Send command
+ * @result:	Set on completion to the command's CQE DWORD 0 controller response
+ * @args_size:	Length of structure
+ * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @sel:	Select (SEL): This field specifies the type of management operation to perform
+ * @lact:	Logging Action (LACT): This field specifies the type of logging action to perform
+ * @cdqid:	Controller Data Queue ID (CDQID): This field specifies the ID of the CDQ to be used
+ *		for the logging action
+ */
+struct nvme_lm_track_send_args {
+	__u32	*result;
+	int	args_size;
+	int	fd;
+	__u32	timeout;
+	__u8	sel;
+	__u8	lact;
+	__u16	cdqid;
+};
+
+/**
+ * struct nvme_lm_migration_send_args - Arguments for the Migration Send command
+ * @result:	Set on completion to the command's CQE DWORD 0 controller response
+ * @data:	Pointer to data
+ * @args_size:	Length of structure
+ * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @sel:	Select (SEL): This field specifies the type of management operation to perform
+ */
+struct nvme_lm_migration_send_args {
+	__u32	*result;
+	void	*data;
+	int	args_size;
+	int	fd;
+	__u32	timeout;
+	__u8	sel;
+	__u8	uidx;
+	bool	dudmq;
+	__u8	stype;
+	__u16	cntlid;
+	__u8	seqind;
+	__u8	csvi;
+	__u16	csuuidi;
+	__u64	offset;
+	__u32	numd;
+};
+
+/**
+ * struct nvme_lm_migration_recv_args - Arguments for the Migration Receive command
+ * @result:	Set on completion to the command's CQE DWORD 0 controller response
+ * @data:	Pointer to data
+ * @args_size:	Length of structure
+ * @fd:		File descriptor of nvme device
+ * @timeout:	Timeout in ms
+ * @sel:	Select (SEL): This field specifies the type of management operation to perform
+ */
+struct nvme_lm_migration_recv_args {
+	__u32	*result;
+	void	*data;
+	int	args_size;
+	int	fd;
+	__u32	timeout;
+	__u16	cntlid;
+	__u8	sel;
+	__u8	csvi;
+	__u8	csuidxp;
+	__u16	csuuidi;
+	__u64	offset;
+	__u8	uidx;
+	__u32	numd;
+};
+
 #endif /* _LIBNVME_API_TYPES_H */

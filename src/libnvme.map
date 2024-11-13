@@ -170,6 +170,12 @@ LIBNVME_1_0 {
 		nvme_default_host;
 		nvme_dev_self_test;
 		nvme_dim_send;
+		nvme_lm_cdq;
+		nvme_lm_track_send;
+		nvme_lm_migration_send;
+		nvme_lm_migration_recv;
+		nvme_lm_set_features_ctrl_data_queue;
+		nvme_lm_get_features_ctrl_data_queue;
 		nvme_directive_recv;
 		nvme_directive_send;
 		nvme_directive_send_id_endir;
