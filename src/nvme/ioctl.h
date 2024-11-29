@@ -1528,12 +1528,13 @@ static inline int nvme_get_log_device_self_test(int fd,
 /**
  * nvme_get_log_create_telemetry_host() - Create host telemetry log
  * @fd:		File descriptor of nvme device
+ * @mcda:	Maximum Created Data Area
  * @log:	Userspace address of the log payload
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_get_log_create_telemetry_host(int fd,
+static inline int nvme_get_log_create_telemetry_host(int fd, __u8 mcda,
 			struct nvme_telemetry_log *log)
 {
 	struct nvme_get_log_args args = {
@@ -1548,7 +1549,7 @@ static inline int nvme_get_log_create_telemetry_host(int fd,
 		.nsid = NVME_NSID_NONE,
 		.csi = NVME_CSI_NVM,
 		.lsi = NVME_LOG_LSI_NONE,
-		.lsp = NVME_LOG_TELEM_HOST_LSP_CREATE,
+		.lsp = ((mcda & 0x7) << 1) | NVME_LOG_TELEM_HOST_LSP_CREATE,
 		.uuidx = NVME_UUID_NONE,
 		.rae = false,
 		.ot = false,
