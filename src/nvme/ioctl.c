@@ -320,13 +320,25 @@ int nvme_get_log(struct nvme_get_log_args *args)
 }
 
 #ifdef CONFIG_LIBURING
-static int nvme_uring_cmd_setup(struct io_uring *ring)
+enum {
+	IO_URING_NOT_AVAILABLE,
+	IO_URING_AVAILABLE,
+} io_uring_kernel_support = IO_URING_NOT_AVAILABLE;
+
+/*
+ * gcc specific attribute, call automatically on the library loading.
+ * if IORING_OP_URING_CMD is not supported, fallback to ioctl interface.
+ */
+__attribute__((constructor))
+static void nvme_uring_cmd_probe()
 {
 	struct io_uring_probe *probe = io_uring_get_probe();
-	if (!io_uring_opcode_supported(probe, IORING_OP_URING_CMD)) {
+	if (NULL != probe && io_uring_opcode_supported(probe, IORING_OP_URING_CMD))
+		io_uring_kernel_support = IO_URING_AVAILABLE;
+}
 
-		return -1;
-	}
+static int nvme_uring_cmd_setup(struct io_uring *ring)
+{
 	return io_uring_queue_init(NVME_URING_ENTRIES, ring, IORING_SETUP_SQE128 | IORING_SETUP_CQE32);
 }
 
@@ -411,14 +423,14 @@ int nvme_get_log_page(int fd, __u32 xfer_len, struct nvme_get_log_args *args)
 
 	args->fd = fd;
 
-	bool fallback = true;
 #ifdef CONFIG_LIBURING
-	struct io_uring ring;
 	int n = 0;
-	ret = nvme_uring_cmd_setup(&ring);
-	/* IORING_OP_URING_CMD is not supported, fallback ioctl interface. */
-	if (!ret)
-		fallback = false;
+	struct io_uring ring;
+	if (io_uring_kernel_support == IO_URING_AVAILABLE) {
+		ret = nvme_uring_cmd_setup(&ring);
+		if (ret)
+			return -1;
+	}
 #endif
 	/*
 	 * 4k is the smallest possible transfer unit, so restricting to 4k
@@ -438,18 +450,17 @@ int nvme_get_log_page(int fd, __u32 xfer_len, struct nvme_get_log_args *args)
 		args->len = xfer;
 		args->log = ptr;
 		args->rae = offset + xfer < data_len || retain;
-		if (fallback)
-			ret = nvme_get_log(args);
 #ifdef CONFIG_LIBURING
-		else {
+		if (io_uring_kernel_support == IO_URING_AVAILABLE) {
 			if (n >= NVME_URING_ENTRIES) {
 				nvme_uring_cmd_wait_complete(&ring, n);
 				n = 0;
 			}
 			n += 1;
 			ret = nvme_uring_cmd_admin_passthru_async(&ring, args);
-		}
+		} else
 #endif
+		ret = nvme_get_log(args);
 		if (ret)
 			return ret;
 
@@ -458,14 +469,13 @@ int nvme_get_log_page(int fd, __u32 xfer_len, struct nvme_get_log_args *args)
 	} while (offset < data_len);
 
 #ifdef CONFIG_LIBURING
-	if (!fallback) {
+	if (io_uring_kernel_support == IO_URING_AVAILABLE) {
 		ret = nvme_uring_cmd_wait_complete(&ring, n);
+		nvme_uring_cmd_exit(&ring);
 		if (ret < 0)
 			return -1;
-		nvme_uring_cmd_exit(&ring);
 	}
 #endif
-
 	return 0;
 }
 
