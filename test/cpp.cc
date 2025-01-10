@@ -6,8 +6,14 @@
  * Authors: Keith Busch <keith.busch@wdc.com>
  */
 
+#include <algorithm>
 #include <iostream>
 #include <libnvme.h>
+
+static int min_compile_test()
+{
+	return std::min(1, 2);
+}
 
 int main()
 {
@@ -61,6 +67,8 @@ int main()
 	}
 	std::cout << "\n";
 	nvme_free_tree(r);
+
+	min_compile_test();
 
 	return 0;
 }
