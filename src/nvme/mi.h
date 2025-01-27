@@ -2292,6 +2292,91 @@ static inline int nvme_mi_admin_get_log_phy_rx_eom(nvme_mi_ctrl_t ctrl,
 }
 
 /**
+ * nvme_mi_admin_get_log_reachability_groups() - Retrieve Reachability Groups Log
+ * @ctrl:	Controller to query
+ * @rgo:	Return groups only
+ * @rae:	Retain asynchronous events
+ * @len:	The allocated length of the log page
+ * @log:	User address to store the log page
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise
+ */
+static inline int nvme_mi_admin_get_log_reachability_groups(nvme_mi_ctrl_t ctrl, __u32 len,
+	bool rgo, bool rae, struct nvme_reachability_groups_log *log)
+{
+	struct nvme_get_log_args args = {
+		.lpo = 0,
+		.result = NULL,
+		.log = log,
+		.args_size = sizeof(args),
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.lid = NVME_LOG_LID_REACHABILITY_GROUPS,
+		.len = len,
+		.nsid = NVME_NSID_ALL,
+		.csi = NVME_CSI_NVM,
+		.lsi = NVME_LOG_LSI_NONE,
+		.lsp = rgo,
+		.uuidx = NVME_LOG_LSP_NONE,
+		.rae = rae,
+		.ot = false,
+	};
+
+	return nvme_mi_admin_get_log_page(ctrl, NVME_LOG_PAGE_PDU_SIZE, &args);
+}
+
+/**
+ * nvme_mi_admin_get_log_reachability_associations() - Retrieve Reachability Associations Log
+ * @ctrl:	Controller to query
+ * @rao:	Return associations only
+ * @rae:	Retain asynchronous events
+ * @len:	The allocated length of the log page
+ * @log:	User address to store the log page
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise
+ */
+static inline int nvme_mi_admin_get_log_reachability_associations(nvme_mi_ctrl_t ctrl, bool rao,
+	bool rae, __u32 len, struct nvme_reachability_associations_log *log)
+{
+	struct nvme_get_log_args args = {
+		.lpo = 0,
+		.result = NULL,
+		.log = log,
+		.args_size = sizeof(args),
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.lid = NVME_LOG_LID_REACHABILITY_ASSOCIATIONS,
+		.len = len,
+		.nsid = NVME_NSID_ALL,
+		.csi = NVME_CSI_NVM,
+		.lsi = NVME_LOG_LSI_NONE,
+		.lsp = rao,
+		.uuidx = NVME_LOG_LSP_NONE,
+		.rae = rae,
+		.ot = false,
+	};
+
+	return nvme_mi_admin_get_log_page(ctrl, NVME_LOG_PAGE_PDU_SIZE, &args);
+}
+
+/**
+ * nvme_mi_admin_get_log_changed_alloc_ns_list() - Retrieve Changed Allocated Namespace List Log
+ * @ctrl:	Controller to query
+ * @rae:	Retain asynchronous events
+ * @len:	The allocated length of the log page
+ * @log:	User address to store the log page
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise
+ */
+static inline int nvme_mi_admin_get_log_changed_alloc_ns_list(nvme_mi_ctrl_t ctrl, bool rae,
+							      __u32 len, struct nvme_ns_list *log)
+{
+	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_CHANGED_ALLOC_NS_LIST,
+					  NVME_NSID_ALL, len, log);
+}
+
+/**
  * nvme_mi_admin_get_log_discovery() - Retrieve Discovery log page
  * @ctrl: Controller to query
  * @rae: Retain asynchronous events
@@ -2325,6 +2410,74 @@ static inline int nvme_mi_admin_get_log_discovery(nvme_mi_ctrl_t ctrl, bool rae,
 		.ot = false,
 	};
 	return nvme_mi_admin_get_log(ctrl, &args);
+}
+
+/**
+ * nvme_mi_admin_get_log_host_discover() - Retrieve Host Discovery Log
+ * @ctrl: Controller to query
+ * @allhoste:	All host entries
+ * @rae:	Retain asynchronous events
+ * @len:	The allocated length of the log page
+ * @log:	User address to store the log page
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise
+ */
+static inline int nvme_mi_admin_get_log_host_discover(nvme_mi_ctrl_t ctrl, bool allhoste, bool rae,
+						      __u32 len, struct nvme_host_discover_log *log)
+{
+	struct nvme_get_log_args args = {
+		.lpo = 0,
+		.result = NULL,
+		.log = log,
+		.args_size = sizeof(args),
+		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
+		.lid = NVME_LOG_LID_HOST_DISCOVER,
+		.len = len,
+		.nsid = NVME_NSID_ALL,
+		.csi = NVME_CSI_NVM,
+		.lsi = NVME_LOG_LSI_NONE,
+		.lsp = allhoste,
+		.uuidx = NVME_LOG_LSP_NONE,
+		.rae = rae,
+		.ot = false,
+	};
+
+	return nvme_mi_admin_get_log_page(ctrl, NVME_LOG_PAGE_PDU_SIZE, &args);
+}
+
+/**
+ * nvme_mi_admin_get_log_ave_discover() - Retrieve AVE Discovery Log
+ * @ctrl: Controller to query
+ * @rae:	Retain asynchronous events
+ * @len:	The allocated length of the log page
+ * @log:	User address to store the log page
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise
+ */
+static inline int nvme_mi_admin_get_log_ave_discover(nvme_mi_ctrl_t ctrl, bool rae, __u32 len,
+						     struct nvme_ave_discover_log *log)
+{
+	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_AVE_DISCOVER, NVME_NSID_ALL, len,
+					  log);
+}
+
+/**
+ * nvme_mi_admin_get_log_pull_model_ddc_req() - Retrieve Pull Model DDC Request Log
+ * @ctrl: Controller to query
+ * @rae:	Retain asynchronous events
+ * @len:	The allocated length of the log page
+ * @log:	User address to store the log page
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise
+ */
+static inline int nvme_mi_admin_get_log_pull_model_ddc_req(nvme_mi_ctrl_t ctrl, bool rae, __u32 len,
+							   struct nvme_pull_model_ddc_req_log *log)
+{
+	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_PULL_MODEL_DDC_REQ, NVME_NSID_ALL,
+					  len, log);
 }
 
 /**
