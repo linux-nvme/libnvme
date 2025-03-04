@@ -65,6 +65,7 @@ struct sockaddr_mctp {
 	__u8			__smctp_pad1;
 };
 
+
 #define MCTP_NET_ANY		0x0
 
 #define MCTP_ADDR_NULL		0x00
@@ -84,6 +85,9 @@ struct nvme_mi_transport_mctp {
 	int	sd;
 	void	*resp_buf;
 	size_t	resp_buf_size;
+	int sd_aem;
+	void	*resp_buf_aem;
+	size_t	resp_buf_aem_size;
 };
 
 static int ioctl_tag(int sd, unsigned long req, struct mctp_ioc_tag_ctl *ctl)
@@ -218,6 +222,174 @@ static bool nvme_mi_mctp_resp_is_mpr(void *buf, size_t len,
 		*mpr_time = cpu_to_le16(msg->mprt) * 100;
 
 	return true;
+}
+
+static int nvme_mi_mctp_aem_fd(struct nvme_mi_ep *ep)
+{
+	struct nvme_mi_transport_mctp *mctp;
+
+	if (ep->transport != &nvme_mi_transport_mctp) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (!ep->transport_data) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	mctp = ep->transport_data;
+	return mctp->sd_aem;
+}
+
+static int nvme_mi_mctp_aem_read(struct nvme_mi_ep *ep,
+			       struct nvme_mi_resp *resp)
+{
+	ssize_t len, resp_len, resp_hdr_len, resp_data_len;
+	struct sockaddr_mctp src_addr = { 0 };
+	struct nvme_mi_transport_mctp *mctp;
+	struct iovec resp_iov[1];
+	struct msghdr resp_msg;
+	int rc, errno_save, timeout;
+	struct pollfd pollfds[1];
+	__le32 mic;
+
+	if (ep->transport != &nvme_mi_transport_mctp) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	/* we need enough space for at least a generic (/error) response */
+	if (resp->hdr_len < sizeof(struct nvme_mi_msg_hdr)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	mctp = ep->transport_data;
+
+	resp_len = resp->hdr_len + resp->data_len + sizeof(mic);
+	if (resp_len > mctp->resp_buf_aem_size) {
+		void *tmp = realloc(mctp->resp_buf_aem, resp_len);
+
+		if (!tmp) {
+			errno_save = errno;
+			nvme_msg(ep->root, LOG_ERR,
+				 "Failure allocating response buffer: %m\n");
+			errno = errno_save;
+			rc = -1;
+			goto out;
+		}
+		mctp->resp_buf_aem = tmp;
+		mctp->resp_buf_aem_size = resp_len;
+	}
+
+	/* offset by one: the MCTP message type is excluded from the buffer */
+	resp_iov[0].iov_base = mctp->resp_buf_aem + 1;
+	resp_iov[0].iov_len = resp_len - 1;
+
+	memset(&resp_msg, 0, sizeof(resp_msg));
+	resp_msg.msg_iov = resp_iov;
+	resp_msg.msg_iovlen = 1;
+	resp_msg.msg_name = &src_addr;
+	resp_msg.msg_namelen = sizeof(src_addr);
+
+	pollfds[0].fd = mctp->sd_aem;
+	pollfds[0].events = POLLIN;
+	timeout = 1;
+retry:
+	rc = ops.poll(pollfds, 1, timeout);
+	if (rc < 0) {
+		if (errno == EINTR)
+			goto retry;
+		errno_save = errno;
+		nvme_msg(ep->root, LOG_ERR,
+			 "Failed polling on MCTP socket: %m");
+		errno = errno_save;
+		goto out;
+	}
+
+	if (rc == 0) {
+		nvme_msg(ep->root, LOG_DEBUG, "Timeout on MCTP socket");
+		errno = ETIMEDOUT;
+		rc = -1;
+		goto out;
+	}
+
+	rc = -1;
+	len = ops.recvmsg(mctp->sd_aem, &resp_msg, MSG_DONTWAIT);
+
+	if (len < 0) {
+		errno_save = errno;
+		nvme_msg(ep->root, LOG_ERR,
+			 "Failure receiving MCTP message: %m\n");
+		errno = errno_save;
+		goto out;
+	}
+
+
+	if (len == 0) {
+		nvme_msg(ep->root, LOG_WARNING, "No data from MCTP endpoint\n");
+		errno = EIO;
+		goto out;
+	}
+
+	if (resp_msg.msg_namelen < sizeof(src_addr)) {
+		nvme_msg(ep->root, LOG_WARNING, "Unexpected src address length\n");
+		errno = EIO;
+		goto out;
+	}
+
+	if (mctp->eid != src_addr.smctp_addr.s_addr) {
+		//This does not belong to the endpoint we're monitoring
+		errno = EWOULDBLOCK;
+		goto out;
+	}
+
+	/* Re-add the type byte, so we can work on aligned lengths from here */
+	((uint8_t *)mctp->resp_buf_aem)[0] = MCTP_TYPE_NVME | MCTP_TYPE_MIC;
+	len += 1;
+
+	/* The smallest response data is 8 bytes: generic 4-byte message header
+	 * plus four bytes of error data (excluding MIC). Ensure we have enough.
+	 */
+	if (len < 8 + sizeof(mic)) {
+		nvme_msg(ep->root, LOG_ERR,
+			 "Invalid MCTP response: too short (%zd bytes, needed %zd)\n",
+			 len, 8 + sizeof(mic));
+		errno = EPROTO;
+		goto out;
+	}
+
+	/* Start unpacking the linear resp buffer into the split header + data
+	 * + MIC. We check for a MPR response before fully unpacking, as we'll
+	 * need to preserve the resp layout if we need to retry the receive.
+	 */
+
+	/* MIC is always at the tail */
+	memcpy(&mic, mctp->resp_buf_aem + len - sizeof(mic), sizeof(mic));
+	len -= 4;
+
+	/* we expect resp->hdr_len bytes, but we may have less */
+	resp_hdr_len = resp->hdr_len;
+	if (resp_hdr_len > len)
+		resp_hdr_len = len;
+	memcpy(resp->hdr, mctp->resp_buf_aem, resp_hdr_len);
+	resp->hdr_len = resp_hdr_len;
+	len -= resp_hdr_len;
+
+	/* any remaining bytes are the data payload */
+	resp_data_len = resp->data_len;
+	if (resp_data_len > len)
+		resp_data_len = len;
+	memcpy(resp->data, mctp->resp_buf_aem + resp_hdr_len, resp_data_len);
+	resp->data_len = resp_data_len;
+
+	resp->mic = le32_to_cpu(mic);
+
+	rc = 0;
+
+out:
+	return rc;
 }
 
 static int nvme_mi_mctp_submit(struct nvme_mi_ep *ep,
@@ -433,7 +605,9 @@ static void nvme_mi_mctp_close(struct nvme_mi_ep *ep)
 
 	mctp = ep->transport_data;
 	close(mctp->sd);
+	close(mctp->sd_aem);
 	free(mctp->resp_buf);
+	free(mctp->resp_buf_aem);
 	free(ep->transport_data);
 }
 
@@ -459,12 +633,15 @@ static const struct nvme_mi_transport nvme_mi_transport_mctp = {
 	.submit = nvme_mi_mctp_submit,
 	.close = nvme_mi_mctp_close,
 	.desc_ep = nvme_mi_mctp_desc_ep,
+	.aem_read = nvme_mi_mctp_aem_read,
+	.aem_fd = nvme_mi_mctp_aem_fd,
 };
 
 nvme_mi_ep_t nvme_mi_open_mctp(nvme_root_t root, unsigned int netid, __u8 eid)
 {
 	struct nvme_mi_transport_mctp *mctp;
 	struct nvme_mi_ep *ep;
+	struct sockaddr_mctp addr;
 	int errno_save;
 
 	ep = nvme_mi_init_ep(root);
@@ -479,6 +656,7 @@ nvme_mi_ep_t nvme_mi_open_mctp(nvme_root_t root, unsigned int netid, __u8 eid)
 
 	memset(mctp, 0, sizeof(*mctp));
 	mctp->sd = -1;
+	mctp->sd_aem = -1;
 
 	mctp->resp_buf_size = 4096;
 	mctp->resp_buf = malloc(mctp->resp_buf_size);
@@ -487,13 +665,39 @@ nvme_mi_ep_t nvme_mi_open_mctp(nvme_root_t root, unsigned int netid, __u8 eid)
 		goto err_free_mctp;
 	}
 
+	mctp->resp_buf_aem_size = 4096;
+	mctp->resp_buf_aem = malloc(mctp->resp_buf_aem_size);
+	if (!mctp->resp_buf_aem) {
+		errno_save = errno;
+		goto err_free_rspbuf;
+	}
+
 	mctp->net = netid;
 	mctp->eid = eid;
 
 	mctp->sd = ops.socket(AF_MCTP, SOCK_DGRAM, 0);
 	if (mctp->sd < 0) {
 		errno_save = errno;
-		goto err_free_rspbuf;
+		goto err_free_aem_rspbuf;
+	}
+
+	mctp->sd_aem = ops.socket(AF_MCTP, SOCK_DGRAM, 0);
+	if (mctp->sd_aem < 0) {
+		errno_save = errno;
+		goto err_close_sd;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.smctp_family = AF_MCTP;
+	addr.smctp_network = mctp->net;
+	addr.smctp_addr.s_addr = MCTP_ADDR_ANY;//mctp->eid;
+	addr.smctp_type = MCTP_TYPE_NVME | MCTP_TYPE_MIC;
+	addr.smctp_tag = MCTP_TAG_OWNER;
+
+	if (bind(mctp->sd_aem, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		errno_save = errno;
+		close(mctp->sd_aem);
+		goto err_close_sd;
 	}
 
 	ep->transport = &nvme_mi_transport_mctp;
@@ -508,13 +712,18 @@ nvme_mi_ep_t nvme_mi_open_mctp(nvme_root_t root, unsigned int netid, __u8 eid)
 
 	return ep;
 
+err_close_sd:
+	close(mctp->sd);
+err_free_aem_rspbuf:
+	free(mctp->resp_buf_aem);
 err_free_rspbuf:
 	free(mctp->resp_buf);
 err_free_mctp:
 	free(mctp);
 err_close_ep:
 	/* the ep->transport is not set yet, so this will not call back
-	 * into nvme_mi_mctp_close() */
+	 * into nvme_mi_mctp_close()
+	 */
 	nvme_mi_close(ep);
 	errno = errno_save;
 	return NULL;
