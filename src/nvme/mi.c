@@ -21,6 +21,12 @@
 #include "mi.h"
 #include "private.h"
 
+#define NUM_ENABLES    (256u)
+
+static int nvme_mi_get_async_message(nvme_mi_ep_t ep,
+							struct nvme_mi_aem_msg *aem_msg,
+							size_t *aem_msg_len);
+
 static const int default_timeout = 1000; /* milliseconds; endpoints may
 					    override */
 
@@ -414,6 +420,59 @@ static int nvme_mi_verify_resp_mic(struct nvme_mi_resp *resp)
 	return resp->mic != ~crc;
 }
 
+int nvme_mi_async_read(nvme_mi_ep_t ep, struct nvme_mi_resp *resp)
+{
+	int rc = ep->transport->aem_read(ep, resp);
+
+	if (nvme_mi_ep_has_quirk(ep, NVME_QUIRK_MIN_INTER_COMMAND_TIME))
+		nvme_mi_record_resp_time(ep);
+
+	if (rc && errno == EWOULDBLOCK) {
+		//Sometimes we might get owned tag data from the wrong endpoint.
+		//This isn't an error, but we shouldn't process it here
+		resp->data_len = 0;//No data to process
+		return 0;
+	} else if (rc) {
+		nvme_msg(ep->root, LOG_INFO, "transport failure\n");
+		return rc;
+	}
+
+	if (ep->transport->mic_enabled) {
+		rc = nvme_mi_verify_resp_mic(resp);
+		if (rc) {
+			nvme_msg(ep->root, LOG_WARNING, "crc mismatch\n");
+			errno = EBADMSG;
+			return -1;
+		}
+	}
+
+	//TODO: There's a bunch of overlap with the nvme_mi_submit.  Maybe we make common helpers
+
+	/* basic response checks */
+	if (resp->hdr_len < sizeof(struct nvme_mi_msg_hdr)) {
+		nvme_msg(ep->root, LOG_DEBUG,
+			 "Bad response header len: %zd\n", resp->hdr_len);
+		errno = EPROTO;
+		return -1;
+	}
+
+	if (resp->hdr->type != NVME_MI_MSGTYPE_NVME) {
+		nvme_msg(ep->root, LOG_DEBUG,
+			 "Invalid message type 0x%02x\n", resp->hdr->type);
+		errno = EPROTO;
+		return -1;
+	}
+
+	if (!(resp->hdr->nmp & ~(NVME_MI_ROR_REQ << 7))) {
+		nvme_msg(ep->root, LOG_DEBUG,
+			 "ROR value in response indicates a response\n");
+		errno = EIO;
+		return -1;
+	}
+
+	return 0;
+}
+
 int nvme_mi_submit(nvme_mi_ep_t ep, struct nvme_mi_req *req,
 		   struct nvme_mi_resp *resp)
 {
@@ -425,11 +484,6 @@ int nvme_mi_submit(nvme_mi_ep_t ep, struct nvme_mi_req *req,
 	}
 
 	if (req->hdr_len & 0x3) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	if (req->data_len & 0x3) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -625,6 +679,28 @@ static int nvme_mi_control_parse_status(struct nvme_mi_resp *resp, __u16 *cpsr)
 
 	return control_resp->status;
 }
+
+static int nvme_mi_get_async_message(nvme_mi_ep_t ep,
+							struct nvme_mi_aem_msg *aem_msg,
+							size_t *aem_msg_len)
+{
+	struct nvme_mi_resp resp;
+
+	memset(&resp, 0, sizeof(resp));
+	resp.hdr = &aem_msg->hdr;
+	resp.hdr_len = sizeof(struct nvme_mi_msg_hdr);
+	resp.data = &aem_msg->occ_list_hdr;
+	resp.data_len = *aem_msg_len;
+
+	int rc = nvme_mi_async_read(ep, &resp);
+
+	if (rc)
+		return rc;
+
+	*aem_msg_len = resp.data_len;
+	return 0;
+}
+
 
 int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
 		       struct nvme_mi_admin_req_hdr *admin_req,
@@ -1798,8 +1874,9 @@ int nvme_mi_mi_subsystem_health_status_poll(nvme_mi_ep_t ep, bool clear,
 	return 0;
 }
 
-int nvme_mi_mi_config_get(nvme_mi_ep_t ep, __u32 dw0, __u32 dw1,
-			  __u32 *nmresp)
+int nvme_mi_mi_config_set_get_ex(nvme_mi_ep_t ep, __u8 opcode, __u32 dw0,
+				__u32 dw1, void *data_out, size_t data_out_len,
+				void *data_in, size_t *data_in_len, __u32 *nmresp)
 {
 	struct nvme_mi_mi_resp_hdr resp_hdr;
 	struct nvme_mi_mi_req_hdr req_hdr;
@@ -1810,17 +1887,21 @@ int nvme_mi_mi_config_get(nvme_mi_ep_t ep, __u32 dw0, __u32 dw1,
 	memset(&req_hdr, 0, sizeof(req_hdr));
 	req_hdr.hdr.type = NVME_MI_MSGTYPE_NVME;
 	req_hdr.hdr.nmp = (NVME_MI_ROR_REQ << 7) | (NVME_MI_MT_MI << 3);
-	req_hdr.opcode = nvme_mi_mi_opcode_configuration_get;
+	req_hdr.opcode = opcode;
 	req_hdr.cdw0 = cpu_to_le32(dw0);
 	req_hdr.cdw1 = cpu_to_le32(dw1);
 
 	memset(&req, 0, sizeof(req));
 	req.hdr = &req_hdr.hdr;
 	req.hdr_len = sizeof(req_hdr);
+	req.data = data_out;
+	req.data_len = data_out_len;
 
 	memset(&resp, 0, sizeof(resp));
 	resp.hdr = &resp_hdr.hdr;
 	resp.hdr_len = sizeof(resp_hdr);
+	resp.data = data_in;
+	resp.data_len = *data_in_len;
 
 	rc = nvme_mi_submit(ep, &req, &resp);
 	if (rc)
@@ -1829,45 +1910,121 @@ int nvme_mi_mi_config_get(nvme_mi_ep_t ep, __u32 dw0, __u32 dw1,
 	if (resp_hdr.status)
 		return resp_hdr.status;
 
-	*nmresp = resp_hdr.nmresp[0] |
-		  resp_hdr.nmresp[1] << 8 |
-		  resp_hdr.nmresp[2] << 16;
+	*data_in_len = resp.data_len;
+
+	if (nmresp) {
+		*nmresp = resp_hdr.nmresp[0] |
+		resp_hdr.nmresp[1] << 8 |
+		resp_hdr.nmresp[2] << 16;
+	}
 
 	return 0;
+}
+
+int nvme_mi_mi_config_get(nvme_mi_ep_t ep, __u32 dw0, __u32 dw1,
+			  __u32 *nmresp)
+{
+	size_t data_in_len = 0;
+
+	return nvme_mi_mi_config_set_get_ex(ep,
+						nvme_mi_mi_opcode_configuration_get,
+						dw0,
+						dw1,
+						NULL,
+						0,
+						NULL,
+						&data_in_len,
+						nmresp);
 }
 
 int nvme_mi_mi_config_set(nvme_mi_ep_t ep, __u32 dw0, __u32 dw1)
 {
-	struct nvme_mi_mi_resp_hdr resp_hdr;
-	struct nvme_mi_mi_req_hdr req_hdr;
-	struct nvme_mi_resp resp;
-	struct nvme_mi_req req;
-	int rc;
+	size_t data_in_len = 0;
 
-	memset(&req_hdr, 0, sizeof(req_hdr));
-	req_hdr.hdr.type = NVME_MI_MSGTYPE_NVME;
-	req_hdr.hdr.nmp = (NVME_MI_ROR_REQ << 7) | (NVME_MI_MT_MI << 3);
-	req_hdr.opcode = nvme_mi_mi_opcode_configuration_set;
-	req_hdr.cdw0 = cpu_to_le32(dw0);
-	req_hdr.cdw1 = cpu_to_le32(dw1);
+	return nvme_mi_mi_config_set_get_ex(
+						ep,
+						nvme_mi_mi_opcode_configuration_set,
+						dw0,
+						dw1,
+						NULL,
+						0,
+						NULL,
+						&data_in_len,
+						NULL);
+}
 
-	memset(&req, 0, sizeof(req));
-	req.hdr = &req_hdr.hdr;
-	req.hdr_len = sizeof(req_hdr);
+int nvme_mi_mi_config_get_async_event(nvme_mi_ep_t ep,
+				__u8 *aeelver,
+				struct ae_supported_list_t *list,
+				size_t *list_num_bytes)
+{
 
-	memset(&resp, 0, sizeof(resp));
-	resp.hdr = &resp_hdr.hdr;
-	resp.hdr_len = sizeof(resp_hdr);
+	__u32 dw0 = NVME_MI_CONFIG_AE;
+	__u32 aeelvertemp = 0;
 
-	rc = nvme_mi_submit(ep, &req, &resp);
+	int rc = nvme_mi_mi_config_set_get_ex(
+						ep,
+						nvme_mi_mi_opcode_configuration_get,
+						dw0,
+						0,
+						NULL,
+						0,
+						list,
+						list_num_bytes,
+						&aeelvertemp);
 	if (rc)
 		return rc;
 
-	if (resp_hdr.status)
-		return resp_hdr.status;
+	*aeelver = 0x000F & aeelvertemp;
 
 	return 0;
 }
+
+int nvme_mi_mi_config_set_async_event(nvme_mi_ep_t ep,
+				bool envfa,
+				bool empfa,
+				bool encfa,
+				__u8 aemd,
+				__u8 aerd,
+				struct ae_enable_list_t *enable_list,
+				size_t enable_list_length,
+				struct nvme_mi_ae_occ_list_hdr *occ_list,
+				size_t *occ_list_num_bytes)
+{
+
+	__u32 dw0 = ((__u32)envfa << 26) |
+				((__u32)empfa << 25) |
+				((__u32)encfa << 24) |
+				((__u32)aemd << 16)  |
+				((__u16) aerd << 8)  | NVME_MI_CONFIG_AE;
+
+	//Basic checks here on lengths
+	if (enable_list_length < sizeof(struct ae_enable_list_t) ||
+		(sizeof(struct ae_enable_list_t) +
+		 enable_list->hdr.numaee * sizeof(struct ae_enable_item_t) > enable_list_length)
+	  ) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	//Some very baseic header checks
+	if (enable_list->hdr.aeelhl != sizeof(struct ae_enable_list_header_t) ||
+		enable_list->hdr.aeelver != 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	return nvme_mi_mi_config_set_get_ex(ep,
+		nvme_mi_mi_opcode_configuration_set,
+		dw0,
+		0,
+		enable_list,
+		enable_list_length,
+		occ_list,
+		occ_list_num_bytes,
+		NULL);
+}
+
 
 void nvme_mi_close(nvme_mi_ep_t ep)
 {
@@ -1973,4 +2130,566 @@ const char *nvme_mi_status_to_string(int status)
                 s = mi_status[status];
 
         return s;
+}
+
+static int validate_enabled_list(struct ae_supported_list_t *list, size_t len)
+{
+	if (list->hdr.aeslver != 0) {
+		errno = EPROTO;
+		return -1;
+	} else if (list->hdr.aeslhl != sizeof(struct ae_supported_list_t)) {
+		errno = EPROTO;
+		return -1;
+	} else if (list->hdr.aest < len ||
+		list->hdr.aest !=
+		list->hdr.aeslhl + list->hdr.numaes * sizeof(struct ae_supported_item_t)) {
+		errno = EPROTO;
+		return -1;
+	}
+	return 0;
+}
+static int validate_occ_list_update_ctx(
+							struct nvme_mi_ae_occ_list_hdr *occ_header,
+							size_t len,
+							struct nvme_mi_aem_ctx *ctx,
+							bool check_generation_num)
+{
+	//Make sure header fields have valid data
+	if (len < sizeof(*occ_header)) {
+		errno = EPROTO;
+		goto err_cleanup;
+	} else if (occ_header->aelver != 0 ||
+			   occ_header->aeolhl != sizeof(*occ_header)) {
+		//Make sure header is the right version and length
+		errno = EPROTO;
+		goto err_cleanup;
+	} else if (occ_header->aeolli.aeoltl > len) {
+		//Full length is bigger than the data that was received
+		errno = EPROTO;
+		goto err_cleanup;
+	} else if (check_generation_num &&
+				ctx->last_generation_num == occ_header->aemti.aemgn) {
+		//This is a duplicate and shouldn't be parsed.
+		//Let's just act like there's no updates
+		occ_header->numaeo = 0;
+	} else {
+		//Todo: //I'm not sure how this works for SYNC. Need to check back.
+		ctx->last_generation_num = occ_header->aemti.aemgn;
+	}
+
+	//Header is fine.  Let's go through the data
+	//First, we should update our context appropriately
+	ctx->occ_header = occ_header;
+
+	//Data starts after header
+	ctx->list_current = (struct nvme_mi_ae_occ_data *) (occ_header + 1);
+	ctx->list_current_index = 0;
+	ctx->list_start = ctx->list_current;
+
+	struct nvme_mi_ae_occ_data *current = ctx->list_current;
+	size_t bytes_so_far = ctx->occ_header->aeolhl;
+
+	for (int i = 0; i < occ_header->numaeo; i++) {
+		//Validate this item
+		if (current->aelhlen != sizeof(*current)) {
+			errno = EPROTO;
+			goto err_cleanup;
+		} else if (!ctx->callbacks.enabled[current->aeoui.aeoi]) {
+			//This is unexpected as this AE shouldn't be enabled
+			errno = EPROTO;
+			goto err_cleanup;
+		}
+
+		//Okay, check data lengths, including this header and the specific data(s)
+		bytes_so_far += sizeof(*current) + current->aeosil + current->aeovsil;
+		if (bytes_so_far > occ_header->aeolli.aeoltl) {
+			errno = EPROTO;
+			goto err_cleanup;
+		}
+	}
+
+	return 0;
+
+err_cleanup:
+	return -1;
+}
+
+int nvme_mi_get_aem_fd(nvme_mi_ep_t ep)
+{
+	if (!ep || !ep->aem_ctx || !ep->transport)
+		return -1;
+
+	return ep->transport->aem_fd(ep);
+}
+
+static void reset_list_info(struct nvme_mi_aem_ctx *ctx)
+{
+	//Reset context information
+	ctx->list_current_index = -1;
+	ctx->list_start = NULL;
+	ctx->list_current = NULL;
+	ctx->occ_header = NULL;
+}
+
+int nvme_mi_enable_aem(nvme_mi_ep_t ep,
+	bool envfa,
+	bool empfa,
+	bool encfa,
+	__u8 aemd,
+	__u8 aerd,
+	struct nvme_mi_aem_callbacks *callbacks,
+	void *userdata)
+{
+	if (!ep || !callbacks || !callbacks->aem_handler || ep->aem_ctx)
+		return -1;
+
+	int rc = 0;
+	bool already_enabled[NUM_ENABLES] = {false};
+	uint8_t response_buffer[4096] = {0};
+	size_t response_len = sizeof(response_buffer);
+	struct nvme_mi_ae_occ_list_hdr *response =
+		(struct nvme_mi_ae_occ_list_hdr *)response_buffer;
+
+	ep->aem_ctx = malloc(sizeof(*ep->aem_ctx));
+	if (!(ep->aem_ctx))
+		return -1;
+
+	memset(ep->aem_ctx, 0, sizeof(*ep->aem_ctx));
+	reset_list_info((ep->aem_ctx));
+	ep->aem_ctx->callbacks = *callbacks;
+
+    // First, let's figure out if anything is already enabled that we need to
+    // disable
+	unsigned char aeelver;
+	size_t ae_list_bytes = NUM_ENABLES * sizeof(struct ae_supported_list_t);
+	struct ae_supported_list_t *enabled_list = malloc(ae_list_bytes);
+
+	if (!enabled_list) {
+		rc = -1;
+		goto cleanup_ctx;
+	}
+
+	rc = nvme_mi_mi_config_get_async_event(
+		ep, &aeelver, enabled_list, &ae_list_bytes);
+	if (rc)
+		goto cleanup_enabled_list;
+
+	rc = validate_enabled_list(enabled_list, ae_list_bytes);
+	if (rc)
+		goto cleanup_enabled_list;
+
+	struct ae_supported_item_t *pSupportedItem =
+		(struct ae_supported_item_t *)(&enabled_list->hdr + 1);
+
+	for (int i = 0; i < enabled_list->hdr.numaes; i++) {
+		if (pSupportedItem[i].aesi.aese)
+			already_enabled[pSupportedItem[i].aesi.aeis] = true;
+	}
+
+	size_t msg_len =
+		sizeof(struct ae_enable_list_header_t) +
+		NUM_ENABLES * sizeof(struct ae_enable_item_t);
+
+	struct ae_enable_list_header_t *request = malloc(msg_len);
+
+	if (!request)
+		goto cleanup_enabled_list;
+
+	request->aeelhl = sizeof(struct ae_enable_list_header_t);
+	request->numaee = 0;//Will be populated later
+	request->aeelver = 0;
+	request->aeetl = 0;//Will be populated later
+
+	//Data follows header
+	struct ae_enable_item_t *items = (struct ae_enable_item_t *)(request + 1);
+
+	bool at_least_one = false;
+
+	int current_index = 0;
+	//Let's be explicit about what's enabled and what's not
+	for (int i = 0; i < NUM_ENABLES; i++) {
+		if (callbacks->enabled[i]) {
+			items[current_index].aeel = sizeof(items[i]);
+			items[current_index].aeei.aee = callbacks->enabled[i];
+			items[current_index].aeei.aeeid = i;
+			at_least_one = true;
+			current_index++;
+		} else if (already_enabled[i]) {
+			//If this event was enabled, but we aren't enabling it now
+			//we need to disable it
+			items[current_index].aeel = sizeof(items[i]);
+			items[current_index].aeei.aee = false;
+			items[current_index].aeei.aeeid = i;
+			current_index++;
+		}
+	}
+
+	//Recalculate since we're not going to actually send a full list
+	request->numaee = current_index;
+	msg_len = sizeof(struct ae_enable_list_header_t) +
+		request->numaee * sizeof(struct ae_enable_item_t);
+
+	request->aeetl = msg_len;
+
+	if (!at_least_one) {
+		errno = EINVAL;
+		rc = -1;
+		goto cleanup_request;
+	}
+	//Need to send a AEM Sync to enable things
+#ifndef TEST_CODE
+	rc = nvme_mi_mi_config_set_async_event(ep,
+					envfa,
+					empfa,
+					encfa,
+					aemd,
+					aerd,
+					(struct ae_enable_list_t *)request,
+					msg_len,
+					response,
+					&response_len);
+#else
+	static int count = 1;
+
+	rc = 0;
+
+	response->aelver = 0;
+	response->numaeo = 2;
+	response->aemti.aemgn = count++;
+	response->aeolhl = 7;
+	struct nvme_mi_ae_occ_data *dptr = (struct nvme_mi_ae_occ_data *)(response+1);
+
+	//First item, has specific info of length 2 { 1, 2, 12, 0xABCD}
+	dptr->aelhlen = 9;
+	dptr->aeosil = 2;
+	dptr->aeovsil = 0;
+	dptr->aeoui.aeoi = 1;
+	dptr->aeoui.aessi = 2;
+	dptr->aeoui.aeocidi = 12;
+	uint16_t *siptr = (uint16_t *)(dptr+1);
+	*siptr = 0xABCD;
+	dptr = (struct nvme_mi_ae_occ_data *)(siptr+1);
+
+	//Second item, has vendor specific info of length 4 { 3, 4, 15, 0x12345678}
+	dptr->aelhlen = 9;
+	dptr->aeosil = 0;
+	dptr->aeovsil = 4;
+	dptr->aeoui.aeoi = 3;
+	dptr->aeoui.aessi = 4;
+	dptr->aeoui.aeocidi = 15;
+	uint32_t *viptr = (uint32_t *)(dptr+1);
+	*viptr = 0x12345678;
+
+	response->aeolli.aeoltl = 7 + 2*9 + 2 + 4;
+	response_len = response->aeolli.aeoltl;
+
+#endif
+	if (rc)
+		goto cleanup_request;
+
+	//Parse the response and fire events
+	rc = validate_occ_list_update_ctx(response,
+					response_len,
+					ep->aem_ctx,
+					false /*generation # shouldn't matter*/);
+	if (rc)
+		goto cleanup_request;
+
+	if (response->numaeo) {
+		//Return value unused here
+		callbacks->aem_handler(ep, response->numaeo, userdata);
+	}
+
+cleanup_request:
+	free(request);
+
+cleanup_enabled_list:
+	free(enabled_list);
+
+cleanup_ctx:
+	// Clear these because they won't point to valid memory anymore
+	reset_list_info(ep->aem_ctx);
+
+	if (rc) {
+		free(ep->aem_ctx);
+		ep->aem_ctx = NULL;
+	}
+	return rc;
+}
+
+int nvme_mi_disable_aem(nvme_mi_ep_t ep)
+{
+	if (!ep || !ep->aem_ctx)
+		return -1;
+
+	int rc = 0;
+	//First need to send a disable
+	size_t msg_len =
+		sizeof(struct ae_enable_list_header_t) +
+		NUM_ENABLES * sizeof(struct ae_enable_item_t);
+
+	struct ae_enable_list_header_t *request = malloc(msg_len);
+
+	request->aeelhl = sizeof(struct ae_enable_list_header_t);
+	request->numaee = 0;//Will be populated later
+	request->aeelver = 0;
+	request->aeetl = 0;//Will be populated later
+
+	//Data follows header
+	struct ae_enable_item_t *items = (struct ae_enable_item_t *)(request + 1);
+
+	//Let's be explicit about what's enabled and what's not
+	int current_index = 0;
+
+	for (int i = 0; i < NUM_ENABLES; i++) {
+		//Disable all the enabled callbacks
+		if (ep->aem_ctx->callbacks.enabled[i]) {
+			items[current_index].aeel = sizeof(items[i]);
+			items[current_index].aeei.aee = 0;
+			items[current_index].aeei.aeeid = i;
+			current_index++;
+		}
+	}
+
+	//Recalculate since we're not going to actually send a full list
+	request->numaee = current_index;
+	msg_len = sizeof(struct ae_enable_list_header_t) +
+		request->numaee * sizeof(struct ae_enable_item_t);
+
+	request->aeetl = msg_len;
+
+	uint8_t response_buffer[4096] = {0};
+	size_t response_len = sizeof(response_buffer);
+	struct nvme_mi_ae_occ_list_hdr *response =
+		(struct nvme_mi_ae_occ_list_hdr *)response_buffer;
+
+	//Need to send a AEM Sync to disable things
+	rc = nvme_mi_mi_config_set_async_event(ep,
+				false,
+				false,
+				false,
+				2,
+				2,
+				(struct ae_enable_list_t *)request,
+				msg_len,
+				response,
+				&response_len);
+	if (rc)
+		goto cleanup_request;
+
+	free(ep->aem_ctx);
+	ep->aem_ctx = NULL;
+
+cleanup_request:
+	free(request);
+
+	return rc;
+}
+
+/*When inside a aem_handler, call with the aem_ctx and struct will be populated with next
+ *event information.  Will return NULL when end of parsing (or error) is occurred.
+ *spec_info and vend_spec_info must be copied to persist as they will not be valid after
+ *the aem_handler has returned.
+ */
+struct nvme_mi_event *nvme_mi_aem_get_next_event(nvme_mi_ep_t ep)
+{
+	if (!ep || !ep->aem_ctx ||
+		!ep->aem_ctx->list_current ||
+		ep->aem_ctx->list_current_index == -1 ||
+	    !ep->aem_ctx->occ_header) {
+		return NULL;
+	}
+
+	if (ep->aem_ctx->occ_header->numaeo < ep->aem_ctx->list_current_index)
+		return NULL;
+
+	struct nvme_mi_aem_ctx *aem_ctx = ep->aem_ctx;
+	struct nvme_mi_ae_occ_data *current = aem_ctx->list_current;
+
+	aem_ctx->event.aeoi = current->aeoui.aeoi;
+	aem_ctx->event.aessi = current->aeoui.aessi;
+	aem_ctx->event.aeocidi = current->aeoui.aeocidi;
+	aem_ctx->event.spec_info_len = current->aeosil;
+	aem_ctx->event.vend_spec_info_len = current->aeovsil;
+	//Now the pointers
+	aem_ctx->event.spec_info = ((uint8_t *)current + current->aelhlen);
+	aem_ctx->event.vend_spec_info =
+		((uint8_t *)aem_ctx->event.spec_info + aem_ctx->event.spec_info_len);
+
+	//Let's grab the next item (if there is any).
+	aem_ctx->list_current_index++;
+	aem_ctx->list_current =
+		(struct nvme_mi_ae_occ_data *)
+		((uint8_t *)aem_ctx->event.vend_spec_info + aem_ctx->event.vend_spec_info_len);
+
+	return &aem_ctx->event;
+}
+
+/* POLLIN has indicated events.  This function reads and processes them.
+ * A callback will likely be invoked.
+ */
+int nvme_mi_aem_process(nvme_mi_ep_t ep, void *userdata)
+{
+	int rc = 0;
+	uint8_t response_buffer[4096];
+	struct nvme_mi_aem_msg *response = (struct nvme_mi_aem_msg *)response_buffer;
+	size_t response_len = sizeof(response_buffer) - sizeof(struct nvme_mi_aem_msg);
+
+	if (!ep || !ep->aem_ctx)
+		return -1;
+
+	memset(response_buffer, 0, sizeof(response_buffer));
+
+	//Reset context information
+	reset_list_info(ep->aem_ctx);
+
+#ifndef TEST_CODE
+	rc = nvme_mi_get_async_message(ep, response, &response_len);
+#else
+	static int count = 1;
+	struct nvme_mi_ae_occ_list_hdr *rsp = &response->occ_list_hdr;
+	int items = 0;
+
+	rc = 0;
+
+	items = (count % 2) + 1;
+
+	rsp->aelver = 0;
+	rsp->numaeo = items;// 1 or 2, repeating each time this is called
+	rsp->aemti.aemgn = count++;
+	rsp->aeolhl = 7;
+	struct nvme_mi_ae_occ_data *dptr = (struct nvme_mi_ae_occ_data *)(rsp+1);
+
+	//First item, has specific info of length 2 { 1, 2, 12, 0x1234}
+	dptr->aelhlen = 9;
+	dptr->aeosil = 2;
+	dptr->aeovsil = 0;
+	dptr->aeoui.aeoi = 1;
+	dptr->aeoui.aessi = 2;
+	dptr->aeoui.aeocidi = 12;
+	uint16_t *siptr = (uint16_t *)(dptr+1);
+	*siptr = 0x1234;
+	dptr = (struct nvme_mi_ae_occ_data *)(siptr+1);
+
+	if (items == 2) {
+		//Second item, has vendor specific info of length 4 { 3, 4, 15, 0xDEADBEEF}
+		dptr->aelhlen = 9;
+		dptr->aeosil = 0;
+		dptr->aeovsil = 4;
+		dptr->aeoui.aeoi = 3;
+		dptr->aeoui.aessi = 4;
+		dptr->aeoui.aeocidi = 15;
+		uint32_t *viptr = (uint32_t *)(dptr+1);
+		*viptr = 0xDEADBEEF;
+	}
+
+
+	rsp->aeolli.aeoltl = 7 + items*9 + 2 + 4*(items - 1);
+	response_len = rsp->aeolli.aeoltl;
+#endif
+
+	if (rc)
+		goto cleanup;
+
+	if (!response_len) {
+		//If no error and response length zero, we've likely received an owned
+		//tag message from a different endpoint than this path is responsible
+		//for monitoring.
+		goto cleanup;
+	}
+
+	//Parse the response and fire events
+	rc = validate_occ_list_update_ctx(&response->occ_list_hdr,
+						response_len,
+						ep->aem_ctx,
+						true /*Ensure unique generation number*/);
+	if (rc)
+		goto cleanup;
+
+	if (response->occ_list_hdr.numaeo) {
+		enum nvme_mi_aem_handler_next_action action =
+			ep->aem_ctx->callbacks.aem_handler(ep,
+								response->occ_list_hdr.numaeo,
+								userdata);
+
+		reset_list_info(ep->aem_ctx);
+
+		if (action == NVME_MI_AEM_HNA_ACK) {
+			response_len = sizeof(response_buffer);
+#ifndef TEST_CODE
+			rc = aem_ack(ep, &response->occ_list_hdr, &response_len);
+#else
+			static int count_2 = 1;
+			struct nvme_mi_ae_occ_list_hdr *rsp = &response->occ_list_hdr;
+			int items = 0;
+			bool ack_has_data = count_2 % 5 == 0;
+
+			count_2++;
+			rc = 0;
+			if (ack_has_data) {
+				items = (count % 2) + 1;
+
+				rsp->aelver = 0;
+				rsp->numaeo = items;// 1 or 2, repeating each time this is called
+				rsp->aemti.aemgn = count;
+				rsp->aeolhl = 7;
+				struct nvme_mi_ae_occ_data *dptr =
+					(struct nvme_mi_ae_occ_data *)(rsp+1);
+
+				//First item, has specific info of length 2 { 1, 2, 12, 0x1234}
+				dptr->aelhlen = 9;
+				dptr->aeosil = 2;
+				dptr->aeovsil = 0;
+				dptr->aeoui.aeoi = 1;
+				dptr->aeoui.aessi = 2;
+				dptr->aeoui.aeocidi = 65;
+				uint16_t *siptr = (uint16_t *)(dptr+1);
+				*siptr = 0x5678;
+				dptr = (struct nvme_mi_ae_occ_data *)(siptr+1);
+
+				if (items == 2) {
+					//Second item, has vendor specific info of length 4
+					// { 3, 4, 15, 0xDEADBEEF}
+					dptr->aelhlen = 9;
+					dptr->aeosil = 0;
+					dptr->aeovsil = 4;
+					dptr->aeoui.aeoi = 3;
+					dptr->aeoui.aessi = 4;
+					dptr->aeoui.aeocidi = 100;
+					uint32_t *viptr = (uint32_t *)(dptr+1);
+					*viptr = 0xBEEF1234;
+				}
+
+				rsp->aeolli.aeoltl = 7 + items*9 + 2 + 4*(items - 1);
+				response_len = rsp->aeolli.aeoltl;
+			} else {
+				response_len = 0;//No OCC info
+			}
+
+			#endif
+			if (rc)
+				goto cleanup;
+
+			//The Ack is not guaranteed to have data
+			if (response_len && response->occ_list_hdr.numaeo) {
+				rc = validate_occ_list_update_ctx(&response->occ_list_hdr,
+										response_len,
+										ep->aem_ctx,
+										true);
+				//Callbacks based on ack
+				if (rc == 0 && response->occ_list_hdr.numaeo) {
+					//Return value unused here
+					ep->aem_ctx->callbacks.aem_handler(ep,
+							response->occ_list_hdr.numaeo,
+							userdata);
+				}
+			}
+		}
+	} else {
+		//This is unexpected unless we have duplicates.  But those shouldn't be acked
+	}
+
+cleanup:
+	reset_list_info(ep->aem_ctx);
+	return rc;
 }

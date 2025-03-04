@@ -1,6 +1,11 @@
 LIBNVME_MI_1_12 {
 	global:
 		nvme_mi_mi_xfer;
+		nvme_mi_get_aem_fd;
+		nvme_mi_enable_aem;
+		nvme_mi_aem_process;
+		nvme_mi_disable_aem;
+		nvme_mi_aem_get_next_event;
 };
 
 LIBNVME_MI_1_11 {
