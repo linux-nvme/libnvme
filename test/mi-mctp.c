@@ -31,6 +31,9 @@ typedef int (*rx_test_fn)(struct test_peer *peer, void *buf, size_t len);
 typedef int (*poll_test_fn)(struct test_peer *peer,
 			    struct pollfd *fds, nfds_t nfds, int timeout);
 
+#define TEST_PEER_SD_COMMANDS_IDX  (0)
+#define TEST_PEER_SD_AEMS_IDX      (1)
+
 /* Our fake MCTP "peer".
  *
  * The terms TX (transmit) and RX (receive) are from the perspective of
@@ -64,17 +67,22 @@ static struct test_peer {
 	void		*poll_data;
 
 	/* store sd from socket() setup */
-	int		sd;
+	int		sd[2];
+	int     sd_idx;
 } test_peer;
 
 /* ensure tests start from a standard state */
 void reset_test_peer(void)
 {
-	int tmp = test_peer.sd;
+	int tmp[3] = {test_peer.sd[TEST_PEER_SD_COMMANDS_IDX],
+				  test_peer.sd[TEST_PEER_SD_AEMS_IDX],
+				  test_peer.sd_idx};
+
 	memset(&test_peer, 0, sizeof(test_peer));
 	test_peer.tx_buf[0] = NVME_MI_MSGTYPE_NVME;
 	test_peer.rx_buf[0] = NVME_MI_MSGTYPE_NVME;
-	test_peer.sd = tmp;
+	memcpy(test_peer.sd, tmp, 2*sizeof(*tmp));
+	test_peer.sd_idx = tmp[2];
 }
 
 /* calculate MIC of peer-to-libnvme data, expand buf by 4 bytes and insert
@@ -96,15 +104,17 @@ static void test_set_tx_mic(struct test_peer *peer)
 int __wrap_socket(int family, int type, int protocol)
 {
 	/* we do an open here to give the mi-mctp code something to close() */
-	test_peer.sd = open("/dev/null", 0);
-	return test_peer.sd;
+	test_peer.sd[test_peer.sd_idx] = open("/dev/null", 0);
+	test_peer.sd_idx++;
+	assert(test_peer.sd_idx <= 2);
+	return test_peer.sd[test_peer.sd_idx-1];
 }
 
 ssize_t __wrap_sendmsg(int sd, const struct msghdr *hdr, int flags)
 {
 	size_t i, pos;
 
-	assert(sd == test_peer.sd);
+	assert(sd == test_peer.sd[TEST_PEER_SD_COMMANDS_IDX]);
 
 	test_peer.rx_buf[0] = NVME_MI_MSGTYPE_NVME;
 
@@ -128,13 +138,18 @@ ssize_t __wrap_recvmsg(int sd, struct msghdr *hdr, int flags)
 {
 	size_t i, pos, len;
 
-	assert(sd == test_peer.sd);
+	assert(sd == test_peer.sd[TEST_PEER_SD_COMMANDS_IDX] ||
+		   sd == test_peer.sd[TEST_PEER_SD_AEMS_IDX]);
 
 	if (test_peer.tx_fn) {
 		test_peer.tx_fn_res = test_peer.tx_fn(&test_peer,
 						   test_peer.rx_buf,
 						   test_peer.rx_buf_len);
 	} else {
+		if (sd == test_peer.sd[1] && test_peer.tx_buf_len == 0) {
+			errno = EAGAIN;
+			return -1;
+		}
 		/* set up a few default response fields; caller may have
 		 * initialised the rest of the response */
 		test_peer.tx_buf[0] = NVME_MI_MSGTYPE_NVME;
@@ -157,6 +172,7 @@ ssize_t __wrap_recvmsg(int sd, struct msghdr *hdr, int flags)
 
 	errno = test_peer.tx_errno;
 
+	test_peer.tx_buf_len = 0; //Clear since this is sent
 	return test_peer.tx_rc ?: (pos - 1);
 }
 
@@ -173,7 +189,7 @@ struct mctp_ioc_tag_ctl;
 #ifdef SIOCMCTPALLOCTAG
 int test_ioctl_tag(int sd, unsigned long req, struct mctp_ioc_tag_ctl *ctl)
 {
-	assert(sd == test_peer.sd);
+	assert(sd == test_peer.sd[TEST_PEER_SD_COMMANDS_IDX]);
 
 	switch (req) {
 	case SIOCMCTPALLOCTAG:
@@ -189,10 +205,16 @@ int test_ioctl_tag(int sd, unsigned long req, struct mctp_ioc_tag_ctl *ctl)
 #else
 int test_ioctl_tag(int sd, unsigned long req, struct mctp_ioc_tag_ctl *ctl)
 {
-	assert(sd == test_peer.sd);
+	assert(sd == test_peer.sd[TEST_PEER_SD_COMMANDS_IDX]);
 	return 0;
 }
 #endif
+
+int __wrap_bind(int sd, __CONST_SOCKADDR_ARG addr, socklen_t len)
+{
+	assert(sd == test_peer.sd[TEST_PEER_SD_AEMS_IDX]);
+	return 0;
+}
 
 static struct __mi_mctp_socket_ops ops = {
 	__wrap_socket,
@@ -200,6 +222,7 @@ static struct __mi_mctp_socket_ops ops = {
 	__wrap_recvmsg,
 	__wrap_poll,
 	test_ioctl_tag,
+	__wrap_bind,
 };
 
 /* tests */
