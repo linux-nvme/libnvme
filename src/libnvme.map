@@ -8,6 +8,7 @@ LIBNVME_1.12 {
 		nvme_lm_set_features_ctrl_data_queue;
 		nvme_lm_get_features_ctrl_data_queue;
 		nvmf_exat_ptr_next;
+		nvme_subsystem_get_model;
 };
 
 LIBNVME_1.11 {
