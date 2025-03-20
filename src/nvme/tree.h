@@ -1347,6 +1347,22 @@ void nvme_subsystem_set_application(nvme_subsystem_t s, const char *a);
 const char *nvme_subsystem_get_iopolicy(nvme_subsystem_t s);
 
 /**
+ * nvme_subsystem_get_model() - Return the model of subsystem
+ * @s:	nvme_subsystem_t object
+ *
+ * Return: Model of the current subsystem
+ */
+const char *nvme_subsystem_get_model(nvme_subsystem_t s);
+
+/**
+ * nvme_subsystem_get_fw_rev() - Return the firmware rev of subsystem
+ * @s:	nvme_subsystem_t object
+ *
+ * Return: Firmware revision of the current subsystem
+ */
+const char *nvme_subsystem_get_fw_rev(nvme_subsystem_t s);
+
+/**
  * nvme_scan_topology() - Scan NVMe topology and apply filter
  * @r:	    nvme_root_t object
  * @f:	    filter to apply
