@@ -21,6 +21,9 @@
  * NVMe standard definitions
  */
 
+#define NVME_UUID_LEN 16
+#define NVME_UUID_LEN_STRING 37 /* 1b4e28ba-2fa1-11d2-883f-0016d3cca427 + \0 */
+
 /**
  * NVME_GET() - extract field from complex value
  * @value: The original value of a complex field
@@ -5998,6 +6001,75 @@ enum nvme_apst_entry {
 };
 
 /**
+ * struct nvme_std_perf_attr - Standard performance attribute structure
+ * @rsvd0:	Reserved
+ * @r4karl:	Random 4 KiB average read latency
+ * @rsvd5:	Reserved
+ */
+struct nvme_std_perf_attr {
+	__u8 rsvd0[4];
+	__u8 r4karl;
+	__u8 rsvd5[4091];
+};
+
+/**
+ * struct nvme_perf_attr_id - Performance attribute identifier structure
+ * @id:	Performance attribute identifier
+ */
+struct nvme_perf_attr_id {
+	__u8 id[NVME_UUID_LEN];
+};
+
+/**
+ * struct nvme_perf_attr_id_list - Performance attribute identifier list structure
+ * @attrtyp:	Bits 7-3: Reserved
+ *		Bits 2-0: Attribute type
+ * @msvspa:	Maximum saveable vendor specific performance attributes
+ * @usvspa:	Unused saveable vendor specific performance attributes
+ * @rsvd3:	Reserved
+ * @id_list:	Performance attribute identifier list
+ * @rsvd1024:	Reserved
+ */
+struct nvme_perf_attr_id_list {
+	__u8 attrtyp;
+	__u8 msvspa;
+	__u8 usvspa;
+	__u8 rsvd3[13];
+	struct nvme_perf_attr_id id_list[63];
+	__u8 rsvd1024[3072];
+};
+
+/**
+ * struct nvme_vs_perf_attr - Vendor specific performance attribute structure
+ * @paid:	Performance attribute identifier
+ * @rsvd16:	Reserved
+ * @attrl:	Attribute Length
+ * @vs:		Vendor specific
+ */
+struct nvme_vs_perf_attr {
+	__u8 paid[16];
+	__u8 rsvd16[14];
+	__le16 attrl;
+	__u8 vs[4064];
+};
+
+/**
+ * struct nvme_perf_characteristics - Performance attribute structure
+ * @std_perf:	Standard performance attribute
+ * @id_list:	Performance attribute identifier list
+ * @vs_perf:	Vendor specific performance attribute
+ * @attr_buf:	Attribute buffer
+ */
+struct nvme_perf_characteristics {
+	union {
+		struct nvme_std_perf_attr std_perf[0];
+		struct nvme_perf_attr_id_list id_list[0];
+		struct nvme_vs_perf_attr vs_perf[0];
+		__u8 attr_buf[4096];
+	};
+};
+
+/**
  * struct nvme_metadata_element_desc - Metadata Element Descriptor
  * @type:	Element Type (ET)
  * @rev:	Element Revision (ER)
@@ -8822,6 +8894,12 @@ enum nvme_features_id {
  * @NVME_FEAT_SPINUP_CONTROL_MASK:
  * @NVME_FEAT_PLS_MODE_SHIFT:
  * @NVME_FEAT_PLS_MODE_MASK:
+ * @NVME_FEAT_PERFC_ATTRI_SHIFT:
+ * @NVME_FEAT_PERFC_ATTRI_MASK:
+ * @NVME_FEAT_PERFC_RVSPA_SHIFT:
+ * @NVME_FEAT_PERFC_RVSPA_MASK:
+ * @NVME_FEAT_PERFC_ATTRTYP_SHIFT:
+ * @NVME_FEAT_PERFC_ATTRTYP_MASK:
  * @NVME_FEAT_FDP_ENABLED_SHIFT:
  * @NVME_FEAT_FDP_ENABLED_MASK:
  * @NVME_FEAT_FDP_INDEX_SHIFT:
@@ -8956,6 +9034,12 @@ enum nvme_feat {
 	NVME_FEAT_SPINUP_CONTROL_MASK	= 0x1,
 	NVME_FEAT_PLS_MODE_SHIFT	= 0,
 	NVME_FEAT_PLS_MODE_MASK		= 0x3,
+	NVME_FEAT_PERFC_ATTRI_SHIFT	= 0,
+	NVME_FEAT_PERFC_ATTRI_MASK	= 0xff,
+	NVME_FEAT_PERFC_RVSPA_SHIFT	= 8,
+	NVME_FEAT_PERFC_RVSPA_MASK	= 0x1,
+	NVME_FEAT_PERFC_ATTRTYP_SHIFT	= 0,
+	NVME_FEAT_PERFC_ATTRTYP_MASK	= 0x3,
 	NVME_FEAT_FDP_ENABLED_SHIFT	= 0,
 	NVME_FEAT_FDP_ENABLED_MASK	= 0x1,
 	NVME_FEAT_FDP_INDEX_SHIFT	= 8,

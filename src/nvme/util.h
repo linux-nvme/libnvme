@@ -448,6 +448,15 @@ static inline void nvme_feature_decode_endurance_group_event_config(__u32 value,
 	*endgcw	= NVME_FEAT_EG_EGCW(value);
 }
 
+#define NVME_FEAT_PERFC_ATTRI(v) NVME_GET(v, FEAT_PERFC_ATTRI)
+#define NVME_FEAT_PERFC_RVSPA(v) NVME_GET(v, FEAT_PERFC_RVSPA)
+
+static inline void nvme_feature_decode_perf_characteristics(__u32 value, __u8 *attri, bool *rvspa)
+{
+	*attri = NVME_FEAT_PERFC_ATTRI(value);
+	*rvspa = NVME_FEAT_PERFC_RVSPA(value);
+}
+
 #define NVME_FEAT_SPM_PBSLC(v)		NVME_GET(v, FEAT_SPM_PBSLC)
 
 static inline void nvme_feature_decode_software_progress_marker(__u32 value,
@@ -645,9 +654,6 @@ enum nvme_version {
  * Return: Returns version string for known types or else "n/a"
  */
 const char *nvme_get_version(enum nvme_version type);
-
-#define NVME_UUID_LEN_STRING	37  /* 1b4e28ba-2fa1-11d2-883f-0016d3cca427 + \0 */
-#define NVME_UUID_LEN		16
 
 /**
  * nvme_uuid_to_string - Return string represenation of encoded UUID
