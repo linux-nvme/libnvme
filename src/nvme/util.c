@@ -413,10 +413,8 @@ const char *nvme_status_to_string(int status, bool fabrics)
 
 static inline void nvme_init_copy_range_elbt(__u8 *elbt, __u64 eilbrt)
 {
-	int i;
-
-	for (i = 0; i < 8; i++)
-		elbt[9 - i] = (eilbrt >> (8 * i)) & 0xff;
+	__u64 *ref_tag_region = (__u64 *)&elbt[2];
+	*ref_tag_region = eilbrt;
 	elbt[1] = 0;
 	elbt[0] = 0;
 }
