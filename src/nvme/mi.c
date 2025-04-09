@@ -414,10 +414,55 @@ static int nvme_mi_verify_resp_mic(struct nvme_mi_resp *resp)
 	return resp->mic != ~crc;
 }
 
+__attribute__((weak)) void nvme_mi_admin_submit_entry(const nvme_mi_ep_t ep,
+						      const struct nvme_mi_admin_req_hdr *req,
+						      const void *data, size_t data_len) { }
+__attribute__((weak)) void nvme_mi_admin_submit_exit(const nvme_mi_ep_t ep,
+						     const struct nvme_mi_admin_resp_hdr *resp,
+						     const void *data, size_t data_len) { }
+
+static void nvme_mi_submit_entry(const nvme_mi_ep_t ep, const struct nvme_mi_req *req)
+{
+	const struct nvme_mi_admin_req_hdr *hdr;
+
+	switch (req->hdr->type) {
+	case NVME_MI_MT_CONTROL:
+	case NVME_MI_MT_MI:
+		break;
+	case NVME_MI_MT_ADMIN:
+		hdr = (const struct nvme_mi_admin_req_hdr *)req->hdr;
+		nvme_mi_admin_submit_entry(ep, hdr, req->data, req->data_len);
+		break;
+	case NVME_MI_MT_PCIE:
+	default:
+		break;
+	}
+}
+
+static void nvme_mi_submit_exit(const nvme_mi_ep_t ep, struct nvme_mi_resp *resp)
+{
+	const struct nvme_mi_admin_resp_hdr *hdr;
+
+	switch (resp->hdr->type) {
+	case NVME_MI_MT_CONTROL:
+	case NVME_MI_MT_MI:
+		break;
+	case NVME_MI_MT_ADMIN:
+		hdr = (const struct nvme_mi_admin_resp_hdr *)resp->hdr;
+		nvme_mi_admin_submit_exit(ep, hdr, resp->data, resp->data_len);
+		break;
+	case NVME_MI_MT_PCIE:
+	default:
+		break;
+	}
+}
+
 int nvme_mi_submit(nvme_mi_ep_t ep, struct nvme_mi_req *req,
 		   struct nvme_mi_resp *resp)
 {
 	int rc;
+
+	nvme_mi_submit_entry(ep, req);
 
 	if (req->hdr_len < sizeof(struct nvme_mi_msg_hdr)) {
 		errno = EINVAL;
@@ -501,6 +546,8 @@ int nvme_mi_submit(nvme_mi_ep_t ep, struct nvme_mi_req *req,
 		errno = EIO;
 		return -1;
 	}
+
+	nvme_mi_submit_exit(ep, resp);
 
 	return 0;
 }
