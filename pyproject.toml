@@ -4,8 +4,22 @@ requires = ["mesonpep517", "wheel", "meson", "ninja"] # PEP 508 specifications.
 build-backend = "mesonpep517.buildapi"
 
 [tool.mesonpep517.metadata]
-author="Hannes Reinecke"
-author-email="hare@suse.de"
+summary="python bindings for libnvme"
+
+[project]
+name = "libnvme"
+dynamic = ["version"]
+description = "Provides library functions for accessing and managing nvme devices on a Linux system."
+readme = "README.md"
+requires-python = ">=3.6"
+license = { text = "LGPL-2.1-or-later" }
+
+authors = [
+    { name = "Hannes Reinecke", email = "hare@suse.de" }
+]
+
+keywords = ["SPDK", "storage", "nvme", "performance", "bindings"]
+
 classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
@@ -13,10 +27,11 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-description="Provides library functions for accessing and managing nvme devices on a Linux system."
-description-file="README.md"
-home-page = "https://github.com/linux-nvme/libnvme"
-license="LGPL-2.1-or-later"
-requires-python=">=3.6"
-summary="python bindings for libnvme"
+
+dependencies = []
+
+[project.urls]
+"Homepage" = "https://github.com/linux-nvme/libnvme"
+"Source" = "https://github.com/linux-nvme/libnvme"
+"Bug Tracker" = "https://github.com/linux-nvme/libnvme/issues"
 
