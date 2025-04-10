@@ -40,6 +40,8 @@
 #include "private.h"
 #include "base64.h"
 #include "crc32.h"
+#include "crypto_services.h"
+#define USE_COMPLIANT_HKDF_LABEL_IMPL_TO_DERIVE_TLS_PSK 1
 
 static int __nvme_open(const char *name)
 {
@@ -740,16 +742,51 @@ static int derive_tls_key(int version, unsigned char cipher,
 			  const char *context, unsigned char *retained,
 			  unsigned char *psk, size_t key_len)
 {
-	_cleanup_evp_pkey_ctx_ EVP_PKEY_CTX *ctx = NULL;
-	uint16_t length = key_len & 0xFFFF;
-	const EVP_MD *md;
-	size_t hmac_len;
+#if USE_COMPLIANT_HKDF_LABEL_IMPL_TO_DERIVE_TLS_PSK
+    // Reference: 
+    //
+    // https://nvmexpress.org/wp-content/uploads/NVM-Express-TCP-Transport-Specification-Revision-1.1-2024.08.05-Ratified.pdf
+    //
+    // 1. PRK = HKDF-Extract(0, Input PSK : Retained PSK); and
+    // 2. TLS PSK = HKDF-Expand-Label(PRK, “nvme-tls-psk”, Context, L),
+    //
+    //       Context = “<hash> <PSK digest>” : 	
+    uint8_t hkdf_label_context[64+3]; // Max hash size length (64) + 3
+    uint8_t hkdf_context_len = strlen(context);
 
-	md = select_hmac(cipher, &hmac_len);
-	if (!md || !hmac_len) {
-		errno = EINVAL;
-		return -1;
+    // Run the hkdf known-answer tests
+    int rc;
+    rc = libnvme_run_HKDF_label_KAT();
+
+    if( rc < 0 ) {
+        return rc;
 	}
+
+    // generate the nvmeof specific label 
+    if (version == 1) {
+        sprintf((char *)&hkdf_label_context[0], "%02d ", cipher);
+        memcpy(&hkdf_label_context[3], context, hkdf_context_len);
+        hkdf_context_len += 3;
+    }
+    else {
+        memcpy(&hkdf_label_context[0], context, hkdf_context_len);
+    }
+
+    // generate derived tls key
+    return libnvme_hkdf_extract_n_expand_label(cipher, &retained[0], key_len,
+                                               "nvme-tls-psk", strlen("nvme-tls-psk"),
+                                                hkdf_label_context, hkdf_context_len, psk, key_len);
+#else
+    _cleanup_evp_pkey_ctx_ EVP_PKEY_CTX *ctx = NULL;
+    uint16_t length = key_len & 0xFFFF;
+    const EVP_MD *md;
+    size_t hmac_len;
+
+    md = select_hmac(cipher, &hmac_len);
+    if (!md || !hmac_len) {
+        errno = EINVAL;
+        return -1;
+    }
 
 	ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
 	if (!ctx) {
@@ -808,6 +845,7 @@ static int derive_tls_key(int version, unsigned char cipher,
 	}
 
 	return key_len;
+#endif
 }
 
 static DEFINE_CLEANUP_FUNC(
