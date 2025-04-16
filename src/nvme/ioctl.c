@@ -52,7 +52,7 @@ int nvme_subsystem_reset(int fd)
 	ret = nvme_verify_chr(fd);
 	if (ret)
 		return ret;
-	return ioctl(fd, NVME_IOCTL_SUBSYS_RESET);
+	return TFR(ioctl(fd, NVME_IOCTL_SUBSYS_RESET));
 }
 
 int nvme_ctrl_reset(int fd)
@@ -62,7 +62,7 @@ int nvme_ctrl_reset(int fd)
 	ret = nvme_verify_chr(fd);
 	if (ret)
 		return ret;
-	return ioctl(fd, NVME_IOCTL_RESET);
+	return TFR(ioctl(fd, NVME_IOCTL_RESET));
 }
 
 int nvme_ns_rescan(int fd)
@@ -72,13 +72,13 @@ int nvme_ns_rescan(int fd)
 	ret = nvme_verify_chr(fd);
 	if (ret)
 		return ret;
-	return ioctl(fd, NVME_IOCTL_RESCAN);
+	return TFR(ioctl(fd, NVME_IOCTL_RESCAN));
 }
 
 int nvme_get_nsid(int fd, __u32 *nsid)
 {
 	errno = 0;
-	*nsid = ioctl(fd, NVME_IOCTL_ID);
+	*nsid = TFR(ioctl(fd, NVME_IOCTL_ID));
 	return -1 * (errno != 0);
 }
 
@@ -87,7 +87,7 @@ int nvme_submit_passthru64(int fd, unsigned long ioctl_cmd,
 			   struct nvme_passthru_cmd64 *cmd,
 			   __u64 *result)
 {
-	int err = ioctl(fd, ioctl_cmd, cmd);
+	int err = TFR(ioctl(fd, ioctl_cmd, cmd));
 
 	if (err >= 0 && result)
 		*result = cmd->result;
@@ -98,7 +98,7 @@ __attribute__((weak))
 int nvme_submit_passthru(int fd, unsigned long ioctl_cmd,
 			 struct nvme_passthru_cmd *cmd, __u32 *result)
 {
-	int err = ioctl(fd, ioctl_cmd, cmd);
+	int err = TFR(ioctl(fd, ioctl_cmd, cmd));
 
 	if (err >= 0 && result)
 		*result = cmd->result;
