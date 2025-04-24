@@ -75,7 +75,14 @@ jobs:
           TAG=$(git describe --tags --abbrev=0)
           REV=$(git rev-list "$TAG"..HEAD --count)
           BASE_VERSION="${TAG#v}"
-          VERSION="${BASE_VERSION}.dev${REV}"
+
+          # Check if REV is 0, and don't append '.dev' if so
+          if [ "$REV" -eq 0 ]; then
+            VERSION="${BASE_VERSION}"
+          else
+            VERSION="${BASE_VERSION}.dev${REV}"
+          fi
+
           echo "dev_version=$VERSION" >> $GITHUB_OUTPUT
           echo "Computed dev version: $VERSION"
 
