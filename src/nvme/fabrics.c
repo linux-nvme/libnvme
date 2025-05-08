@@ -44,6 +44,7 @@
 
 #define NVMF_HOSTNQN_FILE	SYSCONFDIR "/nvme/hostnqn"
 #define NVMF_HOSTID_FILE	SYSCONFDIR "/nvme/hostid"
+#define MACHINE_ID_FILE		SYSCONFDIR "/machine-id"
 
 const char *nvmf_dev = "/dev/nvme-fabrics";
 
@@ -1427,6 +1428,40 @@ static int uuid_from_dmi(char *system_uuid)
 	return ret;
 }
 
+/**
+ * uuid_from_machine_id() - read local machine ID config file
+ * @system_uuid: buffer for the UUID
+ *
+ * Reads and parses local machine ID config file located in $SYSCONFDIR,
+ * typically /etc/machine-id.
+ *
+ * https://www.freedesktop.org/software/systemd/man/latest/machine-id.html
+ *
+ * Return: 0 on success, negative errno otherwise.
+ */
+static int uuid_from_machine_id(char *system_uuid)
+{
+	uint8_t uuid[NVME_UUID_LEN] = {0,};
+	_cleanup_file_ FILE *f = NULL;
+	int n;
+
+	f = fopen(MACHINE_ID_FILE, "re");
+	if (!f)
+		return -errno;
+
+	n = fscanf(f,
+		   "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
+		   "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+		   &uuid[0], &uuid[1], &uuid[2], &uuid[3],
+		   &uuid[4], &uuid[5], &uuid[6], &uuid[7],
+		   &uuid[8], &uuid[9], &uuid[10], &uuid[11],
+		   &uuid[12], &uuid[13], &uuid[14], &uuid[15]);
+	if (n < NVME_UUID_LEN)
+		return -EINVAL;
+
+	return nvme_uuid_to_string(uuid, system_uuid);
+}
+
 char *nvmf_hostid_generate()
 {
 	int ret;
@@ -1436,6 +1471,8 @@ char *nvmf_hostid_generate()
 	ret = uuid_from_dmi(uuid_str);
 	if (ret < 0)
 		ret = uuid_from_device_tree(uuid_str);
+	if (ret < 0)
+		ret = uuid_from_machine_id(uuid_str);
 	if (ret < 0) {
 		if (nvme_uuid_random(uuid) < 0)
 			memset(uuid, 0, NVME_UUID_LEN);
