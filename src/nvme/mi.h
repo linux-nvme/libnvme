@@ -3559,4 +3559,12 @@ int nvme_mi_aem_disable(nvme_mi_ep_t ep);
  */
 int nvme_mi_aem_process(nvme_mi_ep_t ep, void *userdata);
 
+/**
+ * nvme_mi_admin_abort() - Submit an abort command
+ * @ctrl: Controller to send abort command to
+ * @args: &struct nvme_abort_args argument structure
+ *
+ * Return: 0 on success, non-zero on failure
+ */
+int nvme_mi_admin_abort(nvme_mi_ctrl_t ctrl, struct nvme_abort_args *args);
 #endif /* _LIBNVME_MI_MI_H */

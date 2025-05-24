@@ -326,6 +326,15 @@ enum nvme_cmd_dword_fields {
 	NVME_ZNS_MGMT_RECV_ZRAS_FEAT_MASK			= 0x1,
 	NVME_DIM_TAS_SHIFT					= 0,
 	NVME_DIM_TAS_MASK					= 0xF,
+	NVME_ABORT_CDW10_SQID_SHIFT				= 0,
+	NVME_ABORT_CDW10_CID_SHIFT				= 16,
+	NVME_ABORT_CDW10_SQID_MASK				= 0xff,
+	NVME_ABORT_CDW10_CID_MASK				= 0xff,
+};
+
+enum nvme_cqe_dword_fields {
+	NVME_ABORT_CQEDW0_IANP_SHIFT				= 0,
+	NVME_ABORT_CQEDW0_IANP_MASK				= 0x1,
 };
 
 /**
@@ -4588,4 +4597,13 @@ int nvme_lm_set_features_ctrl_data_queue(int fd, __u16 cdqid, __u32 hp, __u32 tp
 int nvme_lm_get_features_ctrl_data_queue(int fd, __u16 cdqid,
 					 struct nvme_lm_ctrl_data_queue_fid_data *data,
 					 __u32 *result);
+
+/**
+ * nvme_abort() - Submit an abort command
+ * @args: &struct nvme_abort_args argument structure
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise.
+ */
+int nvme_abort(struct nvme_abort_args *args);
 #endif /* _LIBNVME_IOCTL_H */

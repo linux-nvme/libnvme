@@ -2668,4 +2668,29 @@ cleanup:
 	return rc;
 }
 
+int nvme_mi_admin_abort(nvme_mi_ctrl_t ctrl, struct nvme_abort_args *args)
+{
+	struct nvme_mi_admin_resp_hdr resp_hdr;
+	struct nvme_mi_admin_req_hdr req_hdr;
+	struct nvme_mi_resp resp;
+	struct nvme_mi_req req;
+	int rc;
 
+	if (args->args_size < sizeof(*args)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id, nvme_admin_abort_cmd);
+
+	req_hdr.cdw10 = NVME_SET(args->sqid, ABORT_CDW10_SQID) |
+			NVME_SET(args->cid, ABORT_CDW10_CID),
+
+	nvme_mi_admin_init_resp(&resp, &resp_hdr);
+
+	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	if (rc)
+		return rc;
+
+	return nvme_mi_admin_parse_status(&resp, NULL);
+}
