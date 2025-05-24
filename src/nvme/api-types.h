@@ -1104,4 +1104,22 @@ struct nvme_lm_migration_recv_args {
 	__u8	csuidxp;
 };
 
+/**
+ * struct nvme_abort_args - Arguments for the NVMe Abort command
+ * @result: The command completion result from CQE dword0
+ * @args_size: Size of &struct nvme_abort_args
+ * @fd: File descriptor of nvme device
+ * @timeout: Timeout in ms
+ * @sqid: Submission queue identifier
+ * @cid: Command indentifier
+ */
+struct nvme_abort_args {
+	__u32 *result;
+	int args_size;
+	int fd;
+	__u32 timeout;
+	__u16 sqid;
+	__u16 cid;
+};
+
 #endif /* _LIBNVME_API_TYPES_H */

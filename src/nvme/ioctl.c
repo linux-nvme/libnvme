@@ -2532,3 +2532,19 @@ int nvme_lm_get_features_ctrl_data_queue(int fd, __u16 cdqid,
 
 	return nvme_get_features(&args);
 }
+
+int nvme_abort(struct nvme_abort_args *args)
+{
+	struct nvme_passthru_cmd cmd = {
+		.opcode = nvme_admin_abort_cmd,
+		.cdw10 = NVME_SET(args->sqid, ABORT_CDW10_SQID) |
+			 NVME_SET(args->cid, ABORT_CDW10_CID),
+	};
+
+	if (args->args_size < sizeof(*args)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	return nvme_submit_admin_passthru(args->fd, &cmd, args->result);
+}
