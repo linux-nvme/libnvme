@@ -36,6 +36,7 @@
 #include "fabrics.h"
 #include "linux.h"
 #include "ioctl.h"
+#include "nvme/tree.h"
 #include "util.h"
 #include "log.h"
 #include "private.h"
@@ -1136,7 +1137,7 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 	int retries = 0;
 	const char *name = nvme_ctrl_get_name(args->c);
 	uint64_t genctr, numrec;
-	int fd = nvme_ctrl_get_fd(args->c);
+	struct nvme_transport_handle *hdl = nvme_ctrl_get_transport_handle(args->c);
 	struct nvme_get_log_args log_args = {
 		.result = args->result,
 		.args_size = sizeof(log_args),
@@ -1161,7 +1162,7 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		 name, retries, args->max_retries);
 	log_args.log = log;
 	log_args.len = DISCOVERY_HEADER_LEN;
-	if (nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
+	if (nvme_get_log_page(hdl, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
 		nvme_msg(ctx, LOG_INFO,
 			 "%s: discover try %d/%d failed, error %d\n",
 			 name, retries, args->max_retries, errno);
@@ -1194,7 +1195,7 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		log_args.lpo = sizeof(*log);
 		log_args.log = log->entries;
 		log_args.len = entries_size;
-		if (nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
+		if (nvme_get_log_page(hdl, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
 			nvme_msg(ctx, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
 				 name, retries, args->max_retries, errno);
@@ -1206,11 +1207,10 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		 * genctr must be checked afterwards to ensure atomicity
 		 */
 		nvme_msg(ctx, LOG_DEBUG, "%s: get header again\n", name);
-
 		log_args.lpo = 0;
 		log_args.log = log;
 		log_args.len = DISCOVERY_HEADER_LEN;
-		if (nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
+		if (nvme_get_log_page(hdl, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
 			nvme_msg(ctx, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
 				 name, retries, args->max_retries, errno);
@@ -1624,7 +1624,6 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 
 	struct nvme_dim_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ctrl_get_fd(c),
 		.result = result,
 		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
 		.tas = tas
@@ -1703,7 +1702,7 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 
 	args.data_len = tdl;
 	args.data = dim;
-	return nvme_dim_send(&args);
+	return nvme_dim_send(nvme_ctrl_get_transport_handle(c), &args);
 }
 
 /**
