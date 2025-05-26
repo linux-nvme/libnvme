@@ -20,6 +20,8 @@
 
 struct nvme_root;
 typedef struct nvme_root *nvme_root_t;
+struct nvme_link;
+typedef struct nvme_link *nvme_link_t;
 
 /**
  * nvme_create_root() - Initialize root object
@@ -279,7 +281,6 @@ struct nvme_fw_download_args {
 /**
  * struct nvme_fw_commit_args - Arguments for the NVMe Firmware Commit command
  * @args_size:	Size of &struct nvme_fw_commit_args
- * @fd:		File descriptor of nvme device
  * @action:	Action to use for the firmware image, see &enum nvme_fw_commit_ca
  * @timeout:	Timeout in ms
  * @result:	The command completion result from CQE dword0
@@ -289,7 +290,6 @@ struct nvme_fw_download_args {
 struct nvme_fw_commit_args {
 	__u32 *result;
 	int args_size;
-	int fd;
 	__u32 timeout;
 	enum nvme_fw_commit_ca action;
 	__u8 slot;

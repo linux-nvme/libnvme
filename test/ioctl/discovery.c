@@ -16,6 +16,8 @@
 #define TEST_FD 0xFD
 #define HEADER_LEN 20
 
+static nvme_link_t test_link;
+
 static void arbitrary_ascii_string(size_t max_len, char *str, char *log_str)
 {
 	size_t len;
@@ -403,7 +405,7 @@ static void test_genctr_error(nvme_ctrl_t c)
 
 static void run_test(const char *test_name, void (*test_fn)(nvme_ctrl_t))
 {
-	struct nvme_ctrl c = {.fd = TEST_FD};
+	struct nvme_ctrl c = { .l = test_link };
 
 	printf("Running test %s...", test_name);
 	fflush(stdout);
@@ -417,7 +419,11 @@ static void run_test(const char *test_name, void (*test_fn)(nvme_ctrl_t))
 
 int main(void)
 {
+	nvme_root_t r = nvme_create_root(stdout, DEFAULT_LOGLEVEL);
+
 	set_mock_fd(TEST_FD);
+	test_link = nvme_open(r, "NVME_TEST_FD");
+
 	RUN_TEST(no_entries);
 	RUN_TEST(four_entries);
 	RUN_TEST(five_entries);
@@ -426,4 +432,6 @@ int main(void)
 	RUN_TEST(header_error);
 	RUN_TEST(entries_error);
 	RUN_TEST(genctr_error);
+
+	nvme_free_root(r);
 }

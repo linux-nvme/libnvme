@@ -1131,12 +1131,11 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 static struct nvmf_discovery_log *nvme_discovery_log(
 	const struct nvme_get_discovery_args *args)
 {
-	nvme_root_t r = root_from_ctrl(args->c);
 	struct nvmf_discovery_log *log;
 	int retries = 0;
 	const char *name = nvme_ctrl_get_name(args->c);
 	uint64_t genctr, numrec;
-	int fd = nvme_ctrl_get_fd(args->c);
+	nvme_link_t l = nvme_ctrl_get_link(args->c);
 	struct nvme_get_log_args log_args = {
 		.result = args->result,
 		.args_size = sizeof(log_args),
@@ -1151,18 +1150,18 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 
 	log = __nvme_alloc(sizeof(*log));
 	if (!log) {
-		nvme_msg(r, LOG_ERR,
+		nvme_msg(l->root, LOG_ERR,
 			 "could not allocate memory for discovery log header\n");
 		errno = ENOMEM;
 		return NULL;
 	}
 
-	nvme_msg(r, LOG_DEBUG, "%s: get header (try %d/%d)\n",
+	nvme_msg(l->root, LOG_DEBUG, "%s: get header (try %d/%d)\n",
 		 name, retries, args->max_retries);
 	log_args.log = log;
 	log_args.len = DISCOVERY_HEADER_LEN;
-	if (nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
-		nvme_msg(r, LOG_INFO,
+	if (nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
+		nvme_msg(l->root, LOG_INFO,
 			 "%s: discover try %d/%d failed, error %d\n",
 			 name, retries, args->max_retries, errno);
 		goto out_free_log;
@@ -1181,21 +1180,21 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		entries_size = sizeof(*log->entries) * numrec;
 		log = __nvme_alloc(sizeof(*log) + entries_size);
 		if (!log) {
-			nvme_msg(r, LOG_ERR,
+			nvme_msg(l->root, LOG_ERR,
 				 "could not alloc memory for discovery log page\n");
 			errno = ENOMEM;
 			return NULL;
 		}
 
-		nvme_msg(r, LOG_DEBUG,
+		nvme_msg(l->root, LOG_DEBUG,
 			 "%s: get %" PRIu64 " records (genctr %" PRIu64 ")\n",
 			 name, numrec, genctr);
 
 		log_args.lpo = sizeof(*log);
 		log_args.log = log->entries;
 		log_args.len = entries_size;
-		if (nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
-			nvme_msg(r, LOG_INFO,
+		if (nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
+			nvme_msg(l->root, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
 				 name, retries, args->max_retries, errno);
 			goto out_free_log;
@@ -1205,13 +1204,13 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		 * If the log page was read with multiple Get Log Page commands,
 		 * genctr must be checked afterwards to ensure atomicity
 		 */
-		nvme_msg(r, LOG_DEBUG, "%s: get header again\n", name);
+		nvme_msg(l->root, LOG_DEBUG, "%s: get header again\n", name);
 
 		log_args.lpo = 0;
 		log_args.log = log;
 		log_args.len = DISCOVERY_HEADER_LEN;
-		if (nvme_get_log_page(fd, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
-			nvme_msg(r, LOG_INFO,
+		if (nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
+			nvme_msg(l->root, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
 				 name, retries, args->max_retries, errno);
 			goto out_free_log;
@@ -1220,10 +1219,10 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		 ++retries < args->max_retries);
 
 	if (genctr != le64_to_cpu(log->genctr)) {
-		nvme_msg(r, LOG_INFO, "%s: discover genctr mismatch\n", name);
+		nvme_msg(l->root, LOG_INFO, "%s: discover genctr mismatch\n", name);
 		errno = EAGAIN;
 	} else if (numrec != le64_to_cpu(log->numrec)) {
-		nvme_msg(r, LOG_INFO,
+		nvme_msg(l->root, LOG_INFO,
 			 "%s: numrec changed unexpectedly "
 			 "from %" PRIu64 " to %" PRIu64 "\n",
 			 name, numrec, le64_to_cpu(log->numrec));
@@ -1624,7 +1623,6 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 
 	struct nvme_dim_args args = {
 		.args_size = sizeof(args),
-		.fd = nvme_ctrl_get_fd(c),
 		.result = result,
 		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
 		.tas = tas
@@ -1703,7 +1701,7 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 
 	args.data_len = tdl;
 	args.data = dim;
-	return nvme_dim_send(&args);
+	return nvme_dim_send(nvme_ctrl_get_link(c), &args);
 }
 
 /**

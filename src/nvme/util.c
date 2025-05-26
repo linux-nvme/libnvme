@@ -646,7 +646,7 @@ const char *nvme_errno_to_string(int status)
 }
 
 #ifdef HAVE_NETDB
-char *hostname2traddr(struct nvme_root *r, const char *traddr)
+char *hostname2traddr(nvme_root_t r, const char *traddr)
 {
 	struct addrinfo *host_info, hints = {.ai_family = AF_UNSPEC};
 	char addrstr[NVMF_TRADDR_SIZE];
@@ -690,9 +690,9 @@ free_addrinfo:
 	return ret_traddr;
 }
 #else /* HAVE_NETDB */
-char *hostname2traddr(struct nvme_root *r, const char *traddr)
+char *hostname2traddr(nvme_root_t r, const char *traddr)
 {
-	nvme_msg(NULL, LOG_ERR, "No support for hostname IP address resolution; " \
+	nvme_msg(r, LOG_ERR, "No support for hostname IP address resolution; " \
 		"recompile with libnss support.\n");
 
 	errno = -ENOTSUP;

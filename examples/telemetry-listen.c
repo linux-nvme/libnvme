@@ -45,7 +45,7 @@ static void save_telemetry(nvme_ctrl_t c)
 	time_t s;
 
 	/* Clear the log (rae == false) at the end to see new telemetry events later */
-	ret = nvme_get_ctrl_telemetry(nvme_ctrl_get_fd(c), false, &log, NVME_TELEMETRY_DA_3, &log_size);
+	ret = nvme_get_ctrl_telemetry(nvme_ctrl_get_link(c), false, &log, NVME_TELEMETRY_DA_3, &log_size);
 	if (ret)
 		return;
 
