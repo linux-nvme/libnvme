@@ -4,6 +4,7 @@
  * Copyright (c) 2022 Code Construct
  */
 
+#include "nvme/types.h"
 #undef NDEBUG
 #include <assert.h>
 #include <stdlib.h>
@@ -447,7 +448,7 @@ static void test_admin_id(nvme_mi_ep_t ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_identify_ctrl(link, &id);
+	rc = nvme_identify_ctrl(link, &id);
 	assert(rc == 0);
 }
 
@@ -501,7 +502,7 @@ static void test_admin_err_mi_resp(nvme_mi_ep_t ep)
 	link = nvme_mi_init_link(ep, 1);
 	assert(link);
 
-	rc = nvme_mi_admin_identify_ctrl(link, &id);
+	rc = nvme_identify_ctrl(link, &id);
 	assert(rc != 0);
 	assert(nvme_status_get_type(rc) == NVME_STATUS_TYPE_MI);
 	assert(nvme_status_get_value(rc) == NVME_MI_RESP_INTERNAL_ERR);
@@ -563,7 +564,7 @@ static void test_admin_err_nvme_resp(nvme_mi_ep_t ep)
 	link = nvme_mi_init_link(ep, 1);
 	assert(link);
 
-	rc = nvme_mi_admin_identify_ctrl(link, &id);
+	rc = nvme_identify_ctrl(link, &id);
 	assert(rc != 0);
 	assert(nvme_status_get_type(rc) == NVME_STATUS_TYPE_NVME);
 	assert(nvme_status_get_value(rc) ==
@@ -976,7 +977,7 @@ static void test_get_features_nodata(nvme_mi_ep_t ep)
 	args.sel = 0;
 	args.result = &res;
 
-	rc = nvme_mi_admin_get_features(link, &args);
+	rc = nvme_get_features(link, &args);
 	assert(rc == 0);
 	assert(args.data_len == 0);
 	assert(res == 0x04030201);
@@ -1007,7 +1008,7 @@ static void test_get_features_data(nvme_mi_ep_t ep)
 	for (i = 0; i < sizeof(tstamp.timestamp); i++)
 		exp[i] = i;
 
-	rc = nvme_mi_admin_get_features(link, &args);
+	rc = nvme_get_features(link, &args);
 	assert(rc == 0);
 	assert(args.data_len == sizeof(tstamp));
 	assert(tstamp.attr == 1);
@@ -1089,9 +1090,9 @@ static void test_set_features(nvme_mi_ep_t ep)
 	args.data = &tstamp;
 	args.data_len = sizeof(tstamp);
 
-	rc = nvme_mi_admin_set_features(link, &args);
+	rc = nvme_set_features(link, &args);
 	assert(rc == 0);
-	assert(args.data_len == 0);
+	assert(args.data_len == 8);
 }
 
 enum ns_type {
@@ -1158,7 +1159,7 @@ static void test_admin_id_alloc_ns_list(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_identify_allocated_ns_list(link, 1, &list);
+	rc = nvme_identify_allocated_ns_list(link, 1, &list);
 	assert(!rc);
 
 	assert(le32_to_cpu(list.ns[0]) == 2);
@@ -1179,7 +1180,7 @@ static void test_admin_id_active_ns_list(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_identify_active_ns_list(link, 1, &list);
+	rc = nvme_identify_active_ns_list(link, 1, &list);
 	assert(!rc);
 
 	assert(le32_to_cpu(list.ns[0]) == 4);
@@ -1242,7 +1243,7 @@ static void test_admin_id_alloc_ns(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_identify_allocated_ns(link, 1, &id);
+	rc = nvme_identify_allocated_ns(link, 1, &id);
 	assert(!rc);
 	assert(le64_to_cpu(id.nsze) == 1);
 }
@@ -1260,7 +1261,7 @@ static void test_admin_id_active_ns(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_identify_ns(link, 1, &id);
+	rc = nvme_identify_ns(link, 1, &id);
 	assert(!rc);
 	assert(le64_to_cpu(id.nsze) == 1);
 }
@@ -1305,7 +1306,7 @@ static void test_admin_id_nsid_ctrl_list(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_identify_nsid_ctrl_list(link, 0x01020304, 5, &list);
+	rc = nvme_identify_nsid_ctrl_list(link, 0x01020304, 5, &list);
 	assert(!rc);
 }
 
@@ -1346,7 +1347,7 @@ static void test_admin_id_secondary_ctrl_list(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_identify_secondary_ctrl_list(link, 5, &list);
+	rc = nvme_identify_secondary_ctrl_list(link, 5, &list);
 	assert(!rc);
 }
 
@@ -1417,12 +1418,12 @@ static void test_admin_ns_mgmt_create(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_ns_mgmt_create(link, NULL, 0, &ns, &data);
+	rc = nvme_ns_mgmt_create(link, NULL, &ns, 0, NVME_CSI_NVM, &data);
 	assert(!rc);
 	assert(ns == 0x01020304);
 
 	data.nsze = cpu_to_le64(42);
-	rc = nvme_mi_admin_ns_mgmt_create(link, NULL, 0, &ns, &data);
+	rc = nvme_ns_mgmt_create(link, NULL, &ns, 0, NVME_CSI_NVM, &data);
 	assert(rc);
 }
 
@@ -1436,7 +1437,7 @@ static void test_admin_ns_mgmt_delete(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_ns_mgmt_delete(link, 0x05060708);
+	rc = nvme_ns_mgmt_delete(link, 0x05060708);
 	assert(!rc);
 }
 
@@ -1503,7 +1504,7 @@ static void test_admin_ns_attach(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_ns_attach_ctrls(link, 0x02030405, &list);
+	rc = nvme_ns_attach_ctrls(link, 0x02030405, &list);
 	assert(!rc);
 }
 
@@ -1526,7 +1527,7 @@ static void test_admin_ns_detach(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_mi_admin_ns_detach_ctrls(link, 0x02030405, &list);
+	rc = nvme_ns_detach_ctrls(link, 0x02030405, &list);
 	assert(!rc);
 }
 
@@ -1589,37 +1590,37 @@ static void test_admin_fw_download(struct nvme_mi_ep *ep)
 	/* invalid (zero) len */
 	args.data_len = info.len = 1;
 	args.offset = info.offset = 0;
-	rc = nvme_mi_admin_fw_download(link, &args);
+	rc = nvme_fw_download(link, &args);
 	assert(rc);
 
 	/* invalid (unaligned) len */
 	args.data_len = info.len = 1;
 	args.offset = info.offset = 0;
-	rc = nvme_mi_admin_fw_download(link, &args);
+	rc = nvme_fw_download(link, &args);
 	assert(rc);
 
 	/* invalid offset */
 	args.data_len = info.len = 4;
 	args.offset = info.offset = 1;
-	rc = nvme_mi_admin_fw_download(link, &args);
+	rc = nvme_fw_download(link, &args);
 	assert(rc);
 
 	/* smallest len */
 	args.data_len = info.len = 4;
 	args.offset = info.offset = 0;
-	rc = nvme_mi_admin_fw_download(link, &args);
+	rc = nvme_fw_download(link, &args);
 	assert(!rc);
 
 	/* largest len */
 	args.data_len = info.len = 4096;
 	args.offset = info.offset = 0;
-	rc = nvme_mi_admin_fw_download(link, &args);
+	rc = nvme_fw_download(link, &args);
 	assert(!rc);
 
 	/* offset value */
 	args.data_len = info.len = 4096;
 	args.offset = info.offset = 4096;
-	rc = nvme_mi_admin_fw_download(link, &args);
+	rc = nvme_fw_download(link, &args);
 	assert(!rc);
 }
 
@@ -1673,21 +1674,21 @@ static void test_admin_fw_commit(struct nvme_mi_ep *ep)
 	info.bpid = args.bpid = 0;
 	info.slot = args.slot = 0;
 	info.action = args.action = 0;
-	rc = nvme_mi_admin_fw_commit(link, &args);
+	rc = nvme_fw_commit(link, &args);
 	assert(!rc);
 
 	/* all ones */
 	info.bpid = args.bpid = 1;
 	info.slot = args.slot = 0x7;
 	info.action = args.action = 0x7;
-	rc = nvme_mi_admin_fw_commit(link, &args);
+	rc = nvme_fw_commit(link, &args);
 	assert(!rc);
 
 	/* correct fields */
 	info.bpid = args.bpid = 1;
 	info.slot = args.slot = 2;
 	info.action = args.action = 3;
-	rc = nvme_mi_admin_fw_commit(link, &args);
+	rc = nvme_fw_commit(link, &args);
 	assert(!rc);
 }
 
@@ -1757,7 +1758,7 @@ static void test_admin_format_nvm(struct nvme_mi_ep *ep)
 	args.mset = 0x1;
 	args.lbaf = 0x0;
 
-	rc = nvme_mi_admin_format_nvm(link, &args);
+	rc = nvme_format_nvm(link, &args);
 	assert(!rc);
 
 	args.nsid = ~args.nsid;
@@ -1768,7 +1769,7 @@ static void test_admin_format_nvm(struct nvme_mi_ep *ep)
 	args.mset = 0x0;
 	args.lbaf = 0xf;
 
-	rc = nvme_mi_admin_format_nvm(link, &args);
+	rc = nvme_format_nvm(link, &args);
 	assert(!rc);
 }
 
@@ -1822,7 +1823,7 @@ static void test_admin_sanitize_nvm(struct nvme_mi_ep *ep)
 	args.nodas = 0x1;
 	args.ovrpat = ~0x04030201;
 
-	rc = nvme_mi_admin_sanitize_nvm(link, &args);
+	rc = nvme_sanitize_nvm(link, &args);
 	assert(!rc);
 
 	args.sanact = 0x0;
@@ -1832,7 +1833,7 @@ static void test_admin_sanitize_nvm(struct nvme_mi_ep *ep)
 	args.nodas = 0x0;
 	args.ovrpat = 0x04030201;
 
-	rc = nvme_mi_admin_sanitize_nvm(link, &args);
+	rc = nvme_sanitize_nvm(link, &args);
 	assert(!rc);
 }
 
@@ -1917,7 +1918,7 @@ static void test_admin_get_log_split(struct nvme_mi_ep *ep)
 	args.lpo = 0;
 	args.ot = false;
 
-	rc = nvme_mi_admin_get_log(link, &args);
+	rc = nvme_get_log_page(link, NVME_LOG_PAGE_PDU_SIZE, &args);
 
 	assert(!rc);
 
