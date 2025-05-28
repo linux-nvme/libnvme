@@ -119,6 +119,11 @@ void nvme_close(nvme_link_t l)
 	free(l);
 }
 
+int nvme_link_get_fd(nvme_link_t l)
+{
+	return l->fd;
+}
+
 int nvme_fw_download_seq(nvme_link_t l, __u32 size, __u32 xfer, __u32 offset,
 			 void *buf)
 {

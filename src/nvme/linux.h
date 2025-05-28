@@ -201,6 +201,17 @@ nvme_link_t nvme_open(nvme_root_t r, const char *name);
 void nvme_close(nvme_link_t l);
 
 /**
+ * nvme_link_get_fd - Return file descriptor for link handle
+ * @l:		Link handle
+ *
+ * If the device handle is for a ioctl based device, nvme_link_get_fd
+ * will return a valid file descriptor.
+ *
+ * Return: File descriptor for an IOCTL based link handle, otherwise -1.
+ */
+int nvme_link_get_fd(nvme_link_t l);
+
+/**
  * enum nvme_hmac_alg - HMAC algorithm
  * @NVME_HMAC_ALG_NONE:		No HMAC algorithm
  * @NVME_HMAC_ALG_SHA2_256:	SHA2-256
