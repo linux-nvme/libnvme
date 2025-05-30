@@ -76,6 +76,35 @@ struct sockaddr_mctp {
 
 #endif /* !AF_MCTP */
 
+#if !defined(MCTP_TAG_PREALLOC) && defined(USE_SIOCMCTPALLOC)
+/*Adding this here for users with older build MCTP header
+ *that require SIOCMCTPALLOC/DROP
+ */
+#define MCTP_TAG_PREALLOC	0x10
+
+#define SIOCMCTPALLOCTAG	(SIOCPROTOPRIVATE + 0)
+#define SIOCMCTPDROPTAG		(SIOCPROTOPRIVATE + 1)
+
+/* Deprecated: use mctp_ioc_tag_ctl2 / TAG2 ioctls instead, which defines the
+ * MCTP network ID as part of the allocated tag. Using this assumes the default
+ * net ID for allocated tags, which may not give correct behaviour on system
+ * with multiple networks configured.
+ */
+struct mctp_ioc_tag_ctl {
+	mctp_eid_t	peer_addr;
+
+	/* For SIOCMCTPALLOCTAG: must be passed as zero, kernel will
+	 * populate with the allocated tag value. Returned tag value will
+	 * always have TO and PREALLOC set.
+	 *
+	 * For SIOCMCTPDROPTAG: userspace provides tag value to drop, from
+	 * a prior SIOCMCTPALLOCTAG call (and so must have TO and PREALLOC set).
+	 */
+	__u8		tag;
+	__u16		flags;
+};
+#endif
+
 #define MCTP_TYPE_NVME		0x04
 #define MCTP_TYPE_MIC		0x80
 
