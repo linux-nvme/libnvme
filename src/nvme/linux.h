@@ -212,6 +212,14 @@ void nvme_close(nvme_link_t l);
 int nvme_link_get_fd(nvme_link_t l);
 
 /**
+ * nvme_link_get_name - Return name of the device link handle
+ * @l:		Link handle
+ *
+ * Return: Device file name, otherwise -1.
+ */
+const char *nvme_link_get_name(nvme_link_t l);
+
+/**
  * enum nvme_hmac_alg - HMAC algorithm
  * @NVME_HMAC_ALG_NONE:		No HMAC algorithm
  * @NVME_HMAC_ALG_SHA2_256:	SHA2-256

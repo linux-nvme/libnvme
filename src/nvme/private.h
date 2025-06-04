@@ -32,6 +32,9 @@ struct nvme_log {
 
 struct nvme_link {
 	struct nvme_root *root;
+	char *name;
+
+	/* direct */
 	int fd;
 
 	struct nvme_log *log;

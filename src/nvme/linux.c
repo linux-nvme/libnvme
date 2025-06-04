@@ -82,9 +82,15 @@ nvme_link_t nvme_open(nvme_root_t r, const char *name)
 	}
 	c = ret == 1;
 
-	l->fd = __nvme_open_dev(name);
-	if (l->fd < 0)
+	l->name = strdup(name);
+	if (!l->name) {
+		errno = ENOMEM;
 		goto free_link;
+	}
+
+	l->fd = __nvme_open_dev(l->name);
+	if (l->fd < 0)
+		goto free_name;
 
 	ret = fstat(l->fd, &stat);
 	if (ret < 0)
@@ -104,6 +110,8 @@ nvme_link_t nvme_open(nvme_root_t r, const char *name)
 
 close_fd:
 	close(l->fd);
+free_name:
+	free(l->name);
 free_link:
 	free(l);
 	return NULL;
@@ -115,6 +123,7 @@ void nvme_close(nvme_link_t l)
 		return;
 
 	close(l->fd);
+	free(l->name);
 	free(l->log);
 	free(l);
 }
@@ -122,6 +131,11 @@ void nvme_close(nvme_link_t l)
 int nvme_link_get_fd(nvme_link_t l)
 {
 	return l->fd;
+}
+
+const char *nvme_link_get_name(nvme_link_t l)
+{
+	return l->name;
 }
 
 int nvme_fw_download_seq(nvme_link_t l, __u32 size, __u32 xfer, __u32 offset,
