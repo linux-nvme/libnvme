@@ -212,6 +212,22 @@ void nvme_close(nvme_link_t l);
 int nvme_link_get_fd(nvme_link_t l);
 
 /**
+ * nvme_link_is_blkdev - Check if link handle is a block device
+ * @l:		Link handle
+ *
+ * Return: Return true if link handle is a block device, otherwise false.
+ */
+bool nvme_link_is_blkdev(nvme_link_t l);
+
+/**
+ * nvme_link_is_chardev - Check if link handle is a char device
+ * @l:		Link handle
+ *
+ * Return: Return true if link handle is a char device, otherwise false.
+ */
+bool nvme_link_is_chardev(nvme_link_t l);
+
+/**
  * nvme_link_get_name - Return name of the device link handle
  * @l:		Link handle
  *

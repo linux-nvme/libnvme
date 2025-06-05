@@ -59,7 +59,6 @@ nvme_link_t nvme_open(nvme_root_t r, const char *name)
 {
 	nvme_link_t l;
 	int ret, id, ns;
-	struct stat stat;
 	bool c;
 
 	l = malloc(sizeof(*l));
@@ -92,16 +91,16 @@ nvme_link_t nvme_open(nvme_root_t r, const char *name)
 	if (l->fd < 0)
 		goto free_name;
 
-	ret = fstat(l->fd, &stat);
+	ret = fstat(l->fd, &l->stat);
 	if (ret < 0)
 		goto close_fd;
 
 	if (c) {
-		if (!S_ISCHR(stat.st_mode)) {
+		if (!S_ISCHR(l->stat.st_mode)) {
 			errno = EINVAL;
 			goto close_fd;
 		}
-	} else if (!S_ISBLK(stat.st_mode)) {
+	} else if (!S_ISBLK(l->stat.st_mode)) {
 		errno = EINVAL;
 		goto close_fd;
 	}
@@ -131,6 +130,16 @@ void nvme_close(nvme_link_t l)
 int nvme_link_get_fd(nvme_link_t l)
 {
 	return l->fd;
+}
+
+bool nvme_link_is_blkdev(nvme_link_t l)
+{
+	return S_ISBLK(l->stat.st_mode);
+}
+
+bool nvme_link_is_chardev(nvme_link_t l)
+{
+	return S_ISCHR(l->stat.st_mode);
 }
 
 const char *nvme_link_get_name(nvme_link_t l)
