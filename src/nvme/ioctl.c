@@ -1511,6 +1511,17 @@ int nvme_fw_download(nvme_link_t l, struct nvme_fw_download_args *args)
 		errno = EINVAL;
 		return -1;
 	}
+
+	if ((args->data_len & 0x3) || (!args->data_len)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (args->offset & 0x3) {
+		errno = EINVAL;
+		return -1;
+	}
+
 	return nvme_submit_admin_passthru(l, &cmd, args->result);
 }
 
