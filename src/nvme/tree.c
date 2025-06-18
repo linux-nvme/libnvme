@@ -1220,6 +1220,126 @@ void nvme_ctrl_set_tls_key(nvme_ctrl_t c, const char *key)
 		c->tls_key = strdup(key);
 }
 
+void nvme_ctrl_set_addr(nvme_ctrl_t c, const char *addr)
+{
+	if (c->address) {
+		free(c->address);
+		c->address = NULL;
+	}
+	if (addr)
+		c->address = strdup(addr);
+}
+
+void nvme_ctrl_set_name(nvme_ctrl_t c, const char *name)
+{
+	if (c->name) {
+		free(c->name);
+		c->name = NULL;
+	}
+	if (name)
+		c->name = strdup(name);
+}
+
+void nvme_ctrl_set_sysfs_dir(nvme_ctrl_t c, const char *sysfs_dir)
+{
+	if (c->sysfs_dir) {
+		free(c->sysfs_dir);
+		c->sysfs_dir = NULL;
+	}
+	if (sysfs_dir)
+		c->sysfs_dir = strdup(sysfs_dir);
+}
+
+void nvme_ctrl_set_firmware(nvme_ctrl_t c)
+{
+	if (c->firmware) {
+		free(c->firmware);
+		c->firmware = NULL;
+	}
+	c->firmware = nvme_get_ctrl_attr(c, "firmware_rev");
+}
+
+void nvme_ctrl_set_model(nvme_ctrl_t c)
+{
+	if (c->model) {
+		free(c->model);
+		c->model = NULL;
+	}
+	c->model = nvme_get_ctrl_attr(c, "model");
+}
+
+void nvme_ctrl_set_state(nvme_ctrl_t c)
+{
+	if (c->state) {
+		free(c->state);
+		c->state = NULL;
+	}
+	c->state = nvme_get_ctrl_attr(c, "state");
+}
+
+void nvme_ctrl_set_numa_node(nvme_ctrl_t c)
+{
+	if (c->numa_node) {
+		free(c->numa_node);
+		c->numa_node = NULL;
+	}
+	c->numa_node = nvme_get_ctrl_attr(c, "numa_node");
+}
+
+void nvme_ctrl_set_queue_count(nvme_ctrl_t c)
+{
+	if (c->queue_count) {
+		free(c->queue_count);
+		c->queue_count = NULL;
+	}
+	c->queue_count = nvme_get_ctrl_attr(c, "queue_count");
+}
+
+void nvme_ctrl_set_serial(nvme_ctrl_t c)
+{
+	if (c->serial) {
+		free(c->serial);
+		c->serial = NULL;
+	}
+	c->serial = nvme_get_ctrl_attr(c, "serial");
+}
+
+void nvme_ctrl_set_sqsize(nvme_ctrl_t c)
+{
+	if (c->sqsize) {
+		free(c->sqsize);
+		c->sqsize = NULL;
+	}
+	c->sqsize = nvme_get_ctrl_attr(c, "sqsize");
+}
+
+void nvme_ctrl_set_cntrltype(nvme_ctrl_t c)
+{
+	if (c->cntrltype) {
+		free(c->cntrltype);
+		c->cntrltype = NULL;
+	}
+	c->cntrltype = nvme_get_ctrl_attr(c, "cntrltype");
+}
+
+void nvme_ctrl_set_cntlid(nvme_ctrl_t c)
+{
+	if (c->cntlid) {
+		free(c->cntlid);
+		c->cntlid = NULL;
+	}
+	c->cntlid = nvme_get_ctrl_attr(c, "cntlid");
+}
+
+void nvme_ctrl_set_dctype(nvme_ctrl_t c)
+{
+	if (c->dctype) {
+		free(c->dctype);
+		c->dctype = NULL;
+	}
+	c->dctype = nvme_get_ctrl_attr(c, "dctype");
+}
+
 void nvme_ctrl_set_discovered(nvme_ctrl_t c, bool discovered)
 {
 	c->discovered = discovered;
@@ -2033,18 +2153,18 @@ static int nvme_configure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 	closedir(d);
 
 	c->fd = -1;
-	c->name = strdup(name);
-	c->sysfs_dir = (char *)path;
-	c->firmware = nvme_get_ctrl_attr(c, "firmware_rev");
-	c->model = nvme_get_ctrl_attr(c, "model");
-	c->state = nvme_get_ctrl_attr(c, "state");
-	c->numa_node = nvme_get_ctrl_attr(c, "numa_node");
-	c->queue_count = nvme_get_ctrl_attr(c, "queue_count");
-	c->serial = nvme_get_ctrl_attr(c, "serial");
-	c->sqsize = nvme_get_ctrl_attr(c, "sqsize");
-	c->cntrltype = nvme_get_ctrl_attr(c, "cntrltype");
-	c->cntlid = nvme_get_ctrl_attr(c, "cntlid");
-	c->dctype = nvme_get_ctrl_attr(c, "dctype");
+	nvme_ctrl_set_name(c, name);
+	nvme_ctrl_set_sysfs_dir(c, path);
+	nvme_ctrl_set_firmware(c);
+	nvme_ctrl_set_model(c);
+	nvme_ctrl_set_state(c);
+	nvme_ctrl_set_numa_node(c);
+	nvme_ctrl_set_queue_count(c);
+	nvme_ctrl_set_serial(c);
+	nvme_ctrl_set_sqsize(c);
+	nvme_ctrl_set_cntrltype(c);
+	nvme_ctrl_set_cntlid(c);
+	nvme_ctrl_set_dctype(c);
 	c->phy_slot = nvme_ctrl_lookup_phy_slot(r, c->address);
 	nvme_read_sysfs_dhchap(r, c);
 	nvme_read_sysfs_tls(r, c);
@@ -2194,8 +2314,7 @@ skip_address:
 		errno = ENODEV;
 		return NULL;
 	}
-	c->address = addr;
-	addr = NULL;
+	nvme_ctrl_set_addr(c, addr);
 	if (s->subsystype && !strcmp(s->subsystype, "discovery"))
 		c->discovery_ctrl = true;
 	ret = nvme_configure_ctrl(r, c, path, name);
@@ -2263,7 +2382,6 @@ nvme_ctrl_t nvme_scan_ctrl(nvme_root_t r, const char *name)
 	if (!c)
 		return NULL;
 
-	path = NULL;
 	nvme_ctrl_scan_paths(r, c);
 	nvme_ctrl_scan_namespaces(r, c);
 	return c;
