@@ -1169,6 +1169,87 @@ const char *nvme_ctrl_get_tls_key(nvme_ctrl_t c);
 void nvme_ctrl_set_tls_key(nvme_ctrl_t c, const char *key);
 
 /**
+ * nvme_ctrl_set_addr() - Set controller address
+ * @c:		Controller whose address to set
+ * @addr:	Address
+ */
+void nvme_ctrl_set_addr(nvme_ctrl_t c, const char *addr);
+
+/**
+ * nvme_ctrl_set_name() - Set controller name
+ * @c:		Controller whose name to set
+ * @name:	Name
+ */
+void nvme_ctrl_set_name(nvme_ctrl_t c, const char *name);
+
+/**
+ * nvme_ctrl_set_sysfs_dir() - Set controller sysfs_dir
+ * @c:		Controller whose sysfs_dir to set
+ * @sysfs_dir:	Sysfs_dir
+ */
+void nvme_ctrl_set_sysfs_dir(nvme_ctrl_t c, const char *sysfs_dir);
+
+/**
+ * nvme_ctrl_set_firmware() - Set controller firmware_rev
+ * @c:		Controller whose firmware revision to set
+ */
+void nvme_ctrl_set_firmware(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_model() - Set controller model
+ * @c:		Controller whose model to set
+ */
+void nvme_ctrl_set_model(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_state() - Set controller state
+ * @c:		Controller whose state to set
+ */
+void nvme_ctrl_set_state(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_numa_node() - Set controller numa_node
+ * @c:		Controller whose numa_node to set
+ */
+void nvme_ctrl_set_numa_node(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_queue_count() - Set controller queue_count
+ * @c:		Controller whose queue_count to set
+ */
+void nvme_ctrl_set_queue_count(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_serial() - Set controller serial
+ * @c:		Controller whose serial to set
+ */
+void nvme_ctrl_set_serial(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_sqsize() - Set controller sqsize
+ * @c:		Controller whose sqsize to set
+ */
+void nvme_ctrl_set_sqsize(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_cntrltype() - Set controller cntrltype
+ * @c:		Controller whose cntrltype to set
+ */
+void nvme_ctrl_set_cntrltype(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_cntlid() - Set controller cntlid
+ * @c:		Controller whose cntlid to set
+ */
+void nvme_ctrl_set_cntlid(nvme_ctrl_t c);
+
+/**
+ * nvme_ctrl_set_dctype() - Set controller dctype
+ * @c:		Controller whose dctype to set
+ */
+void nvme_ctrl_set_dctype(nvme_ctrl_t c);
+
+/**
  * nvme_ctrl_get_config() - Fabrics configuration of a controller
  * @c:	Controller instance
  *
