@@ -195,7 +195,7 @@ static __u8 nvme_mi_mctp_tag_alloc(struct nvme_mi_ep *ep)
 		if (!logged) {
 			/* not necessarily fatal, just means we can't handle
 			 * "more processing required" messages */
-			nvme_msg(ep->root, LOG_INFO,
+			nvme_msg(ep->ctx, LOG_INFO,
 				 "System does not support explicit tag allocation\n");
 			logged = true;
 		}
@@ -336,7 +336,7 @@ static int nvme_mi_mctp_aem_read(struct nvme_mi_ep *ep,
 
 		if (!tmp) {
 			errno_save = errno;
-			nvme_msg(ep->root, LOG_ERR,
+			nvme_msg(ep->ctx, LOG_ERR,
 				 "Failure allocating response buffer: %m\n");
 			errno = errno_save;
 			rc = -1;
@@ -364,7 +364,7 @@ static int nvme_mi_mctp_aem_read(struct nvme_mi_ep *ep,
 			goto out;
 
 		errno_save = errno;
-		nvme_msg(ep->root, LOG_ERR,
+		nvme_msg(ep->ctx, LOG_ERR,
 			 "Failure receiving MCTP message: %m\n");
 		errno = errno_save;
 		goto out;
@@ -372,13 +372,13 @@ static int nvme_mi_mctp_aem_read(struct nvme_mi_ep *ep,
 
 
 	if (len == 0) {
-		nvme_msg(ep->root, LOG_WARNING, "No data from MCTP endpoint\n");
+		nvme_msg(ep->ctx, LOG_WARNING, "No data from MCTP endpoint\n");
 		errno = EIO;
 		goto out;
 	}
 
 	if (resp_msg.msg_namelen < sizeof(src_addr)) {
-		nvme_msg(ep->root, LOG_WARNING, "Unexpected src address length\n");
+		nvme_msg(ep->ctx, LOG_WARNING, "Unexpected src address length\n");
 		errno = EIO;
 		goto out;
 	}
@@ -397,7 +397,7 @@ static int nvme_mi_mctp_aem_read(struct nvme_mi_ep *ep,
 	 * plus four bytes of error data (excluding MIC). Ensure we have enough.
 	 */
 	if (len < 8 + sizeof(mic)) {
-		nvme_msg(ep->root, LOG_ERR,
+		nvme_msg(ep->ctx, LOG_ERR,
 			 "Invalid MCTP response: too short (%zd bytes, needed %zd)\n",
 			 len, 8 + sizeof(mic));
 		errno = EPROTO;
@@ -496,7 +496,7 @@ static int nvme_mi_mctp_submit(struct nvme_mi_ep *ep,
 	len = ops.sendmsg(mctp->sd, &req_msg, 0);
 	if (len < 0) {
 		errno_save = errno;
-		nvme_msg(ep->root, LOG_ERR,
+		nvme_msg(ep->ctx, LOG_ERR,
 			 "Failure sending MCTP message: %m\n");
 		errno = errno_save;
 		rc = -1;
@@ -508,7 +508,7 @@ static int nvme_mi_mctp_submit(struct nvme_mi_ep *ep,
 		void *tmp = realloc(mctp->resp_buf, resp_len);
 		if (!tmp) {
 			errno_save = errno;
-			nvme_msg(ep->root, LOG_ERR,
+			nvme_msg(ep->ctx, LOG_ERR,
 				 "Failure allocating response buffer: %m\n");
 			errno = errno_save;
 			rc = -1;
@@ -537,14 +537,14 @@ retry:
 		if (errno == EINTR)
 			goto retry;
 		errno_save = errno;
-		nvme_msg(ep->root, LOG_ERR,
+		nvme_msg(ep->ctx, LOG_ERR,
 			 "Failed polling on MCTP socket: %m");
 		errno = errno_save;
 		goto out;
 	}
 
 	if (rc == 0) {
-		nvme_msg(ep->root, LOG_DEBUG, "Timeout on MCTP socket");
+		nvme_msg(ep->ctx, LOG_DEBUG, "Timeout on MCTP socket");
 		errno = ETIMEDOUT;
 		rc = -1;
 		goto out;
@@ -555,7 +555,7 @@ retry:
 
 	if (len < 0) {
 		errno_save = errno;
-		nvme_msg(ep->root, LOG_ERR,
+		nvme_msg(ep->ctx, LOG_ERR,
 			 "Failure receiving MCTP message: %m\n");
 		errno = errno_save;
 		goto out;
@@ -563,7 +563,7 @@ retry:
 
 
 	if (len == 0) {
-		nvme_msg(ep->root, LOG_WARNING, "No data from MCTP endpoint\n");
+		nvme_msg(ep->ctx, LOG_WARNING, "No data from MCTP endpoint\n");
 		errno = EIO;
 		goto out;
 	}
@@ -576,7 +576,7 @@ retry:
 	 * plus four bytes of error data (excluding MIC). Ensure we have enough.
 	 */
 	if (len < 8 + sizeof(mic)) {
-		nvme_msg(ep->root, LOG_ERR,
+		nvme_msg(ep->ctx, LOG_ERR,
 			 "Invalid MCTP response: too short (%zd bytes, needed %zd)\n",
 			 len, 8 + sizeof(mic));
 		errno = EPROTO;
@@ -598,7 +598,7 @@ retry:
 	 * to keep the tag allocated and retry the recvmsg
 	 */
 	if (nvme_mi_mctp_resp_is_mpr(mctp->resp_buf, len, mic, &mpr_time)) {
-		nvme_msg(ep->root, LOG_DEBUG,
+		nvme_msg(ep->ctx, LOG_DEBUG,
 			 "Received More Processing Required, waiting for response\n");
 
 		/* if the controller hasn't set MPRT, fall back to our command/
@@ -705,15 +705,16 @@ int nvme_mi_aem_open(nvme_mi_ep_t ep)
 	return 0;
 }
 
-nvme_mi_ep_t nvme_mi_open_mctp(nvme_root_t root, unsigned int netid, __u8 eid)
+nvme_mi_ep_t nvme_mi_open_mctp(struct nvme_global_ctx *ctx,
+			       unsigned int netid, __u8 eid)
 {
 	struct nvme_mi_transport_mctp *mctp;
 	struct nvme_mi_ep *ep;
 	int errno_save;
 
-	ep = nvme_mi_init_ep(root);
+	ep = nvme_mi_init_ep(ctx);
 	if (!ep)
-		return NULL;
+		 NULL;
 
 	mctp = malloc(sizeof(*mctp));
 	if (!mctp) {
@@ -1068,7 +1069,7 @@ out:
 
 #else /* CONFIG_DBUS */
 
-nvme_root_t nvme_mi_scan_mctp(void)
+struct nvme_global_ctx *nvme_mi_scan_mctp(void)
 {
 	return NULL;
 }
