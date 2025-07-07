@@ -86,7 +86,7 @@ int main()
 	else
 		print_discover_log(log);
 
-	nvme_free_tree(r);
+	nvme_free_root(r);
 	free(log);
 	return 0;
 }

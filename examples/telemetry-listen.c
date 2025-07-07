@@ -162,7 +162,7 @@ int main()
 	}
 
 	wait_events(&fds, e, i);
-	nvme_free_tree(r);
+	nvme_free_root(r);
 	free(e);
 
 	return EXIT_SUCCESS;

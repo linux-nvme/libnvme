@@ -69,7 +69,7 @@ int nvme_get_logging_level(nvme_root_t r, bool *log_pid, bool *log_tstamp);
  * via the arguments use the the default one which can be set via this call.
  * When creating a new root object with @nvme_create_root the global root object
  * will be set as well. This means the global root object is always pointing to
- * the latest created root object. Note the first @nvme_free_tree call will reset
+ * the latest created root object. Note the first @nvme_free_root call will reset
  * the global root object.
  *
  * This function is deprecated. Use nvme_init_default_logging or/and

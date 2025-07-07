@@ -451,7 +451,7 @@ struct nvme_ns {
 		return nvme_scan(config_file);
 	}
 	~nvme_root() {
-		nvme_free_tree($self);
+		nvme_free_root($self);
 	}
 	void log_level(const char *level) {
 		int log_level = DEFAULT_LOGLEVEL;

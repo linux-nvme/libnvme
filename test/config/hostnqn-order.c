@@ -50,7 +50,7 @@ static bool command_line(void)
 	pass = true;
 
 out:
-	nvme_free_tree(r);
+	nvme_free_root(r);
 	return pass;
 }
 
@@ -101,7 +101,7 @@ static bool json_config(char *file)
 	pass = true;
 
 out:
-	nvme_free_tree(r);
+	nvme_free_root(r);
 	return pass;
 }
 
@@ -147,7 +147,7 @@ static bool from_file(void)
 	pass = true;
 
 out:
-	nvme_free_tree(r);
+	nvme_free_root(r);
 	return pass;
 }
 

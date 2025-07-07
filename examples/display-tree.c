@@ -67,6 +67,6 @@ int main()
 			}
 		}
 	}
-	nvme_free_tree(r);
+	nvme_free_root(r);
 	return 0;
 }

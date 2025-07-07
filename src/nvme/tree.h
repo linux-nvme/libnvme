@@ -10,7 +10,6 @@
 #ifndef _LIBNVME_TREE_H
 #define _LIBNVME_TREE_H
 
-#include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -19,6 +18,7 @@
 
 #include <nvme/ioctl.h>
 #include <nvme/util.h>
+#include <nvme/api-types.h>
 
 /**
  * DOC: tree.h
@@ -32,19 +32,9 @@ typedef struct nvme_path *nvme_path_t;
 typedef struct nvme_ctrl *nvme_ctrl_t;
 typedef struct nvme_subsystem *nvme_subsystem_t;
 typedef struct nvme_host *nvme_host_t;
-typedef struct nvme_root *nvme_root_t;
 
 typedef bool (*nvme_scan_filter_t)(nvme_subsystem_t, nvme_ctrl_t,
 				   nvme_ns_t, void *);
-
-/**
- * nvme_create_root() - Initialize root object
- * @fp:		File descriptor for logging messages
- * @log_level:	Logging level to use
- *
- * Return: Initialized &nvme_root_t object
- */
-nvme_root_t nvme_create_root(FILE *fp, int log_level);
 
 /**
  * nvme_root_set_application - Specify managing application
@@ -81,14 +71,6 @@ void nvme_root_skip_namespaces(nvme_root_t r);
  *
  */
 void nvme_root_release_fds(nvme_root_t r);
-
-/**
- * nvme_free_tree() - Free root object
- * @r:	&nvme_root_t object
- *
- * Free an &nvme_root_t object and all attached objects
- */
-void nvme_free_tree(nvme_root_t r);
 
 /**
  * nvme_first_host() - Start host iterator

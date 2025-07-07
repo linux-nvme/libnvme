@@ -261,7 +261,7 @@ static bool test_lookup(void)
 	pass = count_entries(r) == ARRAY_SIZE(test_data);
 	pass &= ctrl_lookups(r);
 
-	nvme_free_tree(r);
+	nvme_free_root(r);
 
 	return pass;
 }
@@ -407,7 +407,7 @@ static bool test_src_addr()
 
 	c->address = NULL; /* Needed to avoid freeing non-malloced memory (see above) */
 
-	nvme_free_tree(r);
+	nvme_free_root(r);
 
 	return pass;
 }
@@ -524,7 +524,7 @@ static bool ctrl_match(const char *tag,
 	reference_ctrl->name = NULL;
 	reference_ctrl->address = NULL;
 
-	nvme_free_tree(r);
+	nvme_free_root(r);
 
 	return true;
 }
@@ -1111,7 +1111,7 @@ static bool ctrl_config_match(const char *tag,
 	reference_ctrl->name = NULL;
 	reference_ctrl->address = NULL;
 
-	nvme_free_tree(r);
+	nvme_free_root(r);
 
 	return true;
 }

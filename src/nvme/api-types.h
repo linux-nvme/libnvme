@@ -13,9 +13,30 @@
 #ifndef _LIBNVME_API_TYPES_H
 #define _LIBNVME_API_TYPES_H
 
+#include <stdio.h>
 #include <stdbool.h>
 
 #include <nvme/types.h>
+
+struct nvme_root;
+typedef struct nvme_root *nvme_root_t;
+
+/**
+ * nvme_create_root() - Initialize root object
+ * @fp:		File descriptor for logging messages
+ * @log_level:	Logging level to use
+ *
+ * Return: Initialized &nvme_root_t object
+ */
+nvme_root_t nvme_create_root(FILE *fp, int log_level);
+
+/**
+ * nvme_free_root() - Free root object
+ * @r:	&nvme_root_t object
+ *
+ * Free an &nvme_root_t object and all attached objects
+ */
+void nvme_free_root(nvme_root_t r);
 
 /*
  * _args struct definitions. These are used by both the ioctl-based and

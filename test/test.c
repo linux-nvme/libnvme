@@ -358,7 +358,7 @@ int main(int argc, char **argv)
 		nvme_free_ctrl(c);
 	}
 	printf("\n");
-	nvme_free_tree(r);
+	nvme_free_root(r);
 
 	r = nvme_scan(NULL);
 	if (!r)
@@ -426,7 +426,7 @@ int main(int argc, char **argv)
 			}
 		}
 	}
-	nvme_free_tree(r);
+	nvme_free_root(r);
 
 	return 0;
 }

@@ -74,7 +74,7 @@ static bool psk_json_test(char *file)
 	pass = true;
 
 out:
-	nvme_free_tree(r);
+	nvme_free_root(r);
 	return pass;
 }
 
