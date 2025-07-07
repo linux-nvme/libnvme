@@ -39,6 +39,11 @@ struct nvme_link {
 	int fd;
 	struct stat stat;
 
+	/* mi */
+	struct nvme_mi_ep *ep;
+	__u16 id;
+	struct list_node ep_entry;
+
 	struct nvme_log *log;
 };
 
@@ -315,12 +320,6 @@ struct nvme_mi_ep {
 	bool last_resp_time_valid;
 
 	struct nvme_mi_aem_ctx *aem_ctx;
-};
-
-struct nvme_mi_ctrl {
-	struct nvme_mi_ep	*ep;
-	__u16			id;
-	struct list_node	ep_entry;
 };
 
 struct nvme_mi_ep *nvme_mi_init_ep(struct nvme_root *root);

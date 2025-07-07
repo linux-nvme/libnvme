@@ -89,6 +89,7 @@
 
 #include <nvme/types.h>
 #include <nvme/tree.h>
+#include <nvme/api-types.h>
 
 /**
  * NVME_MI_MSGTYPE_NVME - MCTP message type for NVMe-MI messages.
@@ -791,42 +792,33 @@ void nvme_mi_ep_set_mprt_max(nvme_mi_ep_t ep, unsigned int mprt_max_ms);
  */
 unsigned int nvme_mi_ep_get_timeout(nvme_mi_ep_t ep);
 
-struct nvme_mi_ctrl;
-
 /**
- * typedef nvme_mi_ctrl_t - NVMe-MI Controller object.
- *
- * Provides NVMe command functionality, through the MI interface.
- */
-typedef struct nvme_mi_ctrl * nvme_mi_ctrl_t;
-
-/**
- * nvme_mi_first_ctrl - Start controller iterator
+ * nvme_mi_first_link - Start link iterator
  * @ep: &nvme_mi_ep_t object
  *
- * Return: first MI controller object under this root, or NULL if no controllers
- *         are present.
+ * Return: first link to a MI controller object under this root, or NULL
+ *         if no controllers are present.
  *
- * See: &nvme_mi_next_ctrl, &nvme_mi_for_each_ctrl
+ * See: &nvme_mi_next_link, &nvme_mi_for_each_link
  */
-nvme_mi_ctrl_t nvme_mi_first_ctrl(nvme_mi_ep_t ep);
+nvme_link_t nvme_mi_first_link(nvme_mi_ep_t ep);
 
 /**
- * nvme_mi_next_ctrl - Continue ctrl iterator
+ * nvme_mi_next_link - Continue link iterator
  * @ep: &nvme_mi_ep_t object
- * @c: &nvme_mi_ctrl_t current position of iterator
+ * @l: &nvme_mi_link_t current position of iterator
  *
- * Return: next MI controller object after @c under this endpoint, or NULL
- *         if no further controllers are present.
+ * Return: next link to MI controller object after @c under this
+ *         endpoint, or NULL if no further controllers are present.
  *
- * See: &nvme_mi_first_ctrl, &nvme_mi_for_each_ctrl
+ * See: &nvme_mi_first_link, &nvme_mi_for_each_link
  */
-nvme_mi_ctrl_t nvme_mi_next_ctrl(nvme_mi_ep_t ep, nvme_mi_ctrl_t c);
+nvme_link_t nvme_mi_next_link(nvme_mi_ep_t ep, nvme_link_t l);
 
 /**
- * nvme_mi_for_each_ctrl - Iterator for NVMe-MI controllers.
+ * nvme_mi_for_each_link - Iterator for link to NVMe-MI controllers.
  * @ep: &nvme_mi_ep_t containing endpoints
- * @c: &nvme_mi_ctrl_t object, set on each iteration
+ * @l: &nvme_link_t object, set on each iteration
  *
  * Allows iteration of the list of controllers behind an endpoint. Unless the
  * controllers have already been created explicitly, you'll probably want to
@@ -834,16 +826,16 @@ nvme_mi_ctrl_t nvme_mi_next_ctrl(nvme_mi_ep_t ep, nvme_mi_ctrl_t c);
  *
  * See: &nvme_mi_scan_ep()
  */
-#define nvme_mi_for_each_ctrl(ep, c)			\
-	for (c = nvme_mi_first_ctrl(ep); c != NULL;	\
-	     c = nvme_mi_next_ctrl(ep, c))
+#define nvme_mi_for_each_link(ep, l)			\
+	for (l = nvme_mi_first_link(ep); l != NULL;	\
+	     l = nvme_mi_next_link(ep, l))
 
 /**
- * nvme_mi_for_each_ctrl_safe - Iterator for NVMe-MI controllers, allowing
+ * nvme_mi_for_each_link_safe - Iterator for link to NVMe-MI controllers, allowing
  * deletion during traversal
  * @ep: &nvme_mi_ep_t containing controllers
- * @c: &nvme_mi_ctrl_t object, set on each iteration
- * @_c: &nvme_mi_ctrl_t object used as temporary storage
+ * @l: &nvme_link_t object, set on each iteration
+ * @_l: &nvme_link_t object used as temporary storage
  *
  * Allows iteration of the list of controllers behind an endpoint, safe against
  * deletion during iteration. Unless the controllers have already been created
@@ -852,10 +844,10 @@ nvme_mi_ctrl_t nvme_mi_next_ctrl(nvme_mi_ep_t ep, nvme_mi_ctrl_t c);
  *
  * See: &nvme_mi_scan_ep()
  */
-#define nvme_mi_for_each_ctrl_safe(ep, c, _c)			      \
-	for (c = nvme_mi_first_ctrl(ep), _c = nvme_mi_next_ctrl(ep, c);	      \
-	     c != NULL;							      \
-	     c = _c, _c = nvme_mi_next_ctrl(ep, c))
+#define nvme_mi_for_each_link_safe(ep, l, _l)				\
+	for (l = nvme_mi_first_link(ep), _l = nvme_mi_next_link(ep, l);	\
+	     l != NULL;							\
+	     l = _l, _l = nvme_mi_next_link(ep, l))
 
 /**
  * nvme_mi_open_mctp() - Create an endpoint using a MCTP connection.
@@ -924,7 +916,7 @@ nvme_root_t nvme_mi_scan_mctp(void);
 int nvme_mi_scan_ep(nvme_mi_ep_t ep, bool force_rescan);
 
 /**
- * nvme_mi_init_ctrl() - initialise a NVMe controller.
+ * nvme_mi_init_link() - initialise a link to NVMe controller.
  * @ep: Endpoint to create under
  * @ctrl_id: ID of controller to initialize.
  *
@@ -934,28 +926,28 @@ int nvme_mi_scan_ep(nvme_mi_ep_t ep, bool force_rescan);
  *
  * Return: New controller object, or NULL on failure.
  *
- * See &nvme_mi_close_ctrl
+ * See &nvme_mi_close_link
  */
-nvme_mi_ctrl_t nvme_mi_init_ctrl(nvme_mi_ep_t ep, __u16 ctrl_id);
+nvme_link_t nvme_mi_init_link(nvme_mi_ep_t ep, __u16 ctrl_id);
 
 /**
- * nvme_mi_close_ctrl() - free a controller
- * @ctrl: controller to free
+ * nvme_mi_close_link() - free a controller
+ * @link: link to controller to free
  */
-void nvme_mi_close_ctrl(nvme_mi_ctrl_t ctrl);
+void nvme_mi_close_link(nvme_link_t link);
 
 /**
  * nvme_mi_ctrl_id() - get the ID of a controller
- * @ctrl: controller to query
+ * @link: link to controller to query
  *
  * Retrieve the ID of the controller, as defined by hardware, and available
  * in the Identify (Controller List) data. This is the value passed to
- * @nvme_mi_init_ctrl, but may have been created internally via
+ * @nvme_mi_init_link, but may have been created internally via
  * @nvme_mi_scan_ep.
  *
  * Return: the (locally-stored) ID of this controller.
  */
-__u16 nvme_mi_ctrl_id(nvme_mi_ctrl_t ctrl);
+__u16 nvme_mi_ctrl_id(nvme_link_t link);
 
 
 /**
@@ -1342,7 +1334,7 @@ static inline int nvme_mi_aem_ack(nvme_mi_ep_t ep,
 
 /**
  * nvme_mi_admin_xfer() -  Raw admin transfer interface.
- * @ctrl: controller to send the admin command to
+ * @link: link to send the admin command to
  * @admin_req: request data
  * @req_data_size: size of request data payload
  * @admin_resp: buffer for response data
@@ -1367,7 +1359,7 @@ static inline int nvme_mi_aem_ack(nvme_mi_ep_t ep,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise..
  */
-int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_xfer(nvme_link_t link,
 		       struct nvme_mi_admin_req_hdr *admin_req,
 		       size_t req_data_size,
 		       struct nvme_mi_admin_resp_hdr *admin_resp,
@@ -1376,7 +1368,7 @@ int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
 
 /**
  * nvme_mi_admin_admin_passthru() - Submit an nvme admin passthrough command
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @opcode:	The nvme admin command to send
  * @flags:	NVMe command flags (not used)
  * @rsvd:	Reserved for future use
@@ -1407,7 +1399,7 @@ int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
+int nvme_mi_admin_admin_passthru(nvme_link_t link, __u8 opcode, __u8 flags,
 				 __u16 rsvd, __u32 nsid, __u32 cdw2, __u32 cdw3,
 				 __u32 cdw10, __u32 cdw11, __u32 cdw12,
 				 __u32 cdw13, __u32 cdw14, __u32 cdw15,
@@ -1417,7 +1409,7 @@ int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
 /**
  * nvme_mi_admin_identify_partial() - Perform an Admin identify command,
  * and retrieve partial response data.
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @args: Identify command arguments
  * @offset: offset of identify data to retrieve from response
  * @size: size of identify data to return
@@ -1441,13 +1433,13 @@ int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
  *
  * See: &struct nvme_identify_args
  */
-int nvme_mi_admin_identify_partial(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_identify_partial(nvme_link_t link,
 				   struct nvme_identify_args *args,
 				   off_t offset, size_t size);
 
 /**
  * nvme_mi_admin_identify() - Perform an Admin identify command.
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @args: Identify command arguments
  *
  * Perform an Identify command, using the Identify command parameters in @args.
@@ -1462,10 +1454,10 @@ int nvme_mi_admin_identify_partial(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_identify_args
  */
-static inline int nvme_mi_admin_identify(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify(nvme_link_t link,
 					 struct nvme_identify_args *args)
 {
-	return nvme_mi_admin_identify_partial(ctrl, args,
+	return nvme_mi_admin_identify_partial(link, args,
 					      0, NVME_IDENTIFY_DATA_SIZE);
 }
 
@@ -1490,7 +1482,7 @@ int nvme_mi_control(nvme_mi_ep_t ep, __u8 opcode,
 /**
  * nvme_mi_admin_identify_cns_nsid() - Perform an Admin identify command using
  * specific CNS/NSID parameters.
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @cns: Controller or Namespace Structure, specifying identified object
  * @nsid: namespace ID
  * @data: buffer for identify data response
@@ -1507,7 +1499,7 @@ int nvme_mi_control(nvme_mi_ep_t ep, __u8 opcode,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_identify_cns_nsid(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_cns_nsid(nvme_link_t link,
 						  enum nvme_identify_cns cns,
 						  __u32 nsid, void *data)
 {
@@ -1523,13 +1515,13 @@ static inline int nvme_mi_admin_identify_cns_nsid(nvme_mi_ctrl_t ctrl,
 		.uuidx = NVME_UUID_NONE,
 	};
 
-	return nvme_mi_admin_identify(ctrl, &args);
+	return nvme_mi_admin_identify(link, &args);
 }
 
 /**
  * nvme_mi_admin_identify_ns() - Perform an Admin identify command for a
  * namespace
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @nsid: namespace ID
  * @ns: Namespace identification to populate
  *
@@ -1539,17 +1531,17 @@ static inline int nvme_mi_admin_identify_cns_nsid(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_identify_ns(nvme_mi_ctrl_t ctrl, __u32 nsid,
+static inline int nvme_mi_admin_identify_ns(nvme_link_t link, __u32 nsid,
 					    struct nvme_id_ns *ns)
 {
-	return nvme_mi_admin_identify_cns_nsid(ctrl, NVME_IDENTIFY_CNS_NS,
+	return nvme_mi_admin_identify_cns_nsid(link, NVME_IDENTIFY_CNS_NS,
 					       nsid, ns);
 }
 
 /**
  * nvme_mi_admin_identify_ns_descs() - Perform an Admin identify Namespace
  * Identification Descriptor list command for a namespace
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @nsid: Namespace ID
  * @descs: Namespace Identification Descriptor list to populate
  *
@@ -1559,18 +1551,18 @@ static inline int nvme_mi_admin_identify_ns(nvme_mi_ctrl_t ctrl, __u32 nsid,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_identify_ns_descs(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_ns_descs(nvme_link_t link,
 						  __u32 nsid,
 						  struct nvme_ns_id_desc *descs)
 {
-	return nvme_mi_admin_identify_cns_nsid(ctrl, NVME_IDENTIFY_CNS_NS_DESC_LIST,
+	return nvme_mi_admin_identify_cns_nsid(link, NVME_IDENTIFY_CNS_NS_DESC_LIST,
 					       nsid, descs);
 }
 
 /**
  * nvme_mi_admin_identify_allocated_ns() - Perform an Admin identify command
  * for an allocated namespace
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @nsid: namespace ID
  * @ns: Namespace identification to populate
  *
@@ -1580,18 +1572,18 @@ static inline int nvme_mi_admin_identify_ns_descs(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_identify_allocated_ns(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_allocated_ns(nvme_link_t link,
 						      __u32 nsid,
 						      struct nvme_id_ns *ns)
 {
-	return nvme_mi_admin_identify_cns_nsid(ctrl,
+	return nvme_mi_admin_identify_cns_nsid(link,
 					       NVME_IDENTIFY_CNS_ALLOCATED_NS,
 					       nsid, ns);
 }
 
 /**
  * nvme_mi_admin_identify_ctrl() - Perform an Admin identify for a controller
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @id: Controller identify data to populate
  *
  * Perform an Identify command, for the controller specified by @ctrl,
@@ -1606,17 +1598,17 @@ static inline int nvme_mi_admin_identify_allocated_ns(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_id_ctrl
  */
-static inline int nvme_mi_admin_identify_ctrl(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_ctrl(nvme_link_t link,
 					      struct nvme_id_ctrl *id)
 {
-	return nvme_mi_admin_identify_cns_nsid(ctrl, NVME_IDENTIFY_CNS_CTRL,
+	return nvme_mi_admin_identify_cns_nsid(link, NVME_IDENTIFY_CNS_CTRL,
 					       NVME_NSID_NONE, id);
 }
 
 /**
  * nvme_mi_admin_identify_ctrl_list() - Perform an Admin identify for a
  * controller list.
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @cntid: Controller ID to specify list start
  * @list: List data to populate
  *
@@ -1632,7 +1624,7 @@ static inline int nvme_mi_admin_identify_ctrl(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_ctrl_list
  */
-static inline int nvme_mi_admin_identify_ctrl_list(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_ctrl_list(nvme_link_t link,
 						   __u16 cntid,
 						   struct nvme_ctrl_list *list)
 {
@@ -1648,13 +1640,13 @@ static inline int nvme_mi_admin_identify_ctrl_list(nvme_mi_ctrl_t ctrl,
 		.uuidx = NVME_UUID_NONE,
 	};
 
-	return nvme_mi_admin_identify(ctrl, &args);
+	return nvme_mi_admin_identify(link, &args);
 }
 
 /**
  * nvme_mi_admin_identify_nsid_ctrl_list() - Perform an Admin identify for a
  * controller list with specific namespace ID
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @nsid: Namespace identifier
  * @cntid: Controller ID to specify list start
  * @list: List data to populate
@@ -1671,7 +1663,7 @@ static inline int nvme_mi_admin_identify_ctrl_list(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_ctrl_list
  */
-static inline int nvme_mi_admin_identify_nsid_ctrl_list(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_nsid_ctrl_list(nvme_link_t link,
 							__u32 nsid, __u16 cntid,
 							struct nvme_ctrl_list *list)
 {
@@ -1687,13 +1679,13 @@ static inline int nvme_mi_admin_identify_nsid_ctrl_list(nvme_mi_ctrl_t ctrl,
 		.uuidx = NVME_UUID_NONE,
 	};
 
-	return nvme_mi_admin_identify(ctrl, &args);
+	return nvme_mi_admin_identify(link, &args);
 }
 
 /**
  * nvme_mi_admin_identify_allocated_ns_list() - Perform an Admin identify for
  * an allocated namespace list
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @nsid: Namespace ID to specify list start
  * @list: List data to populate
  *
@@ -1710,7 +1702,7 @@ static inline int nvme_mi_admin_identify_nsid_ctrl_list(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_ns_list
  */
-static inline int nvme_mi_admin_identify_allocated_ns_list(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_allocated_ns_list(nvme_link_t link,
 							   __u32 nsid,
 							   struct nvme_ns_list *list)
 {
@@ -1725,13 +1717,13 @@ static inline int nvme_mi_admin_identify_allocated_ns_list(nvme_mi_ctrl_t ctrl,
 		.uuidx = NVME_UUID_NONE,
 	};
 
-	return nvme_mi_admin_identify(ctrl, &args);
+	return nvme_mi_admin_identify(link, &args);
 }
 
 /**
  * nvme_mi_admin_identify_active_ns_list() - Perform an Admin identify for an
  * active namespace list
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @nsid: Namespace ID to specify list start
  * @list: List data to populate
  *
@@ -1748,7 +1740,7 @@ static inline int nvme_mi_admin_identify_allocated_ns_list(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_ns_list
  */
-static inline int nvme_mi_admin_identify_active_ns_list(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_active_ns_list(nvme_link_t link,
 							__u32 nsid,
 							struct nvme_ns_list *list)
 {
@@ -1763,13 +1755,13 @@ static inline int nvme_mi_admin_identify_active_ns_list(nvme_mi_ctrl_t ctrl,
 		.uuidx = NVME_UUID_NONE,
 	};
 
-	return nvme_mi_admin_identify(ctrl, &args);
+	return nvme_mi_admin_identify(link, &args);
 }
 
 /**
  * nvme_mi_admin_identify_primary_ctrl() - Perform an Admin identify for
  * primary controller capabilities data structure.
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @cntid: Controller ID to specify
  * @cap: Primary Controller Capabilities data structure to populate
  *
@@ -1784,7 +1776,7 @@ static inline int nvme_mi_admin_identify_active_ns_list(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_primary_ctrl_cap
  */
-static inline int nvme_mi_admin_identify_primary_ctrl(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_primary_ctrl(nvme_link_t link,
 						      __u16 cntid,
 						      struct nvme_primary_ctrl_cap *cap)
 {
@@ -1800,13 +1792,13 @@ static inline int nvme_mi_admin_identify_primary_ctrl(nvme_mi_ctrl_t ctrl,
 		.uuidx = NVME_UUID_NONE,
 	};
 
-	return nvme_mi_admin_identify(ctrl, &args);
+	return nvme_mi_admin_identify(link, &args);
 }
 
 /**
  * nvme_mi_admin_identify_secondary_ctrl_list() - Perform an Admin identify for
  * a secondary controller list.
- * @ctrl: Controller to process identify command
+ * @link: Link to process identify command
  * @cntid: Controller ID to specify list start
  * @list: List data to populate
  *
@@ -1822,7 +1814,7 @@ static inline int nvme_mi_admin_identify_primary_ctrl(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_secondary_ctrl_list
  */
-static inline int nvme_mi_admin_identify_secondary_ctrl_list(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_identify_secondary_ctrl_list(nvme_link_t link,
 							     __u16 cntid,
 							     struct nvme_secondary_ctrl_list *list)
 {
@@ -1838,12 +1830,12 @@ static inline int nvme_mi_admin_identify_secondary_ctrl_list(nvme_mi_ctrl_t ctrl
 		.uuidx = NVME_UUID_NONE,
 	};
 
-	return nvme_mi_admin_identify(ctrl, &args);
+	return nvme_mi_admin_identify(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_page() - Retrieve log page data from controller
- * @ctrl: Controller to query
+ * @link: Link to query
  * @xfer_len: The chunk size of the read
  * @args: Get Log Page command arguments
  *
@@ -1860,12 +1852,12 @@ static inline int nvme_mi_admin_identify_secondary_ctrl_list(nvme_mi_ctrl_t ctrl
  *
  * See: &struct nvme_get_log_args
  */
-int nvme_mi_admin_get_log_page(nvme_mi_ctrl_t ctrl, __u32 xfer_len,
+int nvme_mi_admin_get_log_page(nvme_link_t link, __u32 xfer_len,
 			       struct nvme_get_log_args *args);
 
 /**
  * nvme_mi_admin_get_log() - Retrieve log page data from controller
- * @ctrl: Controller to query
+ * @link: Link to query
  * @args: Get Log Page command arguments
  *
  * Performs a Get Log Page Admin command as specified by @args. Response data
@@ -1881,11 +1873,11 @@ int nvme_mi_admin_get_log_page(nvme_mi_ctrl_t ctrl, __u32 xfer_len,
  *
  * See: &struct nvme_get_log_args
  */
-int nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl, struct nvme_get_log_args *args);
+int nvme_mi_admin_get_log(nvme_link_t link, struct nvme_get_log_args *args);
 
 /**
  * nvme_mi_admin_get_nsid_log() - Helper for Get Log Page functions
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain Asynchronous Events
  * @lid: Log identifier
  * @nsid: Namespace ID
@@ -1900,7 +1892,7 @@ int nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl, struct nvme_get_log_args *args);
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_nsid_log(nvme_mi_ctrl_t ctrl, bool rae,
+static inline int nvme_mi_admin_get_nsid_log(nvme_link_t link, bool rae,
 					     enum nvme_cmd_get_log_lid lid,
 					     __u32 nsid, __u32 len, void *log)
 {
@@ -1920,12 +1912,12 @@ static inline int nvme_mi_admin_get_nsid_log(nvme_mi_ctrl_t ctrl, bool rae,
 		.ot = false,
 	};
 
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_endgid_log() - Helper for Get Endurance Group ID Log Page functions
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain Asynchronous Events
  * @lid: Log identifier
  * @endgid: Endurance Group ID
@@ -1940,7 +1932,7 @@ static inline int nvme_mi_admin_get_nsid_log(nvme_mi_ctrl_t ctrl, bool rae,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_endgid_log(nvme_mi_ctrl_t ctrl, bool rae,
+static inline int nvme_mi_admin_get_endgid_log(nvme_link_t link, bool rae,
 					       enum nvme_cmd_get_log_lid lid, __u16 endgid,
 					       __u32 len, void *log)
 {
@@ -1961,13 +1953,13 @@ static inline int nvme_mi_admin_get_endgid_log(nvme_mi_ctrl_t ctrl, bool rae,
 		.ot = false,
 	};
 
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_simple() - Helper for Get Log Page functions with no
  * NSID or RAE requirements
- * @ctrl: Controller to query
+ * @link: Link to query
  * @lid: Log identifier
  * @len: length of log buffer
  * @log: pointer for resulting log data
@@ -1978,36 +1970,36 @@ static inline int nvme_mi_admin_get_endgid_log(nvme_mi_ctrl_t ctrl, bool rae,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_simple(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_simple(nvme_link_t link,
 					       enum nvme_cmd_get_log_lid lid,
 					       __u32 len, void *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, false, lid, NVME_NSID_ALL,
+	return nvme_mi_admin_get_nsid_log(link, false, lid, NVME_NSID_ALL,
 					  len, log);
 }
 
 /**
  * nvme_mi_admin_get_log_supported_log_pages() - Retrieve nmve supported log
  * pages
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @log: Array of LID supported and Effects data structures
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_supported_log_pages(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_supported_log_pages(nvme_link_t link,
 							    bool rae,
 							    struct nvme_supported_log_pages *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae,
+	return nvme_mi_admin_get_nsid_log(link, rae,
 					  NVME_LOG_LID_SUPPORTED_LOG_PAGES,
 					  NVME_NSID_ALL, sizeof(*log), log);
 }
 
 /**
  * nvme_mi_admin_get_log_error() - Retrieve nvme error log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @nr_entries: Number of error log entries allocated
  * @rae: Retain asynchronous events
  * @err_log: Array of error logs of size 'entries'
@@ -2019,18 +2011,18 @@ static inline int nvme_mi_admin_get_log_supported_log_pages(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_error(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_error(nvme_link_t link,
 					      unsigned int nr_entries, bool rae,
 					      struct nvme_error_log_page *err_log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_ERROR,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_ERROR,
 					  NVME_NSID_ALL, sizeof(*err_log) * nr_entries,
 					  err_log);
 }
 
 /**
  * nvme_mi_admin_get_log_smart() - Retrieve nvme smart log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @nsid: Optional namespace identifier
  * @rae: Retain asynchronous events
  * @smart_log: User address to store the smart log
@@ -2045,17 +2037,17 @@ static inline int nvme_mi_admin_get_log_error(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_smart(nvme_mi_ctrl_t ctrl, __u32 nsid,
+static inline int nvme_mi_admin_get_log_smart(nvme_link_t link, __u32 nsid,
 					      bool rae,
 					      struct nvme_smart_log *smart_log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_SMART,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_SMART,
 					  nsid, sizeof(*smart_log), smart_log);
 }
 
 /**
  * nvme_mi_admin_get_log_fw_slot() - Retrieves the controller firmware log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @fw_log: User address to store the log page
  *
@@ -2066,16 +2058,16 @@ static inline int nvme_mi_admin_get_log_smart(nvme_mi_ctrl_t ctrl, __u32 nsid,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_fw_slot(nvme_mi_ctrl_t ctrl, bool rae,
+static inline int nvme_mi_admin_get_log_fw_slot(nvme_link_t link, bool rae,
 			struct nvme_firmware_slot *fw_log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_FW_SLOT,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_FW_SLOT,
 					  NVME_NSID_ALL, sizeof(*fw_log), fw_log);
 }
 
 /**
  * nvme_mi_admin_get_log_changed_ns_list() - Retrieve namespace changed list
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @ns_log: User address to store the log page
  *
@@ -2086,17 +2078,17 @@ static inline int nvme_mi_admin_get_log_fw_slot(nvme_mi_ctrl_t ctrl, bool rae,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_changed_ns_list(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_changed_ns_list(nvme_link_t link,
 							bool rae,
 							struct nvme_ns_list *ns_log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_CHANGED_NS,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_CHANGED_NS,
 					  NVME_NSID_ALL, sizeof(*ns_log), ns_log);
 }
 
 /**
  * nvme_mi_admin_get_log_cmd_effects() - Retrieve nvme command effects log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @csi: Command Set Identifier
  * @effects_log: User address to store the effects log
  *
@@ -2106,7 +2098,7 @@ static inline int nvme_mi_admin_get_log_changed_ns_list(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_cmd_effects(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_cmd_effects(nvme_link_t link,
 						    enum nvme_csi csi,
 						    struct nvme_cmd_effects_log *effects_log)
 {
@@ -2125,12 +2117,12 @@ static inline int nvme_mi_admin_get_log_cmd_effects(nvme_mi_ctrl_t ctrl,
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_device_self_test() - Retrieve the device self test log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @log: Userspace address of the log payload
  *
  * The log page indicates the status of an in progress self test and the
@@ -2140,24 +2132,24 @@ static inline int nvme_mi_admin_get_log_cmd_effects(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_device_self_test(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_device_self_test(nvme_link_t link,
 							 struct nvme_self_test_log *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, false,
+	return nvme_mi_admin_get_nsid_log(link, false,
 					  NVME_LOG_LID_DEVICE_SELF_TEST,
 					  NVME_NSID_ALL, sizeof(*log), log);
 }
 
 /**
  * nvme_mi_admin_get_log_create_telemetry_host_mcda() - Create host telemetry log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @mcda: Maximum Created Data Area
  * @log: Userspace address of the log payload
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_create_telemetry_host_mcda(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_create_telemetry_host_mcda(nvme_link_t link,
 								   enum nvme_telemetry_da mcda,
 								   struct nvme_telemetry_log *log)
 {
@@ -2176,27 +2168,27 @@ static inline int nvme_mi_admin_get_log_create_telemetry_host_mcda(nvme_mi_ctrl_
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_create_telemetry_host() - Create host telemetry log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @log: Userspace address of the log payload
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_create_telemetry_host(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_create_telemetry_host(nvme_link_t link,
 							      struct nvme_telemetry_log *log)
 {
-	return nvme_mi_admin_get_log_create_telemetry_host_mcda(ctrl, NVME_TELEMETRY_DA_CTRL_DETERMINE, log);
+	return nvme_mi_admin_get_log_create_telemetry_host_mcda(link, NVME_TELEMETRY_DA_CTRL_DETERMINE, log);
 }
 
 /**
  * nvme_mi_admin_get_log_telemetry_host() - Get Telemetry Host-Initiated log
  * page
- * @ctrl: Controller to query
+ * @link: Link to query
  * @offset: Offset into the telemetry data
  * @len: Length of provided user buffer to hold the log data in bytes
  * @log: User address for log page data
@@ -2207,7 +2199,7 @@ static inline int nvme_mi_admin_get_log_create_telemetry_host(nvme_mi_ctrl_t ctr
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_telemetry_host(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_telemetry_host(nvme_link_t link,
 						       __u64 offset, __u32 len,
 						       void *log)
 {
@@ -2226,13 +2218,13 @@ static inline int nvme_mi_admin_get_log_telemetry_host(nvme_mi_ctrl_t ctrl,
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_telemetry_ctrl() - Get Telemetry Controller-Initiated
  * log page
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @offset: Offset into the telemetry data
  * @len: Length of provided user buffer to hold the log data in bytes
@@ -2244,7 +2236,7 @@ static inline int nvme_mi_admin_get_log_telemetry_host(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_telemetry_ctrl(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_telemetry_ctrl(nvme_link_t link,
 						       bool rae,
 						       __u64 offset, __u32 len,
 						       void *log)
@@ -2264,12 +2256,12 @@ static inline int nvme_mi_admin_get_log_telemetry_ctrl(nvme_mi_ctrl_t ctrl,
 		.rae = rae,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_endurance_group() - Get Endurance Group log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @endgid: Starting group identifier to return in the list
  * @log: User address to store the endurance log
  *
@@ -2283,7 +2275,7 @@ static inline int nvme_mi_admin_get_log_telemetry_ctrl(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_endurance_group(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_endurance_group(nvme_link_t link,
 							__u16 endgid,
 							struct nvme_endurance_group_log *log)
 {
@@ -2302,20 +2294,20 @@ static inline int nvme_mi_admin_get_log_endurance_group(nvme_mi_ctrl_t ctrl,
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_predictable_lat_nvmset() - Predictable Latency Per NVM
  * Set
- * @ctrl: Controller to query
+ * @link: Link to query
  * @nvmsetid: NVM set id
  * @log: User address to store the predictable latency log
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_predictable_lat_nvmset(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_predictable_lat_nvmset(nvme_link_t link,
 							       __u16 nvmsetid,
 							       struct nvme_nvmset_predictable_lat_log *log)
 {
@@ -2334,13 +2326,13 @@ static inline int nvme_mi_admin_get_log_predictable_lat_nvmset(nvme_mi_ctrl_t ct
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_predictable_lat_event() - Retrieve Predictable Latency
  * Event Aggregate Log Page
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @offset: Offset into the predictable latency event
  * @len: Length of provided user buffer to hold the log data in bytes
@@ -2349,7 +2341,7 @@ static inline int nvme_mi_admin_get_log_predictable_lat_nvmset(nvme_mi_ctrl_t ct
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_predictable_lat_event(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_predictable_lat_event(nvme_link_t link,
 							      bool rae,
 							      __u32 offset,
 							      __u32 len,
@@ -2370,12 +2362,12 @@ static inline int nvme_mi_admin_get_log_predictable_lat_event(nvme_mi_ctrl_t ctr
 		.rae = rae,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_ana() - Retrieve Asymmetric Namespace Access log page
- * @ctrl: Controller to query
+ * @link: Link to query
  * @lsp: Log specific, see &enum nvme_get_log_ana_lsp
  * @rae: Retain asynchronous events
  * @offset: Offset to the start of the log page
@@ -2391,7 +2383,7 @@ static inline int nvme_mi_admin_get_log_predictable_lat_event(nvme_mi_ctrl_t ctr
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_ana(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_ana(nvme_link_t link,
 					    enum nvme_log_ana_lsp lsp, bool rae,
 					    __u64 offset, __u32 len, void *log)
 {
@@ -2410,13 +2402,13 @@ static inline int nvme_mi_admin_get_log_ana(nvme_mi_ctrl_t ctrl,
 		.rae = rae,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_ana_groups() - Retrieve Asymmetric Namespace Access
  * groups only log page
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @len: The allocated length of the log page
  * @log: User address to store the ana group log
@@ -2426,18 +2418,18 @@ static inline int nvme_mi_admin_get_log_ana(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_ana_groups(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_ana_groups(nvme_link_t link,
 						   bool rae, __u32 len,
 						   struct nvme_ana_group_desc *log)
 {
-	return nvme_mi_admin_get_log_ana(ctrl, NVME_LOG_ANA_LSP_RGO_GROUPS_ONLY, rae, 0,
+	return nvme_mi_admin_get_log_ana(link, NVME_LOG_ANA_LSP_RGO_GROUPS_ONLY, rae, 0,
 				len, log);
 }
 
 /**
  * nvme_mi_admin_get_ana_log_atomic() - Retrieve Asymmetric Namespace Access
  * log page atomically
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rgo: Whether to retrieve ANA groups only (no NSIDs)
  * @rae: Whether to retain asynchronous events
  * @retries: The maximum number of times to retry on log page changes
@@ -2455,13 +2447,13 @@ static inline int nvme_mi_admin_get_log_ana_groups(nvme_mi_ctrl_t ctrl,
  * because chgcnt changed during each of the retries attempts.
  * Sets errno = ENOSPC if the full log page does not fit in the provided buffer.
  */
-int nvme_mi_admin_get_ana_log_atomic(nvme_mi_ctrl_t ctrl, bool rgo, bool rae,
+int nvme_mi_admin_get_ana_log_atomic(nvme_link_t link, bool rgo, bool rae,
 				     unsigned int retries,
 				     struct nvme_ana_log *log, __u32 *len);
 
 /**
  * nvme_mi_admin_get_log_lba_status() - Retrieve LBA Status
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @offset: Offset to the start of the log page
  * @len: The allocated length of the log page
@@ -2470,7 +2462,7 @@ int nvme_mi_admin_get_ana_log_atomic(nvme_mi_ctrl_t ctrl, bool rgo, bool rae,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_lba_status(nvme_mi_ctrl_t ctrl, bool rae,
+static inline int nvme_mi_admin_get_log_lba_status(nvme_link_t link, bool rae,
 						   __u64 offset, __u32 len,
 						   void *log)
 {
@@ -2489,13 +2481,13 @@ static inline int nvme_mi_admin_get_log_lba_status(nvme_mi_ctrl_t ctrl, bool rae
 		.rae = rae,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_endurance_grp_evt() - Retrieve Rotational Media
  * Information
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @offset: Offset to the start of the log page
  * @len: The allocated length of the log page
@@ -2504,7 +2496,7 @@ static inline int nvme_mi_admin_get_log_lba_status(nvme_mi_ctrl_t ctrl, bool rae
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_endurance_grp_evt(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_endurance_grp_evt(nvme_link_t link,
 							  bool rae,
 							  __u32 offset,
 							  __u32 len,
@@ -2525,24 +2517,24 @@ static inline int nvme_mi_admin_get_log_endurance_grp_evt(nvme_mi_ctrl_t ctrl,
 		.rae = rae,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_fid_supported_effects() - Retrieve Feature Identifiers
  * Supported and Effects
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @log: FID Supported and Effects data structure
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_fid_supported_effects(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_fid_supported_effects(nvme_link_t link,
 							      bool rae,
 							      struct nvme_fid_supported_effects_log *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae,
+	return nvme_mi_admin_get_nsid_log(link, rae,
 					  NVME_LOG_LID_FID_SUPPORTED_EFFECTS,
 					  NVME_NSID_NONE, sizeof(*log), log);
 }
@@ -2550,24 +2542,24 @@ static inline int nvme_mi_admin_get_log_fid_supported_effects(nvme_mi_ctrl_t ctr
 /**
  * nvme_mi_admin_get_log_mi_cmd_supported_effects() - displays the MI Commands
  * Supported by the controller
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @log: MI Command Supported and Effects data structure
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_mi_cmd_supported_effects(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_mi_cmd_supported_effects(nvme_link_t link,
 								 bool rae,
 								 struct nvme_mi_cmd_supported_effects_log *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_MI_CMD_SUPPORTED_EFFECTS,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_MI_CMD_SUPPORTED_EFFECTS,
 					  NVME_NSID_NONE, sizeof(*log), log);
 }
 
 /**
  * nvme_mi_admin_get_log_boot_partition() - Retrieve Boot Partition
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @lsp: The log specified field of LID
  * @len: The allocated size, minimum
@@ -2577,7 +2569,7 @@ static inline int nvme_mi_admin_get_log_mi_cmd_supported_effects(nvme_mi_ctrl_t 
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_boot_partition(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_boot_partition(nvme_link_t link,
 						       bool rae, __u8 lsp,
 						       __u32 len,
 						       struct nvme_boot_partition *part)
@@ -2597,12 +2589,12 @@ static inline int nvme_mi_admin_get_log_boot_partition(nvme_mi_ctrl_t ctrl,
 		.rae = rae,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_rotational_media_info() - Retrieve Rotational Media Information Log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @endgid: Endurance Group Identifier
  * @len: The allocated length of the log page
  * @log: User address to store the log page
@@ -2610,18 +2602,18 @@ static inline int nvme_mi_admin_get_log_boot_partition(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_rotational_media_info(nvme_mi_ctrl_t ctrl, __u16 endgid,
+static inline int nvme_mi_admin_get_log_rotational_media_info(nvme_link_t link, __u16 endgid,
 							      __u32 len,
 							      struct nvme_rotational_media_info_log *log)
 {
-	return nvme_mi_admin_get_endgid_log(ctrl, false, NVME_LOG_LID_ROTATIONAL_MEDIA_INFO, endgid,
+	return nvme_mi_admin_get_endgid_log(link, false, NVME_LOG_LID_ROTATIONAL_MEDIA_INFO, endgid,
 					    len, log);
 }
 
 /**
  * nvme_mi_admin_get_log_dispersed_ns_participating_nss() - Retrieve Dispersed Namespace
  * Participating NVM Subsystems Log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @nsid: Namespace Identifier
  * @len: The allocated length of the log page
  * @log: User address to store the log page
@@ -2629,32 +2621,32 @@ static inline int nvme_mi_admin_get_log_rotational_media_info(nvme_mi_ctrl_t ctr
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_dispersed_ns_participating_nss(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_dispersed_ns_participating_nss(nvme_link_t link,
 								       __u32 nsid, __u32 len,
 								       struct nvme_dispersed_ns_participating_nss_log *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, false, NVME_LOG_LID_DISPERSED_NS_PARTICIPATING_NSS,
+	return nvme_mi_admin_get_nsid_log(link, false, NVME_LOG_LID_DISPERSED_NS_PARTICIPATING_NSS,
 					  nsid, len, log);
 }
 
 /**
  * nvme_mi_admin_get_log_mgmt_addr_list() - Retrieve Management Address List Log
- * @ctrl:	Controller to query
+ * @link:	Link to query
  * @len:	The allocated length of the log page
  * @log:	User address to store the log page
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_mgmt_addr_list(nvme_mi_ctrl_t ctrl, __u32 len,
+static inline int nvme_mi_admin_get_log_mgmt_addr_list(nvme_link_t link, __u32 len,
 						       struct nvme_mgmt_addr_list_log *log)
 {
-	return nvme_mi_admin_get_log_simple(ctrl, NVME_LOG_LID_MGMT_ADDR_LIST, len, log);
+	return nvme_mi_admin_get_log_simple(link, NVME_LOG_LID_MGMT_ADDR_LIST, len, log);
 }
 
 /**
  * nvme_mi_admin_get_log_phy_rx_eom() - Retrieve Physical Interface Receiver Eye Opening Measurement Log
- * @ctrl:	Controller to query
+ * @link:	Link to query
  * @lsp:	Log specific, controls action and measurement quality
  * @controller:	Target controller ID
  * @len:	The allocated size, minimum
@@ -2664,7 +2656,7 @@ static inline int nvme_mi_admin_get_log_mgmt_addr_list(nvme_mi_ctrl_t ctrl, __u3
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_phy_rx_eom(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_phy_rx_eom(nvme_link_t link,
 						   __u8 lsp, __u16 controller,
 						   __u32 len,
 						    struct nvme_phy_rx_eom_log *log)
@@ -2684,12 +2676,12 @@ static inline int nvme_mi_admin_get_log_phy_rx_eom(nvme_mi_ctrl_t ctrl,
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_reachability_groups() - Retrieve Reachability Groups Log
- * @ctrl:	Controller to query
+ * @link:	Link to query
  * @rgo:	Return groups only
  * @rae:	Retain asynchronous events
  * @len:	The allocated length of the log page
@@ -2698,7 +2690,7 @@ static inline int nvme_mi_admin_get_log_phy_rx_eom(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_reachability_groups(nvme_mi_ctrl_t ctrl, bool rgo, bool rae,
+static inline int nvme_mi_admin_get_log_reachability_groups(nvme_link_t link, bool rgo, bool rae,
 	__u32 len, struct nvme_reachability_groups_log *log)
 {
 	struct nvme_get_log_args args = {
@@ -2718,12 +2710,12 @@ static inline int nvme_mi_admin_get_log_reachability_groups(nvme_mi_ctrl_t ctrl,
 		.ot = false,
 	};
 
-	return nvme_mi_admin_get_log_page(ctrl, NVME_LOG_PAGE_PDU_SIZE, &args);
+	return nvme_mi_admin_get_log_page(link, NVME_LOG_PAGE_PDU_SIZE, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_reachability_associations() - Retrieve Reachability Associations Log
- * @ctrl:	Controller to query
+ * @link:	Link to query
  * @rao:	Return associations only
  * @rae:	Retain asynchronous events
  * @len:	The allocated length of the log page
@@ -2732,7 +2724,7 @@ static inline int nvme_mi_admin_get_log_reachability_groups(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_reachability_associations(nvme_mi_ctrl_t ctrl, bool rao,
+static inline int nvme_mi_admin_get_log_reachability_associations(nvme_link_t link, bool rao,
 								  bool rae, __u32 len,
 								  struct nvme_reachability_associations_log *log)
 {
@@ -2753,12 +2745,12 @@ static inline int nvme_mi_admin_get_log_reachability_associations(nvme_mi_ctrl_t
 		.ot = false,
 	};
 
-	return nvme_mi_admin_get_log_page(ctrl, NVME_LOG_PAGE_PDU_SIZE, &args);
+	return nvme_mi_admin_get_log_page(link, NVME_LOG_PAGE_PDU_SIZE, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_changed_alloc_ns_list() - Retrieve Changed Allocated Namespace List Log
- * @ctrl:	Controller to query
+ * @link:	Link to query
  * @rae:	Retain asynchronous events
  * @len:	The allocated length of the log page
  * @log:	User address to store the log page
@@ -2766,16 +2758,16 @@ static inline int nvme_mi_admin_get_log_reachability_associations(nvme_mi_ctrl_t
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_changed_alloc_ns_list(nvme_mi_ctrl_t ctrl, bool rae,
+static inline int nvme_mi_admin_get_log_changed_alloc_ns_list(nvme_link_t link, bool rae,
 							      __u32 len, struct nvme_ns_list *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_CHANGED_ALLOC_NS_LIST,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_CHANGED_ALLOC_NS_LIST,
 					  NVME_NSID_ALL, len, log);
 }
 
 /**
  * nvme_mi_admin_get_log_discovery() - Retrieve Discovery log page
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @offset: Offset of this log to retrieve
  * @len: The allocated size for this portion of the log
@@ -2787,7 +2779,7 @@ static inline int nvme_mi_admin_get_log_changed_alloc_ns_list(nvme_mi_ctrl_t ctr
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_discovery(nvme_mi_ctrl_t ctrl, bool rae,
+static inline int nvme_mi_admin_get_log_discovery(nvme_link_t link, bool rae,
 						  __u32 offset, __u32 len,
 						  void *log)
 {
@@ -2806,12 +2798,12 @@ static inline int nvme_mi_admin_get_log_discovery(nvme_mi_ctrl_t ctrl, bool rae,
 		.rae = rae,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_host_discover() - Retrieve Host Discovery Log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @allhoste:	All host entries
  * @rae:	Retain asynchronous events
  * @len:	The allocated length of the log page
@@ -2820,7 +2812,7 @@ static inline int nvme_mi_admin_get_log_discovery(nvme_mi_ctrl_t ctrl, bool rae,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_host_discover(nvme_mi_ctrl_t ctrl, bool allhoste, bool rae,
+static inline int nvme_mi_admin_get_log_host_discover(nvme_link_t link, bool allhoste, bool rae,
 						      __u32 len, struct nvme_host_discover_log *log)
 {
 	struct nvme_get_log_args args = {
@@ -2840,12 +2832,12 @@ static inline int nvme_mi_admin_get_log_host_discover(nvme_mi_ctrl_t ctrl, bool 
 		.ot = false,
 	};
 
-	return nvme_mi_admin_get_log_page(ctrl, NVME_LOG_PAGE_PDU_SIZE, &args);
+	return nvme_mi_admin_get_log_page(link, NVME_LOG_PAGE_PDU_SIZE, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_ave_discover() - Retrieve AVE Discovery Log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae:	Retain asynchronous events
  * @len:	The allocated length of the log page
  * @log:	User address to store the log page
@@ -2853,16 +2845,16 @@ static inline int nvme_mi_admin_get_log_host_discover(nvme_mi_ctrl_t ctrl, bool 
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_ave_discover(nvme_mi_ctrl_t ctrl, bool rae, __u32 len,
+static inline int nvme_mi_admin_get_log_ave_discover(nvme_link_t link, bool rae, __u32 len,
 						     struct nvme_ave_discover_log *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_AVE_DISCOVER, NVME_NSID_ALL, len,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_AVE_DISCOVER, NVME_NSID_ALL, len,
 					  log);
 }
 
 /**
  * nvme_mi_admin_get_log_pull_model_ddc_req() - Retrieve Pull Model DDC Request Log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae:	Retain asynchronous events
  * @len:	The allocated length of the log page
  * @log:	User address to store the log page
@@ -2870,23 +2862,23 @@ static inline int nvme_mi_admin_get_log_ave_discover(nvme_mi_ctrl_t ctrl, bool r
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise
  */
-static inline int nvme_mi_admin_get_log_pull_model_ddc_req(nvme_mi_ctrl_t ctrl, bool rae, __u32 len,
+static inline int nvme_mi_admin_get_log_pull_model_ddc_req(nvme_link_t link, bool rae, __u32 len,
 							   struct nvme_pull_model_ddc_req_log *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_PULL_MODEL_DDC_REQ, NVME_NSID_ALL,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_PULL_MODEL_DDC_REQ, NVME_NSID_ALL,
 					  len, log);
 }
 
 /**
  * nvme_mi_admin_get_log_media_unit_stat() - Retrieve Media Unit Status
- * @ctrl: Controller to query
+ * @link: Link to query
  * @domid: Domain Identifier selection, if supported
  * @mus: User address to store the Media Unit statistics log
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_media_unit_stat(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_media_unit_stat(nvme_link_t link,
 							__u16 domid,
 							struct nvme_media_unit_stat_log *mus)
 {
@@ -2905,20 +2897,20 @@ static inline int nvme_mi_admin_get_log_media_unit_stat(nvme_mi_ctrl_t ctrl,
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_support_cap_config_list() - Retrieve Supported
  * Capacity Configuration List
- * @ctrl: Controller to query
+ * @link: Link to query
  * @domid: Domain Identifier selection, if supported
  * @cap: User address to store supported capabilities config list
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_support_cap_config_list(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_support_cap_config_list(nvme_link_t link,
 								__u16 domid,
 								struct nvme_supported_cap_config_list_log *cap)
 {
@@ -2937,29 +2929,29 @@ static inline int nvme_mi_admin_get_log_support_cap_config_list(nvme_mi_ctrl_t c
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_reservation() - Retrieve Reservation Notification
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @log: User address to store the reservation log
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_reservation(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_reservation(nvme_link_t link,
 						    bool rae,
 						    struct nvme_resv_notification_log *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_RESERVATION,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_RESERVATION,
 					  NVME_NSID_ALL, sizeof(*log), log);
 }
 
 /**
  * nvme_mi_admin_get_log_sanitize() - Retrieve Sanitize Status
- * @ctrl: Controller to query
+ * @link: Link to query
  * @rae: Retain asynchronous events
  * @log: User address to store the sanitize log
  *
@@ -2969,17 +2961,17 @@ static inline int nvme_mi_admin_get_log_reservation(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_sanitize(nvme_mi_ctrl_t ctrl, bool rae,
+static inline int nvme_mi_admin_get_log_sanitize(nvme_link_t link, bool rae,
 			struct nvme_sanitize_log_page *log)
 {
-	return nvme_mi_admin_get_nsid_log(ctrl, rae, NVME_LOG_LID_SANITIZE,
+	return nvme_mi_admin_get_nsid_log(link, rae, NVME_LOG_LID_SANITIZE,
 					  NVME_NSID_ALL, sizeof(*log), log);
 }
 
 /**
  * nvme_mi_admin_get_log_zns_changed_zones() - Retrieve list of zones that have
  * changed
- * @ctrl: Controller to query
+ * @link: Link to query
  * @nsid: Namespace ID
  * @rae: Retain asynchronous events
  * @log: User address to store the changed zone log
@@ -2989,7 +2981,7 @@ static inline int nvme_mi_admin_get_log_sanitize(nvme_mi_ctrl_t ctrl, bool rae,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_zns_changed_zones(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_zns_changed_zones(nvme_link_t link,
 							  __u32 nsid, bool rae,
 							  struct nvme_zns_changed_zone_log *log)
 {
@@ -3008,12 +3000,12 @@ static inline int nvme_mi_admin_get_log_zns_changed_zones(nvme_mi_ctrl_t ctrl,
 		.rae = rae,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_persistent_event() - Retrieve Persistent Event Log
- * @ctrl: Controller to query
+ * @link: Link to query
  * @action: Action the controller should take during processing this command
  * @size: Size of @pevent_log
  * @pevent_log: User address to store the persistent event log
@@ -3021,7 +3013,7 @@ static inline int nvme_mi_admin_get_log_zns_changed_zones(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_persistent_event(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_persistent_event(nvme_link_t link,
 							 enum nvme_pevent_log_action action,
 							 __u32 size, void *pevent_log)
 {
@@ -3040,19 +3032,19 @@ static inline int nvme_mi_admin_get_log_persistent_event(nvme_mi_ctrl_t ctrl,
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_log_lockdown() - Retrieve lockdown Log
- * @ctrl:		Controller to query
+ * @link:		Link to query
  * @cnscp:		Contents and Scope of Command and Feature Identifier Lists
  * @lockdown_log:	Buffer to store the lockdown log
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_log_lockdown(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_log_lockdown(nvme_link_t link,
 			__u8 cnscp, struct nvme_lockdown_log *lockdown_log)
 {
 	struct nvme_get_log_args args = {
@@ -3070,13 +3062,13 @@ static inline int nvme_mi_admin_get_log_lockdown(nvme_mi_ctrl_t ctrl,
 		.rae = false,
 		.ot = false,
 	};
-	return nvme_mi_admin_get_log(ctrl, &args);
+	return nvme_mi_admin_get_log(link, &args);
 }
 
 /**
  * nvme_mi_admin_security_send() - Perform a Security Send command on a
  * controller.
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @args: Security Send command arguments
  *
  * Performs a Security Send Admin command as specified by @args. Response data
@@ -3092,13 +3084,13 @@ static inline int nvme_mi_admin_get_log_lockdown(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_get_log_args
  */
-int nvme_mi_admin_security_send(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_security_send(nvme_link_t link,
 				struct nvme_security_send_args *args);
 
 /**
  * nvme_mi_admin_security_recv() - Perform a Security Receive command on a
  * controller.
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @args: Security Receive command arguments
  *
  * Performs a Security Receive Admin command as specified by @args. Response
@@ -3114,12 +3106,12 @@ int nvme_mi_admin_security_send(nvme_mi_ctrl_t ctrl,
  *
  * See: &struct nvme_get_log_args
  */
-int nvme_mi_admin_security_recv(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_security_recv(nvme_link_t link,
 				struct nvme_security_receive_args *args);
 
 /**
  * nvme_mi_admin_get_features - Perform a Get Feature command on a controller
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @args: Get Features command arguments
  *
  * Performs a Get Features Admin command as specified by @args. Returned
@@ -3134,36 +3126,36 @@ int nvme_mi_admin_security_recv(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_get_features(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_get_features(nvme_link_t link,
 			       struct nvme_get_features_args *args);
 
 /**
  * nvme_mi_admin_get_features_arbitration() - Get arbitration feature
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @sel: Select which type of attribute to return, see &enum nvme_get_features_sel
  * @result: The feature data is returned in this argument
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_get_features_arbitration(nvme_mi_ctrl_t ctrl, enum nvme_get_features_sel sel,
+int nvme_mi_admin_get_features_arbitration(nvme_link_t link, enum nvme_get_features_sel sel,
 					   __u32 *result);
 
 /**
  * nvme_mi_admin_get_features_power_mgmt() - Get power management feature
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @sel: Select which type of attribute to return, see &enum nvme_get_features_sel
  * @result: The feature data is returned in this argument
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_get_features_power_mgmt(nvme_mi_ctrl_t ctrl, enum nvme_get_features_sel sel,
+int nvme_mi_admin_get_features_power_mgmt(nvme_link_t link, enum nvme_get_features_sel sel,
 					  __u32 *result);
 
 /**
  * nvme_mi_admin_get_features_data() - Helper function for &nvme_mi_admin_get_features()
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @fid: Feature identifier
  * @nsid: Namespace ID, if applicable for @fid
  * @data_len: Length of feature data, if applicable for @fid, in bytes
@@ -3176,7 +3168,7 @@ int nvme_mi_admin_get_features_power_mgmt(nvme_mi_ctrl_t ctrl, enum nvme_get_fea
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_get_features_data(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_features_data(nvme_link_t link,
 						  enum nvme_features_id fid,
 						  __u32 nsid, __u32 data_len,
 						  void *data, __u32 *result)
@@ -3193,28 +3185,28 @@ static inline int nvme_mi_admin_get_features_data(nvme_mi_ctrl_t ctrl,
 		.uuidx = NVME_UUID_NONE,
 	};
 
-	return nvme_mi_admin_get_features(ctrl, &args);
+	return nvme_mi_admin_get_features(link, &args);
 }
 
 /**
  * nvme_mi_admin_get_features_simple - Get a simple feature value with no data
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @fid: Feature identifier
  * @nsid: Namespace id, if required by @fid
  * @result: output feature data
  */
-static inline int nvme_mi_admin_get_features_simple(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_get_features_simple(nvme_link_t link,
 						    enum nvme_features_id fid,
 						    __u32 nsid,
 						    __u32 *result)
 {
-	return nvme_mi_admin_get_features_data(ctrl, fid, nsid,
+	return nvme_mi_admin_get_features_data(link, fid, nsid,
 					       0, NULL, result);
 }
 
 /**
  * nvme_mi_admin_set_features - Perform a Set Features command on a controller
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @args: Set Features command arguments
  *
  * Performs a Set Features Admin command as specified by @args. Result
@@ -3229,12 +3221,12 @@ static inline int nvme_mi_admin_get_features_simple(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_set_features(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_set_features(nvme_link_t link,
 			       struct nvme_set_features_args *args);
 
 /**
  * nvme_mi_admin_set_features_power_mgmt() - Set power management feature
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @ps: Power State
  * @wh: Workload Hint
  * @save: Save value across power states
@@ -3243,12 +3235,12 @@ int nvme_mi_admin_set_features(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_set_features_power_mgmt(nvme_mi_ctrl_t ctrl, __u8 ps, __u8 wh, bool save,
+int nvme_mi_admin_set_features_power_mgmt(nvme_link_t link, __u8 ps, __u8 wh, bool save,
 					  __u32 *result);
 
 /**
  * nvme_mi_admin_ns_mgmt - Issue a Namespace Management command
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @args: Namespace management command arguments
  *
  * Issues a Namespace Management command to @ctrl, with arguments specified
@@ -3257,12 +3249,12 @@ int nvme_mi_admin_set_features_power_mgmt(nvme_mi_ctrl_t ctrl, __u8 ps, __u8 wh,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_ns_mgmt(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_ns_mgmt(nvme_link_t link,
 			  struct nvme_ns_mgmt_args *args);
 
 /**
  * nvme_mi_admin_ns_mgmt_create - Helper for Namespace Management Create command
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @ns: New namespace parameters
  * @csi: Command Set Identifier for new NS
  * @nsid: Set to new namespace ID on create
@@ -3275,7 +3267,7 @@ int nvme_mi_admin_ns_mgmt(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_ns_mgmt_create(nvme_mi_ctrl_t ctrl,
+static inline int nvme_mi_admin_ns_mgmt_create(nvme_link_t link,
 				struct nvme_id_ns *ns, __u8 csi, __u32 *nsid,
 				struct nvme_ns_mgmt_host_sw_specified *data)
 {
@@ -3289,12 +3281,12 @@ static inline int nvme_mi_admin_ns_mgmt_create(nvme_mi_ctrl_t ctrl,
 		.data = data,
 	};
 
-	return nvme_mi_admin_ns_mgmt(ctrl, &args);
+	return nvme_mi_admin_ns_mgmt(link, &args);
 }
 
 /**
  * nvme_mi_admin_ns_mgmt_delete - Helper for Namespace Management Delete command
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @nsid: Namespace ID to delete
  *
  * Issues a Namespace Management (Delete) command to @ctrl, to delete the
@@ -3303,7 +3295,7 @@ static inline int nvme_mi_admin_ns_mgmt_create(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_ns_mgmt_delete(nvme_mi_ctrl_t ctrl, __u32 nsid)
+static inline int nvme_mi_admin_ns_mgmt_delete(nvme_link_t link, __u32 nsid)
 {
 	struct nvme_ns_mgmt_args args = {
 		.args_size = sizeof(args),
@@ -3311,30 +3303,30 @@ static inline int nvme_mi_admin_ns_mgmt_delete(nvme_mi_ctrl_t ctrl, __u32 nsid)
 		.sel = NVME_NS_MGMT_SEL_DELETE,
 	};
 
-	return nvme_mi_admin_ns_mgmt(ctrl, &args);
+	return nvme_mi_admin_ns_mgmt(link, &args);
 }
 
 /**
  * nvme_mi_admin_ns_attach() - Attach or detach namespace to controller(s)
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @args: Namespace Attach command arguments
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_ns_attach(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_ns_attach(nvme_link_t link,
 			    struct nvme_ns_attach_args *args);
 
 /**
  * nvme_mi_admin_ns_attach_ctrls() - Attach namespace to controllers
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @nsid: Namespace ID to attach
  * @ctrlist: Controller list to modify attachment state of nsid
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_ns_attach_ctrls(nvme_mi_ctrl_t ctrl, __u32 nsid,
+static inline int nvme_mi_admin_ns_attach_ctrls(nvme_link_t link, __u32 nsid,
 						struct nvme_ctrl_list *ctrlist)
 {
 	struct nvme_ns_attach_args args = {
@@ -3345,19 +3337,19 @@ static inline int nvme_mi_admin_ns_attach_ctrls(nvme_mi_ctrl_t ctrl, __u32 nsid,
 		.sel = NVME_NS_ATTACH_SEL_CTRL_ATTACH,
 	};
 
-	return nvme_mi_admin_ns_attach(ctrl, &args);
+	return nvme_mi_admin_ns_attach(link, &args);
 }
 
 /**
  * nvme_mi_admin_ns_detach_ctrls() - Detach namespace from controllers
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @nsid: Namespace ID to detach
  * @ctrlist: Controller list to modify attachment state of nsid
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-static inline int nvme_mi_admin_ns_detach_ctrls(nvme_mi_ctrl_t ctrl, __u32 nsid,
+static inline int nvme_mi_admin_ns_detach_ctrls(nvme_link_t link, __u32 nsid,
 						struct nvme_ctrl_list *ctrlist)
 {
 	struct nvme_ns_attach_args args = {
@@ -3368,13 +3360,13 @@ static inline int nvme_mi_admin_ns_detach_ctrls(nvme_mi_ctrl_t ctrl, __u32 nsid,
 		.sel = NVME_NS_ATTACH_SEL_CTRL_DEATTACH,
 	};
 
-	return nvme_mi_admin_ns_attach(ctrl, &args);
+	return nvme_mi_admin_ns_attach(link, &args);
 }
 
 /**
  * nvme_mi_admin_fw_download() - Download part or all of a firmware image to
  * the controller
- * @ctrl: Controller to send firmware data to
+ * @link: Link to send firmware data to
  * @args: &struct nvme_fw_download_args argument structure
  *
  * The Firmware Image Download command downloads all or a portion of an image
@@ -3392,24 +3384,24 @@ static inline int nvme_mi_admin_ns_detach_ctrls(nvme_mi_ctrl_t ctrl, __u32 nsid,
  *
  * Return: 0 on success, non-zero on failure
  */
-int nvme_mi_admin_fw_download(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_fw_download(nvme_link_t link,
 			      struct nvme_fw_download_args *args);
 
 /**
  * nvme_mi_admin_fw_commit() - Commit firmware using the specified action
- * @ctrl: Controller to send firmware data to
+ * @link: Link to send firmware data to
  * @args: &struct nvme_fw_download_args argument structure
  *
  * The Firmware Commit command modifies the firmware image or Boot Partitions.
  *
  * Return: 0 on success, non-zero on failure
  */
-int nvme_mi_admin_fw_commit(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_fw_commit(nvme_link_t link,
 			    struct nvme_fw_commit_args *args);
 
 /**
  * nvme_mi_admin_format_nvm() - Format NVMe namespace
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @args: Format NVM command arguments
  *
  * Perform a low-level format to set the LBA data & metadata size. May destroy
@@ -3418,12 +3410,12 @@ int nvme_mi_admin_fw_commit(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_format_nvm(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_format_nvm(nvme_link_t link,
 			     struct nvme_format_nvm_args *args);
 
 /**
  * nvme_mi_admin_sanitize_nvm() - Start a subsystem Sanitize operation
- * @ctrl: Controller to send command to
+ * @link: Link to send command to
  * @args: Sanitize command arguments
  *
  * A sanitize operation alters all user data in the NVM subsystem such that
@@ -3439,7 +3431,7 @@ int nvme_mi_admin_format_nvm(nvme_mi_ctrl_t ctrl,
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.
  */
-int nvme_mi_admin_sanitize_nvm(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_sanitize_nvm(nvme_link_t link,
 			       struct nvme_sanitize_nvm_args *args);
 
 /**

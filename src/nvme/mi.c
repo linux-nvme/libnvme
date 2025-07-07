@@ -159,7 +159,7 @@ void nvme_mi_ep_probe(struct nvme_mi_ep *ep)
 {
 	struct nvme_identify_args id_args = { 0 };
 	struct nvme_id_ctrl id = { 0 };
-	struct nvme_mi_ctrl *ctrl;
+	struct nvme_link *link;
 	int rc;
 
 	/* Ensure the probe occurs at most once. This isn't just to mitigate doubling
@@ -182,8 +182,8 @@ void nvme_mi_ep_probe(struct nvme_mi_ep *ep)
 	/* start with no quirks, detect as we go */
 	ep->quirks = 0;
 
-	ctrl = nvme_mi_init_ctrl(ep, 0);
-	if (!ctrl)
+	link = nvme_mi_init_link(ep, 0);
+	if (!link)
 		return;
 
 	/* Do enough of an identify (assuming controller 0) to retrieve
@@ -205,7 +205,7 @@ void nvme_mi_ep_probe(struct nvme_mi_ep *ep)
 	id_args.cntid = 0;
 	id_args.csi = NVME_CSI_NVM;
 
-	rc = nvme_mi_admin_identify_partial(ctrl, &id_args, 0,
+	rc = nvme_mi_admin_identify_partial(link, &id_args, 0,
 				    offsetof(struct nvme_id_ctrl, rab));
 	if (rc) {
 		nvme_msg(ep->root, LOG_WARNING,
@@ -238,7 +238,7 @@ void nvme_mi_ep_probe(struct nvme_mi_ep *ep)
 	}
 
 out_close:
-	nvme_mi_close_ctrl(ctrl);
+	nvme_mi_close_link(link);
 }
 
 static const int nsec_per_sec = 1000 * 1000 * 1000;
@@ -337,25 +337,25 @@ static bool nvme_mi_ep_has_quirk(nvme_mi_ep_t ep, unsigned long quirk)
 	return ep->quirks & quirk;
 }
 
-struct nvme_mi_ctrl *nvme_mi_init_ctrl(nvme_mi_ep_t ep, __u16 ctrl_id)
+struct nvme_link *nvme_mi_init_link(nvme_mi_ep_t ep, __u16 ctrl_id)
 {
-	struct nvme_mi_ctrl *ctrl;
+	struct nvme_link *link;
 
-	ctrl = malloc(sizeof(*ctrl));
-	if (!ctrl)
+	link = malloc(sizeof(*link));
+	if (!link)
 		return NULL;
 
-	ctrl->ep = ep;
-	ctrl->id = ctrl_id;
+	link->ep = ep;
+	link->id = ctrl_id;
 
-	list_add_tail(&ep->controllers, &ctrl->ep_entry);
+	list_add_tail(&ep->controllers, &link->ep_entry);
 
-	return ctrl;
+	return link;
 }
 
-__u16 nvme_mi_ctrl_id(nvme_mi_ctrl_t ctrl)
+__u16 nvme_mi_ctrl_id(nvme_link_t link)
 {
-	return ctrl->id;
+	return link->id;
 }
 
 int nvme_mi_scan_ep(nvme_mi_ep_t ep, bool force_rescan)
@@ -366,9 +366,9 @@ int nvme_mi_scan_ep(nvme_mi_ep_t ep, bool force_rescan)
 
 	if (ep->controllers_scanned) {
 		if (force_rescan) {
-			struct nvme_mi_ctrl *ctrl, *tmp;
-			nvme_mi_for_each_ctrl_safe(ep, ctrl, tmp)
-				nvme_mi_close_ctrl(ctrl);
+			struct nvme_link *link, *tmp;
+			nvme_mi_for_each_link_safe(ep, link, tmp)
+				nvme_mi_close_link(link);
 		} else {
 			return 0;
 		}
@@ -385,13 +385,13 @@ int nvme_mi_scan_ep(nvme_mi_ep_t ep, bool force_rescan)
 	}
 
 	for (i = 0; i < n_ctrl; i++) {
-		struct nvme_mi_ctrl *ctrl;
+		struct nvme_link *link;
 		__u16 id;
 
 		id = le16_to_cpu(list.identifier[i]);
 
-		ctrl = nvme_mi_init_ctrl(ep, id);
-		if (!ctrl)
+		link = nvme_mi_init_link(ep, id);
+		if (!link)
 			break;
 	}
 
@@ -756,7 +756,7 @@ static int nvme_mi_get_async_message(nvme_mi_ep_t ep,
 }
 
 
-int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_xfer(nvme_link_t link,
 		       struct nvme_mi_admin_req_hdr *admin_req,
 		       size_t req_data_size,
 		       struct nvme_mi_admin_resp_hdr *admin_resp,
@@ -807,9 +807,9 @@ int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
 	admin_req->hdr.type = NVME_MI_MSGTYPE_NVME;
 	admin_req->hdr.nmp = (NVME_MI_ROR_REQ << 7) |
 			     (NVME_MI_MT_ADMIN << 3) |
-			     (ctrl->ep->csi & 1);
+			     (link->ep->csi & 1);
 
-	admin_req->ctrl_id = cpu_to_le16(ctrl->id);
+	admin_req->ctrl_id = cpu_to_le16(link->id);
 	memset(&req, 0, sizeof(req));
 	req.hdr = &admin_req->hdr;
 	req.hdr_len = sizeof(*admin_req);
@@ -836,7 +836,7 @@ int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
 	admin_req->dlen = cpu_to_le32(dlen);
 	admin_req->doff = cpu_to_le32(doff);
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
@@ -845,7 +845,7 @@ int nvme_mi_admin_xfer(nvme_mi_ctrl_t ctrl,
 	return 0;
 }
 
-int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
+int nvme_mi_admin_admin_passthru(nvme_link_t link, __u8 opcode, __u8 flags,
 				 __u16 rsvd, __u32 nsid, __u32 cdw2, __u32 cdw3,
 				 __u32 cdw10, __u32 cdw11, __u32 cdw12,
 				 __u32 cdw13, __u32 cdw14, __u32 cdw15,
@@ -864,14 +864,14 @@ int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
 	bool has_read_data = false;
 
 	if (direction == NVME_DATA_TFR_BIDIRECTIONAL) {
-		nvme_msg(ctrl->ep->root, LOG_ERR,
+		nvme_msg(link->root, LOG_ERR,
 			"nvme_mi_admin_admin_passthru doesn't support bidirectional commands\n");
 		errno = EINVAL;
 		return -1;
 	}
 
 	if (data_len > 4096) {
-		nvme_msg(ctrl->ep->root, LOG_ERR,
+		nvme_msg(link->root, LOG_ERR,
 			"nvme_mi_admin_admin_passthru doesn't support data_len over 4096 bytes.\n");
 		errno = EINVAL;
 		return -1;
@@ -884,7 +884,7 @@ int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
 			has_read_data = true;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id, opcode);
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id, opcode);
 	req_hdr.cdw1 = cpu_to_le32(nsid);
 	req_hdr.cdw2 = cpu_to_le32(cdw2);
 	req_hdr.cdw3 = cpu_to_le32(cdw3);
@@ -917,12 +917,12 @@ int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
 	 * timeout and override
 	 */
 	if (timeout_ms != 0) {
-		timeout_save = nvme_mi_ep_get_timeout(ctrl->ep);
-		nvme_mi_ep_set_timeout(ctrl->ep, timeout_ms);
+		timeout_save = nvme_mi_ep_get_timeout(link->ep);
+		nvme_mi_ep_set_timeout(link->ep, timeout_ms);
 	}
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (timeout_ms != 0)
-		nvme_mi_ep_set_timeout(ctrl->ep, timeout_save);
+		nvme_mi_ep_set_timeout(link->ep, timeout_save);
 
 	if (rc)
 		return rc;
@@ -939,7 +939,7 @@ int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
 	return 0;
 }
 
-int nvme_mi_admin_identify_partial(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_identify_partial(nvme_link_t link,
 				   struct nvme_identify_args *args,
 				   off_t offset, size_t size)
 {
@@ -959,7 +959,7 @@ int nvme_mi_admin_identify_partial(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id, nvme_admin_identify);
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id, nvme_admin_identify);
 	req_hdr.cdw1 = cpu_to_le32(args->nsid);
 	req_hdr.cdw10 = cpu_to_le32(args->cntid << 16 | args->cns);
 	req_hdr.cdw11 = cpu_to_le32((args->csi & 0xff) << 24 |
@@ -976,7 +976,7 @@ int nvme_mi_admin_identify_partial(nvme_mi_ctrl_t ctrl,
 	resp.data = args->data;
 	resp.data_len = size;
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
@@ -1026,7 +1026,7 @@ int nvme_mi_control(nvme_mi_ep_t ep, __u8 opcode,
  * this option seems to be supported better by devices.  For more information
  * about this option, please check https://github.com/linux-nvme/libnvme/pull/539
  * */
-static int __nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl,
+static int __nvme_mi_admin_get_log(nvme_link_t link,
 				   const struct nvme_get_log_args *args,
 				   off_t offset, size_t *lenp, bool final)
 {
@@ -1054,7 +1054,7 @@ static int __nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl,
 
 	ndw = (len >> 2) - 1;
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 		nvme_admin_get_log_page);
 	req_hdr.cdw1 = cpu_to_le32(args->nsid);
 	req_hdr.cdw10 = cpu_to_le32((ndw & 0xffff) << 16 |
@@ -1075,7 +1075,7 @@ static int __nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl,
 	resp.data = args->log + offset;
 	resp.data_len = len;
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
@@ -1086,7 +1086,7 @@ static int __nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl,
 	return rc;
 }
 
-int nvme_mi_admin_get_log_page(nvme_mi_ctrl_t ctrl, __u32 xfer_size,
+int nvme_mi_admin_get_log_page(nvme_link_t link, __u32 xfer_size,
 			       struct nvme_get_log_args *args)
 {
 	const size_t max_xfer_size = xfer_size;
@@ -1115,7 +1115,7 @@ int nvme_mi_admin_get_log_page(nvme_mi_ctrl_t ctrl, __u32 xfer_size,
 		final = xfer_offset + cur_xfer_size >= args->len;
 
 		/* xfered_size is used as both input and output parameter */
-		rc = __nvme_mi_admin_get_log(ctrl, args, xfer_offset,
+		rc = __nvme_mi_admin_get_log(link, args, xfer_offset,
 					     &xfered_size, final);
 		if (rc)
 			break;
@@ -1133,12 +1133,12 @@ int nvme_mi_admin_get_log_page(nvme_mi_ctrl_t ctrl, __u32 xfer_size,
 	return rc;
 }
 
-int nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl, struct nvme_get_log_args *args)
+int nvme_mi_admin_get_log(nvme_link_t link, struct nvme_get_log_args *args)
 {
-	return nvme_mi_admin_get_log_page(ctrl, 4096, args);
+	return nvme_mi_admin_get_log_page(link, 4096, args);
 }
 
-static int read_ana_chunk(nvme_mi_ctrl_t ctrl, enum nvme_log_ana_lsp lsp, bool rae,
+static int read_ana_chunk(nvme_link_t link, enum nvme_log_ana_lsp lsp, bool rae,
 			  __u8 *log, __u8 **read, __u8 *to_read, __u8 *log_end)
 {
 	if (to_read > log_end) {
@@ -1150,7 +1150,7 @@ static int read_ana_chunk(nvme_mi_ctrl_t ctrl, enum nvme_log_ana_lsp lsp, bool r
 		__u32 len = min_t(__u32, log_end - *read, NVME_LOG_PAGE_PDU_SIZE);
 		int ret;
 
-		ret = nvme_mi_admin_get_log_ana(ctrl, lsp, rae,
+		ret = nvme_mi_admin_get_log_ana(link, lsp, rae,
 						*read - log, len, *read);
 		if (ret)
 			return ret;
@@ -1160,7 +1160,7 @@ static int read_ana_chunk(nvme_mi_ctrl_t ctrl, enum nvme_log_ana_lsp lsp, bool r
 	return 0;
 }
 
-static int try_read_ana(nvme_mi_ctrl_t ctrl, enum nvme_log_ana_lsp lsp, bool rae,
+static int try_read_ana(nvme_link_t link, enum nvme_log_ana_lsp lsp, bool rae,
 			struct nvme_ana_log *log, __u8 *log_end,
 			__u8 *read, __u8 **to_read, bool *may_retry)
 {
@@ -1172,7 +1172,7 @@ static int try_read_ana(nvme_mi_ctrl_t ctrl, enum nvme_log_ana_lsp lsp, bool rae
 		__le32 nnsids;
 
 		*to_read += sizeof(*log->descs);
-		ret = read_ana_chunk(ctrl, lsp, rae,
+		ret = read_ana_chunk(link, lsp, rae,
 				     (__u8 *)log, &read, *to_read, log_end);
 		if (ret) {
 			/*
@@ -1194,7 +1194,7 @@ static int try_read_ana(nvme_mi_ctrl_t ctrl, enum nvme_log_ana_lsp lsp, bool rae
 		       group + offsetof(struct nvme_ana_group_desc, nnsids),
 		       sizeof(nnsids));
 		*to_read += le32_to_cpu(nnsids) * sizeof(__le32);
-		ret = read_ana_chunk(ctrl, lsp, rae,
+		ret = read_ana_chunk(link, lsp, rae,
 				     (__u8 *)log, &read, *to_read, log_end);
 		if (ret) {
 			*may_retry = errno == ENOSPC;
@@ -1206,7 +1206,7 @@ static int try_read_ana(nvme_mi_ctrl_t ctrl, enum nvme_log_ana_lsp lsp, bool rae
 	return 0;
 }
 
-int nvme_mi_admin_get_ana_log_atomic(nvme_mi_ctrl_t ctrl, bool rgo, bool rae,
+int nvme_mi_admin_get_ana_log_atomic(nvme_link_t link, bool rgo, bool rae,
 				     unsigned int retries,
 				     struct nvme_ana_log *log, __u32 *len)
 {
@@ -1224,7 +1224,7 @@ int nvme_mi_admin_get_ana_log_atomic(nvme_mi_ctrl_t ctrl, bool rgo, bool rae,
 	}
 
 	to_read = (__u8 *)log->descs;
-	ret = read_ana_chunk(ctrl, lsp, rae,
+	ret = read_ana_chunk(link, lsp, rae,
 			     (__u8 *)log, &read, to_read, log_end);
 	if (ret)
 		return ret;
@@ -1235,7 +1235,7 @@ int nvme_mi_admin_get_ana_log_atomic(nvme_mi_ctrl_t ctrl, bool rgo, bool rae,
 		int saved_errno;
 		__le64 chgcnt;
 
-		saved_ret = try_read_ana(ctrl, lsp, rae, log, log_end,
+		saved_ret = try_read_ana(link, lsp, rae, log, log_end,
 					 read, &to_read, &may_retry);
 		/*
 		 * If the log page was read with multiple Get Log Page commands,
@@ -1249,7 +1249,7 @@ int nvme_mi_admin_get_ana_log_atomic(nvme_mi_ctrl_t ctrl, bool rgo, bool rae,
 		chgcnt = log->chgcnt;
 		read = (__u8 *)log;
 		to_read = (__u8 *)log->descs;
-		ret = read_ana_chunk(ctrl, lsp, rae,
+		ret = read_ana_chunk(link, lsp, rae,
 				     (__u8 *)log, &read, to_read, log_end);
 		if (ret)
 			return ret;
@@ -1265,7 +1265,7 @@ int nvme_mi_admin_get_ana_log_atomic(nvme_mi_ctrl_t ctrl, bool rgo, bool rae,
 	return -1;
 }
 
-int nvme_mi_admin_security_send(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_security_send(nvme_link_t link,
 				struct nvme_security_send_args *args)
 {
 
@@ -1285,7 +1285,7 @@ int nvme_mi_admin_security_send(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_security_send);
 
 	req_hdr.cdw10 = cpu_to_le32(args->secp << 24 |
@@ -1302,14 +1302,14 @@ int nvme_mi_admin_security_send(nvme_mi_ctrl_t ctrl,
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
 	return nvme_mi_admin_parse_status(&resp, args->result);
 }
 
-int nvme_mi_admin_security_recv(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_security_recv(nvme_link_t link,
 				struct nvme_security_receive_args *args)
 {
 
@@ -1329,7 +1329,7 @@ int nvme_mi_admin_security_recv(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_security_recv);
 
 	req_hdr.cdw10 = cpu_to_le32(args->secp << 24 |
@@ -1346,7 +1346,7 @@ int nvme_mi_admin_security_recv(nvme_mi_ctrl_t ctrl,
 	resp.data = args->data;
 	resp.data_len = args->data_len;
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
@@ -1359,7 +1359,7 @@ int nvme_mi_admin_security_recv(nvme_mi_ctrl_t ctrl,
 	return 0;
 }
 
-int nvme_mi_admin_get_features(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_get_features(nvme_link_t link,
 			       struct nvme_get_features_args *args)
 {
 	struct nvme_mi_admin_resp_hdr resp_hdr;
@@ -1373,7 +1373,7 @@ int nvme_mi_admin_get_features(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_get_features);
 
 	req_hdr.cdw1 = cpu_to_le32(args->nsid);
@@ -1385,7 +1385,7 @@ int nvme_mi_admin_get_features(nvme_mi_ctrl_t ctrl,
 	resp.data = args->data;
 	resp.data_len = args->data_len;
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
@@ -1398,7 +1398,7 @@ int nvme_mi_admin_get_features(nvme_mi_ctrl_t ctrl,
 	return 0;
 }
 
-static int __nvme_mi_admin_get_features(nvme_mi_ctrl_t ctrl, enum nvme_features_id fid,
+static int __nvme_mi_admin_get_features(nvme_link_t link, enum nvme_features_id fid,
 					enum nvme_get_features_sel sel, __u32 *result)
 {
 	struct nvme_get_features_args args = {
@@ -1414,22 +1414,22 @@ static int __nvme_mi_admin_get_features(nvme_mi_ctrl_t ctrl, enum nvme_features_
 		.result = result,
 	};
 
-	return nvme_mi_admin_get_features(ctrl, &args);
+	return nvme_mi_admin_get_features(link, &args);
 }
 
-int nvme_mi_admin_get_features_arbitration(nvme_mi_ctrl_t ctrl, enum nvme_get_features_sel sel,
+int nvme_mi_admin_get_features_arbitration(nvme_link_t link, enum nvme_get_features_sel sel,
 					   __u32 *result)
 {
-	return __nvme_mi_admin_get_features(ctrl, NVME_FEAT_FID_ARBITRATION, sel, result);
+	return __nvme_mi_admin_get_features(link, NVME_FEAT_FID_ARBITRATION, sel, result);
 }
 
-int nvme_mi_admin_get_features_power_mgmt(nvme_mi_ctrl_t ctrl, enum nvme_get_features_sel sel,
+int nvme_mi_admin_get_features_power_mgmt(nvme_link_t link, enum nvme_get_features_sel sel,
 					  __u32 *result)
 {
-	return __nvme_mi_admin_get_features(ctrl, NVME_FEAT_FID_POWER_MGMT, sel, result);
+	return __nvme_mi_admin_get_features(link, NVME_FEAT_FID_POWER_MGMT, sel, result);
 }
 
-int nvme_mi_admin_set_features(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_set_features(nvme_link_t link,
 			       struct nvme_set_features_args *args)
 {
 	struct nvme_mi_admin_resp_hdr resp_hdr;
@@ -1443,7 +1443,7 @@ int nvme_mi_admin_set_features(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_set_features);
 
 	req_hdr.cdw1 = cpu_to_le32(args->nsid);
@@ -1460,7 +1460,7 @@ int nvme_mi_admin_set_features(nvme_mi_ctrl_t ctrl,
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
@@ -1473,7 +1473,7 @@ int nvme_mi_admin_set_features(nvme_mi_ctrl_t ctrl,
 	return 0;
 }
 
-static int __nvme_mi_admin_set_features(nvme_mi_ctrl_t ctrl, __u8 fid, __u32 cdw11, bool save,
+static int __nvme_mi_admin_set_features(nvme_link_t link, __u8 fid, __u32 cdw11, bool save,
 					__u32 *result)
 {
 	struct nvme_set_features_args args = {
@@ -1489,18 +1489,18 @@ static int __nvme_mi_admin_set_features(nvme_mi_ctrl_t ctrl, __u8 fid, __u32 cdw
 		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
 		.result = result,
 	};
-	return nvme_mi_admin_set_features(ctrl, &args);
+	return nvme_mi_admin_set_features(link, &args);
 }
 
-int nvme_mi_admin_set_features_power_mgmt(nvme_mi_ctrl_t ctrl, __u8 ps, __u8 wh, bool save,
+int nvme_mi_admin_set_features_power_mgmt(nvme_link_t link, __u8 ps, __u8 wh, bool save,
 					  __u32 *result)
 {
 	__u32 value = NVME_SET(ps, FEAT_PWRMGMT_PS) | NVME_SET(wh, FEAT_PWRMGMT_WH);
 
-	return __nvme_mi_admin_set_features(ctrl, NVME_FEAT_FID_POWER_MGMT, value, save, result);
+	return __nvme_mi_admin_set_features(link, NVME_FEAT_FID_POWER_MGMT, value, save, result);
 }
 
-int nvme_mi_admin_ns_mgmt(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_ns_mgmt(nvme_link_t link,
 			  struct nvme_ns_mgmt_args *args)
 {
 	const size_t size_v1 = sizeof_args(struct nvme_ns_mgmt_args, csi, __u64);
@@ -1517,7 +1517,7 @@ int nvme_mi_admin_ns_mgmt(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_ns_mgmt);
 
 	req_hdr.cdw1 = cpu_to_le32(args->nsid);
@@ -1545,14 +1545,14 @@ int nvme_mi_admin_ns_mgmt(nvme_mi_ctrl_t ctrl,
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
 	return nvme_mi_admin_parse_status(&resp, args->result);
 }
 
-int nvme_mi_admin_ns_attach(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_ns_attach(nvme_link_t link,
 			    struct nvme_ns_attach_args *args)
 {
 	struct nvme_mi_admin_resp_hdr resp_hdr;
@@ -1566,7 +1566,7 @@ int nvme_mi_admin_ns_attach(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_ns_attach);
 
 	req_hdr.cdw1 = cpu_to_le32(args->nsid);
@@ -1578,14 +1578,14 @@ int nvme_mi_admin_ns_attach(nvme_mi_ctrl_t ctrl,
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
 	return nvme_mi_admin_parse_status(&resp, args->result);
 }
 
-int nvme_mi_admin_fw_download(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_fw_download(nvme_link_t link,
 			      struct nvme_fw_download_args *args)
 {
 	struct nvme_mi_admin_resp_hdr resp_hdr;
@@ -1609,7 +1609,7 @@ int nvme_mi_admin_fw_download(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_fw_download);
 
 	req_hdr.cdw10 = cpu_to_le32((args->data_len >> 2) - 1);
@@ -1621,14 +1621,14 @@ int nvme_mi_admin_fw_download(nvme_mi_ctrl_t ctrl,
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
 	return nvme_mi_admin_parse_status(&resp, NULL);
 }
 
-int nvme_mi_admin_fw_commit(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_fw_commit(nvme_link_t link,
 			    struct nvme_fw_commit_args *args)
 {
 	struct nvme_mi_admin_resp_hdr resp_hdr;
@@ -1642,7 +1642,7 @@ int nvme_mi_admin_fw_commit(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_fw_commit);
 
 	req_hdr.cdw10 = cpu_to_le32(((__u32)(args->bpid & 0x1) << 31) |
@@ -1651,14 +1651,14 @@ int nvme_mi_admin_fw_commit(nvme_mi_ctrl_t ctrl,
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
 	return nvme_mi_admin_parse_status(&resp, NULL);
 }
 
-int nvme_mi_admin_format_nvm(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_format_nvm(nvme_link_t link,
 			     struct nvme_format_nvm_args *args)
 {
 	struct nvme_mi_admin_resp_hdr resp_hdr;
@@ -1672,7 +1672,7 @@ int nvme_mi_admin_format_nvm(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_format_nvm);
 
 	req_hdr.cdw1 = cpu_to_le32(args->nsid);
@@ -1685,14 +1685,14 @@ int nvme_mi_admin_format_nvm(nvme_mi_ctrl_t ctrl,
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
 	return nvme_mi_admin_parse_status(&resp, args->result);
 }
 
-int nvme_mi_admin_sanitize_nvm(nvme_mi_ctrl_t ctrl,
+int nvme_mi_admin_sanitize_nvm(nvme_link_t link,
 			       struct nvme_sanitize_nvm_args *args)
 {
 	struct nvme_mi_admin_resp_hdr resp_hdr;
@@ -1706,7 +1706,7 @@ int nvme_mi_admin_sanitize_nvm(nvme_mi_ctrl_t ctrl,
 		return -1;
 	}
 
-	nvme_mi_admin_init_req(ctrl->ep, &req, &req_hdr, ctrl->id,
+	nvme_mi_admin_init_req(link->ep, &req, &req_hdr, link->id,
 			       nvme_admin_sanitize_nvm);
 
 	req_hdr.cdw10 = cpu_to_le32(((args->nodas ? 1 : 0) << 9)
@@ -1718,7 +1718,7 @@ int nvme_mi_admin_sanitize_nvm(nvme_mi_ctrl_t ctrl,
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
-	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
+	rc = nvme_mi_submit(link->ep, &req, &resp);
 	if (rc)
 		return rc;
 
@@ -2097,13 +2097,13 @@ int nvme_mi_mi_config_set_async_event(nvme_mi_ep_t ep,
 
 void nvme_mi_close(nvme_mi_ep_t ep)
 {
-	struct nvme_mi_ctrl *ctrl, *tmp;
+	struct nvme_link *link, *tmp;
 
 	/* don't look for controllers during destruction */
 	ep->controllers_scanned = true;
 
-	nvme_mi_for_each_ctrl_safe(ep, ctrl, tmp)
-		nvme_mi_close_ctrl(ctrl);
+	nvme_mi_for_each_link_safe(ep, link, tmp)
+		nvme_mi_close_link(link);
 
 	if (ep->transport && ep->transport->close)
 		ep->transport->close(ep);
@@ -2111,10 +2111,10 @@ void nvme_mi_close(nvme_mi_ep_t ep)
 	free(ep);
 }
 
-void nvme_mi_close_ctrl(nvme_mi_ctrl_t ctrl)
+void nvme_mi_close_link(nvme_link_t link)
 {
-	list_del(&ctrl->ep_entry);
-	free(ctrl);
+	list_del(&link->ep_entry);
+	free(link);
 }
 
 char *nvme_mi_endpoint_desc(nvme_mi_ep_t ep)
@@ -2157,16 +2157,15 @@ nvme_mi_ep_t nvme_mi_next_endpoint(nvme_root_t m, nvme_mi_ep_t ep)
 	return ep ? list_next(&m->endpoints, ep, root_entry) : NULL;
 }
 
-nvme_mi_ctrl_t nvme_mi_first_ctrl(nvme_mi_ep_t ep)
+nvme_link_t nvme_mi_first_link(nvme_mi_ep_t ep)
 {
-	return list_top(&ep->controllers, struct nvme_mi_ctrl, ep_entry);
+	return list_top(&ep->controllers, struct nvme_link, ep_entry);
 }
 
-nvme_mi_ctrl_t nvme_mi_next_ctrl(nvme_mi_ep_t ep, nvme_mi_ctrl_t c)
+nvme_link_t nvme_mi_next_link(nvme_mi_ep_t ep, nvme_link_t l)
 {
-	return c ? list_next(&ep->controllers, c, ep_entry) : NULL;
+	return l ? list_next(&ep->controllers, l, ep_entry) : NULL;
 }
-
 
 static const char *const mi_status[] = {
         [NVME_MI_RESP_MPR]                   = "More Processing Required: The command message is in progress and requires more time to complete processing",

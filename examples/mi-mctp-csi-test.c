@@ -57,7 +57,7 @@ void hexdump(const unsigned char *buf, int len)
 int do_get_log_page(nvme_mi_ep_t ep, int argc, char **argv)
 {
 	struct nvme_get_log_args args = { 0 };
-	struct nvme_mi_ctrl *ctrl;
+	struct nvme_link *link;
 	uint8_t buf[4096];
 	uint16_t ctrl_id;
 	int rc, tmp;
@@ -86,13 +86,13 @@ int do_get_log_page(nvme_mi_ep_t ep, int argc, char **argv)
 		args.lid = 0x1;
 	}
 
-	ctrl = nvme_mi_init_ctrl(ep, ctrl_id);
-	if (!ctrl) {
+	link = nvme_mi_init_link(ep, ctrl_id);
+	if (!link) {
 		warn("can't create controller");
 		return -1;
 	}
 
-	rc = nvme_mi_admin_get_log(ctrl, &args);
+	rc = nvme_mi_admin_get_log(link, &args);
 	if (rc) {
 		warn("can't perform Get Log page command");
 		return -1;
