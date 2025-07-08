@@ -187,7 +187,19 @@ int nvme_admin_passthru64(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 
 int nvme_submit_admin_passthru(nvme_link_t l, struct nvme_passthru_cmd *cmd, __u32 *result)
 {
-	return nvme_submit_passthru(l, NVME_IOCTL_ADMIN_CMD, cmd, result);
+	switch (l->type) {
+	case NVME_LINK_TYPE_DIRECT:
+		return nvme_submit_passthru(l, NVME_IOCTL_ADMIN_CMD, cmd, result);
+	case NVME_LINK_TYPE_MI:
+		return nvme_mi_admin_admin_passthru(
+			l, cmd->opcode, cmd->flags, cmd->rsvd1,
+			cmd->nsid, cmd->cdw2, cmd->cdw3, cmd->cdw10, cmd->cdw11, cmd->cdw12, cmd->cdw13,
+			cmd->cdw14, cmd->cdw15, cmd->data_len, (void*)cmd->addr, cmd->metadata_len,
+			(void*)cmd->metadata, cmd->timeout_ms, result);
+	default:
+		errno = ENOTSUP;
+		return -1;
+       }
 }
 
 int nvme_admin_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
