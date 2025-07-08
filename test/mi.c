@@ -14,6 +14,7 @@
 #include <ccan/endian/endian.h>
 
 /* we define a custom transport, so need the internal headers */
+#include "nvme/linux.h"
 #include "nvme/private.h"
 
 #include "libnvme-mi.h"
@@ -196,11 +197,11 @@ static void test_ctrl_lifetime(nvme_mi_ep_t ep)
 	count = count_ep_controllers(ep);
 	assert(count == 2);
 
-	nvme_mi_close_link(l1);
+	nvme_close(l1);
 	count = count_ep_controllers(ep);
 	assert(count == 1);
 
-	nvme_mi_close_link(l2);
+	nvme_close(l2);
 	count = count_ep_controllers(ep);
 	assert(count == 0);
 }

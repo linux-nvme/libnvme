@@ -931,12 +931,6 @@ int nvme_mi_scan_ep(nvme_mi_ep_t ep, bool force_rescan);
 nvme_link_t nvme_mi_init_link(nvme_mi_ep_t ep, __u16 ctrl_id);
 
 /**
- * nvme_mi_close_link() - free a controller
- * @link: link to controller to free
- */
-void nvme_mi_close_link(nvme_link_t link);
-
-/**
  * nvme_mi_ctrl_id() - get the ID of a controller
  * @link: link to controller to query
  *
@@ -948,7 +942,6 @@ void nvme_mi_close_link(nvme_link_t link);
  * Return: the (locally-stored) ID of this controller.
  */
 __u16 nvme_mi_ctrl_id(nvme_link_t link);
-
 
 /**
  * nvme_mi_endpoint_desc - Get a string describing a MI endpoint.

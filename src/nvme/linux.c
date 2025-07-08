@@ -41,10 +41,19 @@
 #include "base64.h"
 #include "crc32.h"
 
-static int __nvme_open_dev(const char *name)
+static int __nvme_link_open_direct(nvme_link_t l, const char *devname)
 {
 	_cleanup_free_ char *path = NULL;
-	int ret;
+	char *name = basename(devname);
+	int ret, id, ns;
+	bool c;
+
+	l->type = NVME_LINK_TYPE_DIRECT;
+
+	ret = sscanf(name, "nvme%dn%d", &id, &ns);
+	if (ret != 1 && ret != 2)
+		return -EINVAL;
+	c = ret == 1;
 
 	ret = asprintf(&path, "%s/%s", "/dev", name);
 	if (ret < 0) {
@@ -52,16 +61,35 @@ static int __nvme_open_dev(const char *name)
 		return -1;
 	}
 
-	return open(path, O_RDONLY);
+	l->fd = open(path, O_RDONLY);
+	if (l->fd < 0)
+		return -errno;
+
+	ret = fstat(l->fd, &l->stat);
+	if (ret < 0)
+		return -errno;
+
+	if (c) {
+		if (!S_ISCHR(l->stat.st_mode))
+			return -EINVAL;
+	} else if (!S_ISBLK(l->stat.st_mode)) {
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
-nvme_link_t nvme_open(nvme_root_t r, const char *name)
+void __nvme_link_close_direct(nvme_link_t l)
+{
+	close(l->fd);
+	free(l);
+}
+
+nvme_link_t __nvme_create_link(nvme_root_t r)
 {
 	nvme_link_t l;
-	int ret, id, ns;
-	bool c;
 
-	l = malloc(sizeof(*l));
+	l = calloc(1, sizeof(*l));
 	if (!l) {
 		errno = ENOMEM;
 		return NULL;
@@ -69,51 +97,43 @@ nvme_link_t nvme_open(nvme_root_t r, const char *name)
 
 	l->root = r;
 
+	return l;
+}
+
+nvme_link_t nvme_open(nvme_root_t r, const char *name)
+{
+	nvme_link_t l;
+	int ret;
+
+	l = __nvme_create_link(r);
+	if (!l)
+		 NULL;
+
+	l->name = strdup(name);
+	if (!l->name) {
+		free(l);
+		errno = -ENOMEM;
+		return NULL;
+	}
+
 	if (!strcmp(name, "NVME_TEST_FD")) {
+		l->type = NVME_LINK_TYPE_DIRECT;
 		l->fd = 0xFD;
 		return l;
 	}
 
-	ret = sscanf(name, "nvme%dn%d", &id, &ns);
-	if (ret != 1 && ret != 2) {
-		errno = EINVAL;
-		goto free_link;
-	}
-	c = ret == 1;
+	if (!strncmp(name, "mctp:", strlen("mctp:")))
+		ret = __nvme_link_open_mi(l, name);
+	else
+		ret = __nvme_link_open_direct(l, name);
 
-	l->name = strdup(name);
-	if (!l->name) {
-		errno = ENOMEM;
-		goto free_link;
-	}
-
-	l->fd = __nvme_open_dev(l->name);
-	if (l->fd < 0)
-		goto free_name;
-
-	ret = fstat(l->fd, &l->stat);
-	if (ret < 0)
-		goto close_fd;
-
-	if (c) {
-		if (!S_ISCHR(l->stat.st_mode)) {
-			errno = EINVAL;
-			goto close_fd;
-		}
-	} else if (!S_ISBLK(l->stat.st_mode)) {
-		errno = EINVAL;
-		goto close_fd;
+	if (ret) {
+		nvme_close(l);
+		errno = -ret;
+		return NULL;
 	}
 
 	return l;
-
-close_fd:
-	close(l->fd);
-free_name:
-	free(l->name);
-free_link:
-	free(l);
-	return NULL;
 }
 
 void nvme_close(nvme_link_t l)
@@ -121,10 +141,18 @@ void nvme_close(nvme_link_t l)
 	if (!l)
 		return;
 
-	close(l->fd);
 	free(l->name);
-	free(l->log);
-	free(l);
+
+	switch (l->type) {
+	case NVME_LINK_TYPE_DIRECT:
+		__nvme_link_close_direct(l);
+		break;
+	case NVME_LINK_TYPE_MI:
+		__nvme_link_close_mi(l);
+		break;
+	case NVME_LINK_TYPE_UNKNOWN:
+		free(l);
+	}
 }
 
 int nvme_link_get_fd(nvme_link_t l)

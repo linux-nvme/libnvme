@@ -31,8 +31,15 @@ struct nvme_log {
 	bool timestamp;
 };
 
+enum nvme_link_type {
+	NVME_LINK_TYPE_UNKNOWN = 0,
+	NVME_LINK_TYPE_DIRECT,
+	NVME_LINK_TYPE_MI,
+};
+
 struct nvme_link {
 	struct nvme_root *root;
+	enum nvme_link_type type;
 	char *name;
 
 	/* direct */
@@ -216,6 +223,10 @@ int json_update_config(nvme_root_t r, const char *config_file);
 int json_dump_tree(nvme_root_t r);
 
 nvme_link_t __nvme_open(nvme_root_t r, const char *name);
+nvme_link_t __nvme_create_link(nvme_root_t root);
+int __nvme_link_open_mi(nvme_link_t l, const char *devname);
+int __nvme_link_init_mi(nvme_link_t l);
+void __nvme_link_close_mi(nvme_link_t link);
 
 nvme_ctrl_t __nvme_lookup_ctrl(nvme_subsystem_t s, const char *transport,
 			       const char *traddr, const char *host_traddr,

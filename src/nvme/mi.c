@@ -19,6 +19,7 @@
 
 #include "log.h"
 #include "mi.h"
+#include "linux.h"
 #include "private.h"
 
 #define NUM_ENABLES    (256u)
@@ -54,6 +55,61 @@ static bool nvme_mi_probe_enabled_default(void)
 		strcasecmp(val, "false") &&
 		strncasecmp(val, "disable", 7);
 
+}
+
+static int parse_devname(const char *dev, unsigned int *net, uint8_t *eid,
+			unsigned int *ctrl)
+{
+	int rc;
+
+	/* <net>,<eid>:<ctrl-id> form */
+	rc = sscanf(dev, "mctp:%u,%hhu:%u", net, eid, ctrl);
+	if (rc == 3)
+		return 0;
+
+	/* <net>,<eid> form, implicit ctrl-id = 0 */
+	*ctrl = 0;
+	rc = sscanf(dev, "mctp:%u,%hhu", net, eid);
+	if (rc == 2)
+		return 0;
+
+	return -EINVAL;
+}
+
+int __nvme_link_init_mi(nvme_link_t l)
+{
+	if (l->type != NVME_LINK_TYPE_UNKNOWN)
+		return -EALREADY;
+
+	l->type = NVME_LINK_TYPE_MI;
+
+	return 0;
+}
+
+int __nvme_link_open_mi(nvme_link_t l, const char *devname)
+{
+	unsigned int rc, net, ctrl_id;
+	unsigned char eid;
+	struct nvme_mi_ep *ep;
+
+	rc = __nvme_link_init_mi(l);
+	if (rc)
+		return rc;
+
+	rc = parse_devname(devname, &net, &eid, &ctrl_id);
+		return rc;
+
+	ep = nvme_mi_open_mctp(l->root, net, eid);
+	if (!ep)
+		return -EINVAL;
+
+	return 0;
+}
+
+void __nvme_link_close_mi(nvme_link_t link)
+{
+	list_del(&link->ep_entry);
+	free(link);
 }
 
 /* MI-equivalent of nvme_create_root, but avoids clashing symbol names
@@ -238,7 +294,7 @@ void nvme_mi_ep_probe(struct nvme_mi_ep *ep)
 	}
 
 out_close:
-	nvme_mi_close_link(link);
+	nvme_close(link);
 }
 
 static const int nsec_per_sec = 1000 * 1000 * 1000;
@@ -341,9 +397,11 @@ struct nvme_link *nvme_mi_init_link(nvme_mi_ep_t ep, __u16 ctrl_id)
 {
 	struct nvme_link *link;
 
-	link = malloc(sizeof(*link));
-	if (!link)
-		return NULL;
+	link = __nvme_create_link(ep->root);
+ 	if (!link)
+		 NULL;
+
+	__nvme_link_init_mi(link);
 
 	link->ep = ep;
 	link->id = ctrl_id;
@@ -368,7 +426,7 @@ int nvme_mi_scan_ep(nvme_mi_ep_t ep, bool force_rescan)
 		if (force_rescan) {
 			struct nvme_link *link, *tmp;
 			nvme_mi_for_each_link_safe(ep, link, tmp)
-				nvme_mi_close_link(link);
+				nvme_close(link);
 		} else {
 			return 0;
 		}
@@ -2103,18 +2161,12 @@ void nvme_mi_close(nvme_mi_ep_t ep)
 	ep->controllers_scanned = true;
 
 	nvme_mi_for_each_link_safe(ep, link, tmp)
-		nvme_mi_close_link(link);
+		nvme_close(link);
 
 	if (ep->transport && ep->transport->close)
 		ep->transport->close(ep);
 	list_del(&ep->root_entry);
 	free(ep);
-}
-
-void nvme_mi_close_link(nvme_link_t link)
-{
-	list_del(&link->ep_entry);
-	free(link);
 }
 
 char *nvme_mi_endpoint_desc(nvme_mi_ep_t ep)
