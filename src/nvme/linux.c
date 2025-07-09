@@ -170,6 +170,16 @@ bool nvme_link_is_chardev(nvme_link_t l)
 	return S_ISCHR(l->stat.st_mode);
 }
 
+bool nvme_link_is_direct(nvme_link_t l)
+{
+	return l->type == NVME_LINK_TYPE_DIRECT;
+}
+
+bool nvme_link_is_mi(nvme_link_t l)
+{
+	return l->type == NVME_LINK_TYPE_MI;
+}
+
 const char *nvme_link_get_name(nvme_link_t l)
 {
 	return l->name;

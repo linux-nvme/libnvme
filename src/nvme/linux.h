@@ -228,6 +228,22 @@ bool nvme_link_is_blkdev(nvme_link_t l);
 bool nvme_link_is_chardev(nvme_link_t l);
 
 /**
+ * nvme_link_is_direct - Check if link handle is using IOCTL interface
+ * @l:		Link handle
+ *
+ * Return: Return true if link handle is using IOCTL itnerface, otherwise false.
+ */
+bool nvme_link_is_direct(nvme_link_t l);
+
+/**
+ * nvme_link_is_mi - Check if link handle is a using MI interface
+ * @l:		Link handle
+ *
+ * Return: Return true if link handle is using MI interface, otherwise false.
+ */
+bool nvme_link_is_mi(nvme_link_t l);
+
+/**
  * nvme_link_get_name - Return name of the device link handle
  * @l:		Link handle
  *
