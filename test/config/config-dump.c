@@ -4,6 +4,7 @@
  * Copyright (c) 2024 Daniel Wagner, SUSE LLC
  */
 
+#include "nvme/log.h"
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -17,15 +18,13 @@ static bool config_dump(const char *file)
 	nvme_root_t r;
 	int err;
 
-	r = nvme_create_root(stderr, LOG_ERR);
+	r = nvme_create_root(stderr, DEFAULT_LOGLEVEL);
 	if (!r)
 		return false;
 
 	err = nvme_scan_topology(r, NULL, NULL);
-	if (err) {
-		if (errno != ENOENT)
-			goto out;
-	}
+	if (err < 0 && err != -ENOENT)
+		goto out;
 
 	err = nvme_read_config(r, file);
 	if (err)

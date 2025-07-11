@@ -68,8 +68,7 @@ int main()
 	nvme_ctrl_t c;
 	nvme_ns_t n;
 
-	r = nvme_scan(NULL);
-	if (!r)
+	if (nvme_scan(NULL, &r))
 		return -1;
 
 	nvme_for_each_host(r, h) {

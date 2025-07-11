@@ -300,8 +300,7 @@ static int __add_bool_argument(char **argstr, char *tok, bool arg)
 	if (!arg)
 		return 0;
 	if (asprintf(&nstr, "%s,%s", *argstr, tok) < 0) {
-		errno = ENOMEM;
-		return -1;
+		return -ENOMEM;
 	}
 	free(*argstr);
 	*argstr = nstr;
@@ -316,8 +315,7 @@ static int __add_hex_argument(char **argstr, char *tok, int arg, bool allow_zero
 	if (arg < 0 || (!arg && !allow_zero))
 		return 0;
 	if (asprintf(&nstr, "%s,%s=0x%08x", *argstr, tok, arg) < 0) {
-		errno = ENOMEM;
-		return -1;
+		return -ENOMEM;
 	}
 	free(*argstr);
 	*argstr = nstr;
@@ -332,8 +330,7 @@ static int __add_int_argument(char **argstr, char *tok, int arg, bool allow_zero
 	if (arg < 0 || (!arg && !allow_zero))
 		return 0;
 	if (asprintf(&nstr, "%s,%s=%d", *argstr, tok, arg) < 0) {
-		errno = ENOMEM;
-		return -1;
+		return -ENOMEM;
 	}
 	free(*argstr);
 	*argstr = nstr;
@@ -348,8 +345,7 @@ static int __add_int_or_minus_one_argument(char **argstr, char *tok, int arg)
 	if (arg < -1)
 		return 0;
 	if (asprintf(&nstr, "%s,%s=%d", *argstr, tok, arg) < 0) {
-		errno = ENOMEM;
-		return -1;
+		return -ENOMEM;
 	}
 	free(*argstr);
 	*argstr = nstr;
@@ -364,8 +360,7 @@ static int __add_argument(char **argstr, const char *tok, const char *arg)
 	if (!arg || arg[0] == '\0' || !strcmp(arg, "none"))
 		return 0;
 	if (asprintf(&nstr, "%s,%s=%s", *argstr, tok, arg) < 0) {
-		errno = ENOMEM;
-		return -1;
+		return -ENOMEM;
 	}
 	free(*argstr);
 	*argstr = nstr;
@@ -591,23 +586,20 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 
 	if (!transport) {
 		nvme_msg(h->r, LOG_ERR, "need a transport (-t) argument\n");
-		errno = ENVME_CONNECT_TARG;
-		return -1;
+		return -ENVME_CONNECT_TARG;
 	}
 
 	if (strncmp(transport, "loop", 4)) {
 		if (!nvme_ctrl_get_traddr(c)) {
 			nvme_msg(h->r, LOG_ERR, "need a address (-a) argument\n");
-			errno = ENVME_CONNECT_AARG;
-			return -1;
+			return -ENVME_CONNECT_AARG;
 		}
 	}
 
 	/* always specify nqn as first arg - this will init the string */
 	if (asprintf(argstr, "nqn=%s",
 		     nvme_ctrl_get_subsysnqn(c)) < 0) {
-		errno = ENOMEM;
-		return -1;
+		return -ENOMEM;
 	}
 
 	if (!strcmp(nvme_ctrl_get_subsysnqn(c), NVME_DISC_SUBSYS_NAME)) {
@@ -629,10 +621,8 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 
 	if (cfg->tls) {
 		ret = __nvme_import_keys_from_config(h, c, &keyring_id, &key_id);
-		if (ret) {
-			errno = -ret;
-			return -1;
-		}
+		if (ret)
+			return ret;
 
 		if (key_id == 0) {
 			if (cfg->tls_configured_key)
@@ -950,8 +940,7 @@ int nvmf_add_ctrl(nvme_host_t h, nvme_ctrl_t c,
 		if (app && strcmp(app, root_app)) {
 			nvme_msg(h->r, LOG_INFO, "skip %s, not managed by %s\n",
 				 nvme_subsystem_get_nqn(s), root_app);
-			errno = ENVME_CONNECT_IGNORED;
-			return -1;
+			return -ENVME_CONNECT_IGNORED;
 		}
 	}
 
@@ -959,11 +948,9 @@ int nvmf_add_ctrl(nvme_host_t h, nvme_ctrl_t c,
 	if (traddr_is_hostname(h->r, c)) {
 		char *traddr = c->traddr;
 
-		c->traddr = hostname2traddr(h->r, traddr);
-		if (!c->traddr) {
+		if (hostname2traddr(h->r, traddr, &c->traddr)) {
 			c->traddr = traddr;
-			errno = ENVME_CONNECT_TRADDR;
-			return -1;
+			return -ENVME_CONNECT_TRADDR;
 		}
 		free(traddr);
 	}
@@ -973,10 +960,8 @@ int nvmf_add_ctrl(nvme_host_t h, nvme_ctrl_t c,
 		return ret;
 
 	ret = __nvmf_add_ctrl(h->r, argstr);
-	if (ret < 0) {
-		errno = -ret;
-		return -1;
-	}
+	if (ret < 0)
+		return ret;
 
 	nvme_msg(h->r, LOG_INFO, "nvme%d: %s connected\n", ret,
 		 nvme_ctrl_get_subsysnqn(c));
@@ -993,18 +978,17 @@ int nvmf_connect_ctrl(nvme_ctrl_t c)
 		return ret;
 
 	ret = __nvmf_add_ctrl(c->s->h->r, argstr);
-	if (ret < 0) {
-		errno = -ret;
-		return -1;
-	}
+	if (ret < 0)
+		return ret;
 
 	return 0;
 }
 
-nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
-				    struct nvmf_disc_log_entry *e,
-				    const struct nvme_fabrics_config *cfg,
-				    bool *discover)
+int nvmf_connect_disc_entry(nvme_host_t h,
+			    struct nvmf_disc_log_entry *e,
+			    const struct nvme_fabrics_config *cfg,
+			    bool *discover,
+			    nvme_ctrl_t *cp)
 {
 	const char *transport;
 	char *traddr = NULL, *trsvcid = NULL;
@@ -1024,8 +1008,7 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 			nvme_msg(h->r, LOG_ERR,
 				 "skipping unsupported adrfam %d\n",
 				 e->adrfam);
-			errno = EINVAL;
-			return NULL;
+			return -EINVAL;
 		}
 		break;
         case NVMF_TRTYPE_FC:
@@ -1037,8 +1020,7 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 			nvme_msg(h->r, LOG_ERR,
 				 "skipping unsupported adrfam %d\n",
 				 e->adrfam);
-			errno = EINVAL;
-			return NULL;
+			return -EINVAL;
 		}
 		break;
 	case NVMF_TRTYPE_LOOP:
@@ -1047,8 +1029,7 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 	default:
 		nvme_msg(h->r, LOG_ERR, "skipping unsupported transport %d\n",
 			 e->trtype);
-		errno = EINVAL;
-		return NULL;
+		return -EINVAL;
 	}
 
 	transport = nvmf_trtype_str(e->trtype);
@@ -1056,14 +1037,13 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 	nvme_msg(h->r, LOG_DEBUG, "lookup ctrl "
 		 "(transport: %s, traddr: %s, trsvcid %s)\n",
 		 transport, traddr, trsvcid);
-	c = nvme_create_ctrl(h->r, e->subnqn, transport, traddr,
-			     cfg->host_traddr, cfg->host_iface, trsvcid);
-	if (!c) {
+	ret = nvme_create_ctrl(h->r, e->subnqn, transport, traddr,
+			       cfg->host_traddr, cfg->host_iface, trsvcid, &c);
+	if (!ret) {
 		nvme_msg(h->r, LOG_DEBUG, "skipping discovery entry, "
 			 "failed to allocate %s controller with traddr %s\n",
 			 transport, traddr);
-		errno = ENOMEM;
-		return NULL;
+		return ret;
 	}
 
 	switch (e->subtype) {
@@ -1091,8 +1071,7 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 
 	if (nvme_ctrl_is_discovered(c)) {
 		nvme_free_ctrl(c);
-		errno = EAGAIN;
-		return NULL;
+		return -EAGAIN;
 	}
 
 	if (e->treq & NVMF_TREQ_DISABLE_SQFLOW &&
@@ -1104,21 +1083,24 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
 		c->cfg.tls = true;
 
 	ret = nvmf_add_ctrl(h, c, cfg);
-	if (!ret)
-		return c;
+	if (!ret) {
+		*cp = c;
+		return 0;
+	}
 
-	if (errno == EINVAL && c->cfg.disable_sqflow) {
-		errno = 0;
+	if (ret == EINVAL && c->cfg.disable_sqflow) {
 		/* disable_sqflow is unrecognized option on older kernels */
 		nvme_msg(h->r, LOG_INFO, "failed to connect controller, "
 			 "retry with disabling SQ flow control\n");
 		c->cfg.disable_sqflow = false;
 		ret = nvmf_add_ctrl(h, c, cfg);
-		if (!ret)
-			return c;
+		if (!ret) {
+			*cp = c;
+			return 0;
+		}
 	}
 	nvme_free_ctrl(c);
-	return NULL;
+	return -ENOENT;
 }
 
 /*
@@ -1128,11 +1110,11 @@ nvme_ctrl_t nvmf_connect_disc_entry(nvme_host_t h,
  */
 #define DISCOVERY_HEADER_LEN 20
 
-static struct nvmf_discovery_log *nvme_discovery_log(
-	const struct nvme_get_discovery_args *args)
+static int nvme_discovery_log(const struct nvme_get_discovery_args *args,
+			      struct nvmf_discovery_log **logp)
 {
 	struct nvmf_discovery_log *log;
-	int retries = 0;
+	int retries = 0, err;
 	const char *name = nvme_ctrl_get_name(args->c);
 	uint64_t genctr, numrec;
 	nvme_link_t l = nvme_ctrl_get_link(args->c);
@@ -1152,18 +1134,18 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 	if (!log) {
 		nvme_msg(l->root, LOG_ERR,
 			 "could not allocate memory for discovery log header\n");
-		errno = ENOMEM;
-		return NULL;
+		return -ENOMEM;
 	}
 
 	nvme_msg(l->root, LOG_DEBUG, "%s: get header (try %d/%d)\n",
 		 name, retries, args->max_retries);
 	log_args.log = log;
 	log_args.len = DISCOVERY_HEADER_LEN;
-	if (nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
+	err = nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args);
+	if (err) {
 		nvme_msg(l->root, LOG_INFO,
 			 "%s: discover try %d/%d failed, error %d\n",
-			 name, retries, args->max_retries, errno);
+			 name, retries, args->max_retries, err);
 		goto out_free_log;
 	}
 
@@ -1182,8 +1164,7 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		if (!log) {
 			nvme_msg(l->root, LOG_ERR,
 				 "could not alloc memory for discovery log page\n");
-			errno = ENOMEM;
-			return NULL;
+			return -ENOMEM;
 		}
 
 		nvme_msg(l->root, LOG_DEBUG,
@@ -1193,10 +1174,11 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		log_args.lpo = sizeof(*log);
 		log_args.log = log->entries;
 		log_args.len = entries_size;
-		if (nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
+		err = nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args);
+		if (err) {
 			nvme_msg(l->root, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
-				 name, retries, args->max_retries, errno);
+				 name, retries, args->max_retries, err);
 			goto out_free_log;
 		}
 
@@ -1209,10 +1191,11 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		log_args.lpo = 0;
 		log_args.log = log;
 		log_args.len = DISCOVERY_HEADER_LEN;
-		if (nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args)) {
+		err = nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args);
+		if (err) {
 			nvme_msg(l->root, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
-				 name, retries, args->max_retries, errno);
+				 name, retries, args->max_retries, err);
 			goto out_free_log;
 		}
 	} while (genctr != le64_to_cpu(log->genctr) &&
@@ -1220,20 +1203,21 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 
 	if (genctr != le64_to_cpu(log->genctr)) {
 		nvme_msg(l->root, LOG_INFO, "%s: discover genctr mismatch\n", name);
-		errno = EAGAIN;
+		err = -EAGAIN;
 	} else if (numrec != le64_to_cpu(log->numrec)) {
 		nvme_msg(l->root, LOG_INFO,
 			 "%s: numrec changed unexpectedly "
 			 "from %" PRIu64 " to %" PRIu64 "\n",
 			 name, numrec, le64_to_cpu(log->numrec));
-		errno = EBADSLT;
+		err = -EBADSLT;
 	} else {
-		return log;
+		*logp = log;
+		return 0;
 	}
 
 out_free_log:
 	free(log);
-	return NULL;
+	return err;
 }
 
 static void sanitize_discovery_log_entry(struct nvmf_disc_log_entry *e)
@@ -1252,22 +1236,25 @@ int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 		.lsp = NVMF_LOG_DISC_LSP_NONE,
 	};
 
-	*logp = nvmf_get_discovery_wargs(&args);
-	return *logp ? 0 : -1;
+
+	return nvmf_get_discovery_wargs(&args, logp);
 }
 
-struct nvmf_discovery_log *nvmf_get_discovery_wargs(struct nvme_get_discovery_args *args)
+int nvmf_get_discovery_wargs(struct nvme_get_discovery_args *args,
+			     struct nvmf_discovery_log **logp)
 {
 	struct nvmf_discovery_log *log;
+	int err;
 
-	log = nvme_discovery_log(args);
-	if (!log)
-		return NULL;
+	err = nvme_discovery_log(args, &log);
+	if (err)
+		return err;
 
 	for (int i = 0; i < le64_to_cpu(log->numrec); i++)
 		sanitize_discovery_log_entry(&log->entries[i]);
 
-	return log;
+	*logp = log;
+	return 0;
 }
 
 static int uuid_from_device_tree(char *system_uuid)
@@ -1632,40 +1619,35 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 		nvme_msg(r, LOG_ERR,
 			 "%s: failed to perform DIM. subsystem undefined.\n",
 			 c->name);
-		errno = EINVAL;
-		return -1;
+		return -EINVAL;
 	}
 
 	if (!c->s->h) {
 		nvme_msg(r, LOG_ERR,
 			 "%s: failed to perform DIM. host undefined.\n",
 			 c->name);
-		errno = EINVAL;
-		return -1;
+		return -EINVAL;
 	}
 
 	if (!c->s->h->hostid) {
 		nvme_msg(r, LOG_ERR,
 			 "%s: failed to perform DIM. hostid undefined.\n",
 			 c->name);
-		errno = EINVAL;
-		return -1;
+		return -EINVAL;
 	}
 
 	if (!c->s->h->hostnqn) {
 		nvme_msg(r, LOG_ERR,
 			 "%s: failed to perform DIM. hostnqn undefined.\n",
 			 c->name);
-		errno = EINVAL;
-		return -1;
+		return -EINVAL;
 	}
 
 	if (strcmp(c->transport, "tcp")) {
 		nvme_msg(r, LOG_ERR,
 			 "%s: DIM only supported for TCP connections.\n",
 			 c->name);
-		errno = EINVAL;
-		return -1;
+		return -EINVAL;
 	}
 
 	/* Register one Discovery Information Entry (DIE) of size TEL */
@@ -1674,8 +1656,7 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 
 	dim = (struct nvmf_dim_data *)calloc(1, tdl);
 	if (!dim) {
-		errno = ENOMEM;
-		return -1;
+		return -ENOMEM;
 	}
 
 	dim->tdl    = cpu_to_le32(tdl);
@@ -1690,7 +1671,7 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 	ret = get_entity_name(dim->ename, sizeof(dim->ename));
 	if (ret <= 0)
 		nvme_msg(r, LOG_INFO, "%s: Failed to retrieve ENAME. %s.\n",
-			 c->name, strerror(errno));
+			 c->name, strerror(ret));
 
 	ret = get_entity_version(dim->ever, sizeof(dim->ever));
 	if (ret <= 0)
@@ -1759,10 +1740,8 @@ static int nvme_fetch_cntrltype_dctype_from_id(nvme_ctrl_t c)
 	int ret;
 
 	id = __nvme_alloc(sizeof(*id));
-	if (!id) {
-		errno = ENOMEM;
-		return -1;
-	}
+	if (!id)
+		return -ENOMEM;
 
 	ret = nvme_ctrl_identify(c, id);
 	if (ret)
@@ -1795,10 +1774,8 @@ bool nvmf_is_registration_supported(nvme_ctrl_t c)
 
 int nvmf_register_ctrl(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u32 *result)
 {
-	if (!nvmf_is_registration_supported(c)) {
-		errno = ENOTSUP;
-		return -1;
-	}
+	if (!nvmf_is_registration_supported(c))
+		return -ENOTSUP;
 
 	/* We're registering our source address with the DC. To do
 	 * that, we can simply send an empty string. This tells the DC
@@ -1836,7 +1813,7 @@ static char *unescape_uri(const char *str, int len)
 	return dst;
 }
 
-struct nvme_fabrics_uri *nvme_parse_uri(const char *str)
+int nvme_parse_uri(const char *str, struct nvme_fabrics_uri **urip)
 {
 	struct nvme_fabrics_uri *uri;
 	_cleanup_free_ char *scheme = NULL;
@@ -1861,20 +1838,18 @@ struct nvme_fabrics_uri *nvme_parse_uri(const char *str)
 
 	uri = calloc(1, sizeof(struct nvme_fabrics_uri));
 	if (!uri)
-		return NULL;
+		return -ENOMEM;
 
 	if (sscanf(str, "%m[^:/]://%m[^/?#]%ms",
 		   &scheme, &authority, &path) < 2) {
 		nvme_free_uri(uri);
-		errno = EINVAL;
-		return NULL;
+		return -EINVAL;
 	}
 
 	if (sscanf(scheme, "%m[^+]+%ms",
 		   &uri->scheme, &uri->protocol) < 1) {
 		nvme_free_uri(uri);
-		errno = EINVAL;
-		return NULL;
+		return -EINVAL;
 	}
 
 	/* split userinfo */
@@ -1892,8 +1867,7 @@ struct nvme_fabrics_uri *nvme_parse_uri(const char *str)
 		if (sscanf(host, "%m[^:]:%d",
 			   &h, &uri->port) < 1) {
 			nvme_free_uri(uri);
-			errno = EINVAL;
-			return NULL;
+			return -EINVAL;
 		}
 		uri->host = unescape_uri(h, 0);
 	}
@@ -1932,7 +1906,8 @@ struct nvme_fabrics_uri *nvme_parse_uri(const char *str)
 		}
 	}
 
-	return uri;
+	*urip = uri;
+	return 0;
 }
 
 void nvme_free_uri(struct nvme_fabrics_uri *uri)

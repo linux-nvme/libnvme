@@ -133,8 +133,7 @@ int main()
 	nvme_host_t h;
 	nvme_root_t r;
 
-	r = nvme_scan(NULL);
-	if (!r)
+	if (nvme_scan(NULL, &r))
 		return EXIT_FAILURE;
 
 	nvme_for_each_host(r, h)
