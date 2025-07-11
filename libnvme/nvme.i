@@ -448,7 +448,10 @@ struct nvme_ns {
 
 %extend nvme_root {
 	nvme_root(const char *config_file = NULL) {
-		return nvme_scan(config_file);
+		struct nvme_root *r;
+		if (nvme_scan(config_file, &r))
+			return NULL;
+		return r;
 	}
 	~nvme_root() {
 		nvme_free_root($self);
@@ -516,7 +519,11 @@ struct nvme_ns {
 		  const char *hostid = NULL,
 		  const char *hostkey = NULL,
 		  const char *hostsymname = NULL) {
-		nvme_host_t h = hostnqn ? nvme_lookup_host(r, hostnqn, hostid) : nvme_default_host(r);
+		nvme_host_t h;
+		if (hostnqn)
+			h = nvme_lookup_host(r, hostnqn, hostid);
+		if (nvme_default_host(r, &h))
+			return NULL;
 		if (hostsymname)
 			nvme_host_set_hostsymname(h, hostsymname);
 		if (hostkey)
@@ -663,8 +670,11 @@ struct nvme_ns {
 		  const char *host_traddr = NULL,
 		  const char *host_iface = NULL,
 		  const char *trsvcid = NULL) {
-		return nvme_create_ctrl(r, subsysnqn, transport, traddr,
-					host_traddr, host_iface, trsvcid);
+		struct nvme_ctrl *c;
+		if (nvme_create_ctrl(r, subsysnqn, transport, traddr,
+					host_traddr, host_iface, trsvcid, &c))
+			return NULL;
+		return c;
 	}
 	~nvme_ctrl() {
 		nvme_free_ctrl($self);
@@ -748,7 +758,7 @@ struct nvme_ns {
 
 	%newobject discover;
 	struct nvmf_discovery_log *discover(int lsp = 0, int max_retries = 6) {
-		struct nvmf_discovery_log *logp;
+		struct nvmf_discovery_log *logp = NULL;
 		struct nvme_get_discovery_args args = {
 			.c = $self,
 			.args_size = sizeof(args),
@@ -759,7 +769,7 @@ struct nvme_ns {
 		};
 
 		Py_BEGIN_ALLOW_THREADS  /* Release Python GIL */
-		    logp = nvmf_get_discovery_wargs(&args);
+		    nvmf_get_discovery_wargs(&args, &logp);
 		Py_END_ALLOW_THREADS    /* Reacquire Python GIL */
 
 		if (logp == NULL) discover_err = 1;

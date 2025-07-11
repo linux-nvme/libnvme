@@ -73,6 +73,7 @@ static void check_str(const char *exp, const char *res)
 static void export_test(struct test_data *test)
 {
 	char *psk;
+	int ret;
 
 	if (test->version != 1 ||
 	    !(test->hmac == NVME_HMAC_ALG_SHA2_256 ||
@@ -82,10 +83,10 @@ static void export_test(struct test_data *test)
 	printf("test nvme_export_tls_key hmac %d %s\n",
 	       test->hmac, test->exported_psk);
 
-	psk = nvme_export_tls_key(test->configured_psk, test->psk_length);
-	if (!psk) {
+	ret = nvme_export_tls_key(test->configured_psk, test->psk_length, &psk);
+	if (ret) {
 		test_rc = 1;
-		printf("ERROR: nvme_export_tls_key() failed with %d\n", errno);
+		printf("ERROR: nvme_export_tls_key() failed with %d\n", ret);
 		return;
 	}
 	check_str(test->exported_psk, psk);
@@ -97,6 +98,7 @@ static void import_test(struct test_data *test)
 	unsigned char *psk;
 	int psk_length;
 	unsigned int hmac;
+	int ret;
 
 	if (test->version != 1 ||
 	    !(test->hmac == NVME_HMAC_ALG_SHA2_256 ||
@@ -106,10 +108,10 @@ static void import_test(struct test_data *test)
 	printf("test nvme_import_tls_key hmac %d %s\n",
 	       test->hmac, test->exported_psk);
 
-	psk = nvme_import_tls_key(test->exported_psk, &psk_length, &hmac);
-	if (!psk) {
+	ret = nvme_import_tls_key(test->exported_psk, &psk_length, &hmac, &psk);
+	if (ret) {
 		test_rc = 1;
-		printf("ERROR: nvme_import_tls_key() failed with %d\n", errno);
+		printf("ERROR: nvme_import_tls_key() failed with %d\n", ret);
 		return;
 	}
 
@@ -136,6 +138,7 @@ out:
 static void export_versioned_test(struct test_data *test)
 {
 	char *psk;
+	int ret;
 
 	if (test->version != 1)
 		return;
@@ -143,13 +146,13 @@ static void export_versioned_test(struct test_data *test)
 	printf("test nvme_export_tls_key_versioned hmac %d %s\n",
 	       test->hmac, test->exported_psk);
 
-	psk = nvme_export_tls_key_versioned(test->version, test->hmac,
+	ret = nvme_export_tls_key_versioned(test->version, test->hmac,
 					    test->configured_psk,
-					    test->psk_length);
-	if (!psk) {
+					    test->psk_length, &psk);
+	if (ret) {
 		test_rc = 1;
 		printf("ERROR: nvme_export_tls_key_versioned() failed with %d\n",
-		       errno);
+		       ret);
 		return;
 	}
 
@@ -164,6 +167,7 @@ static void import_versioned_test(struct test_data *test)
 	unsigned char version;
 	unsigned char hmac;
 	size_t psk_length;
+	int ret;
 
 	if (test->version != 1)
 		return;
@@ -171,12 +175,12 @@ static void import_versioned_test(struct test_data *test)
 	printf("test nvme_import_tls_key_versioned hmac %d %s\n",
 	       test->hmac, test->exported_psk);
 
-	psk = nvme_import_tls_key_versioned(test->exported_psk, &version,
-					    &hmac, &psk_length);
-	if (!psk) {
+	ret = nvme_import_tls_key_versioned(test->exported_psk, &version,
+					    &hmac, &psk_length, &psk);
+	if (ret) {
 		test_rc = 1;
 		printf("ERROR: nvme_import_tls_key_versioned() failed with %d\n",
-		       errno);
+		       ret);
 		return;
 	}
 
