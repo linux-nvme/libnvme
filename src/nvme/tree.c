@@ -130,9 +130,7 @@ int nvme_host_get_ids(nvme_root_t r,
 		      char *hostnqn_arg, char *hostid_arg,
 		      char **hostnqn, char **hostid)
 {
-	_cleanup_free_ char *nqn = NULL;
-	_cleanup_free_ char *hid = NULL;
-	_cleanup_free_ char *hnqn = NULL;
+	_cleanup_free_ char *nqn = NULL, *hid = NULL, *hnqn = NULL;
 	nvme_host_t h;
 
 	/* command line argumments */
@@ -202,8 +200,7 @@ int nvme_host_get_ids(nvme_root_t r,
 
 nvme_host_t nvme_default_host(nvme_root_t r)
 {
-	_cleanup_free_ char *hostnqn = NULL;
-	_cleanup_free_ char *hostid = NULL;
+	_cleanup_free_ char *hostnqn = NULL, *hostid = NULL;
 	struct nvme_host *h;
 
 	if (nvme_host_get_ids(r, NULL, NULL, &hostnqn, &hostid))
@@ -421,10 +418,9 @@ const char *nvme_root_get_application(nvme_root_t r)
 
 void nvme_root_set_application(nvme_root_t r, const char *a)
 {
-	if (r->application) {
-		free(r->application);
-		r->application = NULL;
-	}
+	free(r->application);
+	r->application = NULL;
+
 	if (a)
 		r->application = strdup(a);
 }
@@ -466,10 +462,9 @@ const char *nvme_host_get_hostsymname(nvme_host_t h)
 
 void nvme_host_set_hostsymname(nvme_host_t h, const char *hostsymname)
 {
-	if (h->hostsymname) {
-		free(h->hostsymname);
-		h->hostsymname = NULL;
-	}
+	free(h->hostsymname);
+	h->hostsymname = NULL;
+
 	if (hostsymname)
 		h->hostsymname = strdup(hostsymname);
 }
@@ -481,10 +476,9 @@ const char *nvme_host_get_dhchap_key(nvme_host_t h)
 
 void nvme_host_set_dhchap_key(nvme_host_t h, const char *key)
 {
-	if (h->dhchap_key) {
-		free(h->dhchap_key);
-		h->dhchap_key = NULL;
-	}
+	free(h->dhchap_key);
+	h->dhchap_key = NULL;
+
 	if (key)
 		h->dhchap_key = strdup(key);
 }
@@ -528,14 +522,11 @@ void nvme_free_tree(nvme_root_t r)
 	if (!r)
 		return;
 
-	if (r->options)
-		free(r->options);
+	free(r->options);
 	nvme_for_each_host_safe(r, h, _h)
 		__nvme_free_host(h);
-	if (r->config_file)
-		free(r->config_file);
-	if (r->application)
-		free(r->application);
+	free(r->config_file);
+	free(r->application);
 	free(r);
 }
 
@@ -574,10 +565,9 @@ const char *nvme_subsystem_get_application(nvme_subsystem_t s)
 
 void nvme_subsystem_set_application(nvme_subsystem_t s, const char *a)
 {
-	if (s->application) {
-		free(s->application);
-		s->application = NULL;
-	}
+	free(s->application);
+	s->application = NULL;
+
 	if (a)
 		s->application = strdup(a);
 }
@@ -667,22 +657,15 @@ static void __nvme_free_subsystem(struct nvme_subsystem *s)
 	nvme_subsystem_for_each_ns_safe(s, n, _n)
 		__nvme_free_ns(n);
 
-	if (s->name)
-		free(s->name);
+	free(s->name);
 	free(s->sysfs_dir);
 	free(s->subsysnqn);
-	if (s->model)
-		free(s->model);
-	if (s->serial)
-		free(s->serial);
-	if (s->firmware)
-		free(s->firmware);
-	if (s->subsystype)
-		free(s->subsystype);
-	if (s->application)
-		free(s->application);
-	if (s->iopolicy)
-		free(s->iopolicy);
+	free(s->model);
+	free(s->serial);
+	free(s->firmware);
+	free(s->subsystype);
+	free(s->application);
+	free(s->iopolicy);
 	free(s);
 }
 
@@ -759,10 +742,8 @@ static void __nvme_free_host(struct nvme_host *h)
 	nvme_for_each_subsystem_safe(h, s, _s)
 		__nvme_free_subsystem(s);
 	free(h->hostnqn);
-	if (h->hostid)
-		free(h->hostid);
-	if (h->dhchap_key)
-		free(h->dhchap_key);
+	free(h->hostid);
+	free(h->dhchap_key);
 	nvme_host_set_hostsymname(h, NULL);
 	h->r->modified = true;
 	free(h);
@@ -1131,8 +1112,7 @@ const char *nvme_ctrl_get_state(nvme_ctrl_t c)
 	char *state = c->state;
 
 	c->state = nvme_get_ctrl_attr(c, "state");
-	if (state)
-		free(state);
+	free(state);
 	return c->state;
 }
 
@@ -1198,10 +1178,9 @@ const char *nvme_ctrl_get_cntlid(nvme_ctrl_t c)
 
 void nvme_ctrl_set_dhchap_host_key(nvme_ctrl_t c, const char *key)
 {
-	if (c->dhchap_key) {
-		free(c->dhchap_key);
-		c->dhchap_key = NULL;
-	}
+	free(c->dhchap_key);
+	c->dhchap_key = NULL;
+
 	if (key)
 		c->dhchap_key = strdup(key);
 }
@@ -1213,10 +1192,9 @@ const char *nvme_ctrl_get_dhchap_key(nvme_ctrl_t c)
 
 void nvme_ctrl_set_dhchap_key(nvme_ctrl_t c, const char *key)
 {
-	if (c->dhchap_ctrl_key) {
-		free(c->dhchap_ctrl_key);
-		c->dhchap_ctrl_key = NULL;
-	}
+	free(c->dhchap_ctrl_key);
+	c->dhchap_ctrl_key = NULL;
+
 	if (key)
 		c->dhchap_ctrl_key = strdup(key);
 }
@@ -1228,10 +1206,9 @@ const char *nvme_ctrl_get_keyring(nvme_ctrl_t c)
 
 void nvme_ctrl_set_keyring(nvme_ctrl_t c, const char *keyring)
 {
-	if (c->keyring) {
-		free(c->keyring);
-		c->keyring = NULL;
-	}
+	free(c->keyring);
+	c->keyring = NULL;
+
 	if (keyring)
 		c->keyring = strdup(keyring);
 }
@@ -1243,10 +1220,9 @@ const char *nvme_ctrl_get_tls_key_identity(nvme_ctrl_t c)
 
 void nvme_ctrl_set_tls_key_identity(nvme_ctrl_t c, const char *identity)
 {
-	if (c->tls_key_identity) {
-		free(c->tls_key_identity);
-		c->tls_key_identity = NULL;
-	}
+	free(c->tls_key_identity);
+	c->tls_key_identity = NULL;
+
 	if (identity)
 		c->tls_key_identity = strdup(identity);
 }
@@ -1258,10 +1234,9 @@ const char *nvme_ctrl_get_tls_key(nvme_ctrl_t c)
 
 void nvme_ctrl_set_tls_key(nvme_ctrl_t c, const char *key)
 {
-	if (c->tls_key) {
-		free(c->tls_key);
-		c->tls_key = NULL;
-	}
+	free(c->tls_key);
+	c->tls_key = NULL;
+
 	if (key)
 		c->tls_key = strdup(key);
 }
@@ -1332,7 +1307,7 @@ nvme_path_t nvme_ctrl_next_path(nvme_ctrl_t c, nvme_path_t p)
 }
 
 #define FREE_CTRL_ATTR(a) \
-	do { if (a) { free(a); (a) = NULL; } } while (0)
+	do { free(a); (a) = NULL; } while (0)
 void nvme_deconfigure_ctrl(nvme_ctrl_t c)
 {
 	nvme_ctrl_release_fd(c);
@@ -1980,8 +1955,7 @@ static char *nvme_ctrl_lookup_phy_slot(nvme_root_t r, const char *address)
 		if (entry->d_type == DT_DIR &&
 		    strncmp(entry->d_name, ".", 1) != 0 &&
 		    strncmp(entry->d_name, "..", 2) != 0) {
-			_cleanup_free_ char *path = NULL;
-			_cleanup_free_ char *addr = NULL;
+			_cleanup_free_ char *path = NULL, *addr = NULL;
 
 			ret = asprintf(&path, "%s/%s",
 				       slots_sysfs_dir, entry->d_name);
@@ -2282,8 +2256,7 @@ nvme_ctrl_t nvme_scan_ctrl(nvme_root_t r, const char *name)
 	hostid = nvme_get_attr(path, "hostid");
 	h = nvme_lookup_host(r, hostnqn, hostid);
 	if (h) {
-		if (h->dhchap_key)
-			free(h->dhchap_key);
+		free(h->dhchap_key);
 		h->dhchap_key = nvme_get_attr(path, "dhchap_secret");
 		if (h->dhchap_key && !strcmp(h->dhchap_key, "none")) {
 			free(h->dhchap_key);
@@ -2914,9 +2887,8 @@ static char *nvme_ns_generic_to_blkdev(const char *generic)
 static struct nvme_ns *__nvme_scan_namespace(const char *sysfs_dir, const char *name)
 {
 	struct nvme_ns *n;
-	_cleanup_free_ char *path = NULL;
+	_cleanup_free_ char *path = NULL, *blkdev = NULL;
 	int ret;
-	_cleanup_free_ char *blkdev = NULL;
 
 	blkdev = nvme_ns_generic_to_blkdev(name);
 	if (!blkdev) {

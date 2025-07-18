@@ -1841,10 +1841,8 @@ static char *unescape_uri(const char *str, int len)
 struct nvme_fabrics_uri *nvme_parse_uri(const char *str)
 {
 	struct nvme_fabrics_uri *uri;
-	_cleanup_free_ char *scheme = NULL;
-	_cleanup_free_ char *authority = NULL;
-	_cleanup_free_ char *path = NULL;
-	_cleanup_free_ char *h = NULL;
+	_cleanup_free_ char *scheme = NULL, *authority = NULL;
+	_cleanup_free_ char *path = NULL, *h = NULL;
 	const char *host;
 	int i;
 
