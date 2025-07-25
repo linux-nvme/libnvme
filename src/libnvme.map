@@ -2,6 +2,12 @@
 LIBNVME_UNRELEASED {
 };
 
+LIBNVME_1_15 {
+	global:
+		nvme_set_etdas;
+		nvme_clear_etdas;
+};
+
 LIBNVME_1_14 {
 	global:
 		nvme_get_features_temp_thresh2;
