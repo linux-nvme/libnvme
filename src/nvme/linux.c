@@ -619,7 +619,7 @@ static DEFINE_CLEANUP_FUNC(
 #define _cleanup_evp_pkey_ctx_ __cleanup__(cleanup_evp_pkey_ctx)
 
 /*
- * hkdf_info_printf()
+ * hkdf_expand_labelf()
  *
  * Helper function to append variable length label and context to an HkdfLabel
  *
@@ -635,8 +635,8 @@ static DEFINE_CLEANUP_FUNC(
  * Returns the number of bytes appended to the HKDF info buffer, or -1 on an
  * error.
  */
-__attribute__((format(printf, 2, 3)))
-static int hkdf_info_printf(EVP_PKEY_CTX *ctx, char *fmt, ...)
+__attribute__((format(printf, 3, 4)))
+  static int hkdf_expand_label(EVP_PKEY_CTX *ctx, char *label, char *fmt, ...)
 {
 	_cleanup_free_ char *str = NULL;
 	va_list myargs;
@@ -651,11 +651,14 @@ static int hkdf_info_printf(EVP_PKEY_CTX *ctx, char *fmt, ...)
 	if (ret > 255)
 		return -1;
 	len = ret;
-	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, (unsigned char *)&len, 1) <= 0)
+	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, (unsigned char *)&len, 2) <= 0)
+		return -1;
+	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, (unsigned char *)label,
+					strlen(label)) <= 0)
 		return -1;
 	if (EVP_PKEY_CTX_add1_hkdf_info(ctx, (unsigned char *)str, len) <= 0)
 		return -1;
-	return (ret + 1);
+	return (ret + strlen(label) + 2);
 }
 
 /*
@@ -725,20 +728,10 @@ static int derive_retained_key(int hmac, const char *hostnqn,
 		errno = ENOKEY;
 		return -1;
 	}
-	if (EVP_PKEY_CTX_add1_hkdf_info(ctx,
-			(const unsigned char *)&length, 2) <= 0) {
+	if (hkdf_expand_label(ctx, "tls13 HostNQN", %s", hostnqn) <= 0) {
 		errno = ENOKEY;
 		return -1;
 	}
-	if (hkdf_info_printf(ctx, "tls13 HostNQN") <= 0) {
-		errno = ENOKEY;
-		return -1;
-	}
-	if (hkdf_info_printf(ctx, "%s", hostnqn) <= 0) {
-		errno = ENOKEY;
-		return -1;
-	}
-
 	if (EVP_PKEY_derive(ctx, retained, &key_len) <= 0) {
 		errno = ENOKEY;
 		return -1;
@@ -803,24 +796,17 @@ static int derive_tls_key(int version, unsigned char cipher,
 		errno = ENOKEY;
 		return -1;
 	}
-	if (EVP_PKEY_CTX_add1_hkdf_info(ctx,
-			(const unsigned char *)&length, 2) <= 0) {
-		errno = ENOKEY;
-		return -1;
-	}
-	if (hkdf_info_printf(ctx, "tls13 nvme-tls-psk") <= 0) {
-		errno = ENOKEY;
-		return -1;
-	}
 	switch (version) {
 	case 0:
-		if (hkdf_info_printf(ctx, "%s", context) <= 0) {
+		if (hkdf_expand_label(ctx, "tls13 nvme-tls-psk",
+				      "%s", context) <= 0) {
 			errno = ENOKEY;
 			return -1;
 		}
 		break;
 	case 1:
-		if (hkdf_info_printf(ctx, "%02d %s", cipher, context) <= 0) {
+		if (hkdf_expand_label(ctx, "tls13 nvme-tls-psk"
+				      "%02d %s", cipher, context) <= 0) {
 			errno = ENOKEY;
 			return -1;
 		}
