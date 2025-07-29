@@ -1118,17 +1118,6 @@ static int nvme_discovery_log(const struct nvme_get_discovery_args *args,
 	const char *name = nvme_ctrl_get_name(args->c);
 	uint64_t genctr, numrec;
 	nvme_link_t l = nvme_ctrl_get_link(args->c);
-	struct nvme_get_log_args log_args = {
-		.result = args->result,
-		.args_size = sizeof(log_args),
-		.timeout = args->timeout,
-		.lid = NVME_LOG_LID_DISCOVER,
-		.nsid = NVME_NSID_NONE,
-		.csi = NVME_CSI_NVM,
-		.lsi = NVME_LOG_LSI_NONE,
-		.lsp = args->lsp,
-		.uuidx = NVME_UUID_NONE,
-	};
 
 	log = __nvme_alloc(sizeof(*log));
 	if (!log) {
@@ -1139,9 +1128,11 @@ static int nvme_discovery_log(const struct nvme_get_discovery_args *args,
 
 	nvme_msg(l->root, LOG_DEBUG, "%s: get header (try %d/%d)\n",
 		 name, retries, args->max_retries);
-	log_args.log = log;
-	log_args.len = DISCOVERY_HEADER_LEN;
-	err = nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args);
+	err = nvme_get_log(l, NVME_NSID_NONE, false, args->lsp,
+		NVME_LOG_LID_DISCOVER, NVME_LOG_LSI_NONE, NVME_CSI_NVM,
+		false, NVME_UUID_NONE,
+		0, log, DISCOVERY_HEADER_LEN,
+		NVME_LOG_PAGE_PDU_SIZE, NULL);
 	if (err) {
 		nvme_msg(l->root, LOG_INFO,
 			 "%s: discover try %d/%d failed, error %d\n",
@@ -1171,10 +1162,11 @@ static int nvme_discovery_log(const struct nvme_get_discovery_args *args,
 			 "%s: get %" PRIu64 " records (genctr %" PRIu64 ")\n",
 			 name, numrec, genctr);
 
-		log_args.lpo = sizeof(*log);
-		log_args.log = log->entries;
-		log_args.len = entries_size;
-		err = nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args);
+		err = nvme_get_log(l, NVME_NSID_NONE, false, args->lsp,
+			NVME_LOG_LID_DISCOVER, NVME_LOG_LSI_NONE, NVME_CSI_NVM,
+			false, NVME_UUID_NONE,
+			sizeof(*log), log->entries, entries_size,
+			NVME_LOG_PAGE_PDU_SIZE, NULL);
 		if (err) {
 			nvme_msg(l->root, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",
@@ -1188,10 +1180,11 @@ static int nvme_discovery_log(const struct nvme_get_discovery_args *args,
 		 */
 		nvme_msg(l->root, LOG_DEBUG, "%s: get header again\n", name);
 
-		log_args.lpo = 0;
-		log_args.log = log;
-		log_args.len = DISCOVERY_HEADER_LEN;
-		err = nvme_get_log_page(l, NVME_LOG_PAGE_PDU_SIZE, &log_args);
+		err = nvme_get_log(l, NVME_NSID_NONE, false, args->lsp,
+			NVME_LOG_LID_DISCOVER, NVME_LOG_LSI_NONE, NVME_CSI_NVM,
+			false, NVME_UUID_NONE,
+			0, log, DISCOVERY_HEADER_LEN,
+			NVME_LOG_PAGE_PDU_SIZE, NULL);
 		if (err) {
 			nvme_msg(l->root, LOG_INFO,
 				 "%s: discover try %d/%d failed, error %d\n",

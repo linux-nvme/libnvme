@@ -143,7 +143,7 @@ static int test_ctrl(nvme_ctrl_t c)
 		printf("  Reservation Log\n");
 	else
 		printf("  ERROR: Reservation Log:%x\n", ret);
-	ret = nvme_get_log_ana_groups(l, true, sizeof(buf), analog);
+	ret = nvme_get_log_ana_groups(l, true, analog, sizeof(buf));
 	if (!ret)
 		printf("  ANA Groups\n");
 	else
@@ -153,7 +153,7 @@ static int test_ctrl(nvme_ctrl_t c)
 		printf("  Endurance Group\n");
 	else
 		printf("  ERROR: Endurance Group:%x\n", ret);
-	ret = nvme_get_log_telemetry_ctrl(l, true, 0, sizeof(buf), telem);
+	ret = nvme_get_log_telemetry_ctrl(l, true, 0, telem, sizeof(buf));
 	if (!ret)
 		printf("  Telemetry Controller\n");
 	else

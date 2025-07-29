@@ -282,42 +282,6 @@ enum features {
 	NVME_FEATURES_IOCSP_IOCSCI_MASK				= 0xff,
 };
 
-int nvme_get_log(nvme_link_t l, struct nvme_get_log_args *args)
-{
-	__u32 numd = (args->len >> 2) - 1;
-	__u16 numdu = numd >> 16, numdl = numd & 0xffff;
-
-	__u32 cdw10 = NVME_SET(args->lid, LOG_CDW10_LID) |
-			NVME_SET(args->lsp, LOG_CDW10_LSP) |
-			NVME_SET(!!args->rae, LOG_CDW10_RAE) |
-			NVME_SET(numdl, LOG_CDW10_NUMDL);
-	__u32 cdw11 = NVME_SET(numdu, LOG_CDW11_NUMDU) |
-			NVME_SET(args->lsi, LOG_CDW11_LSI);
-	__u32 cdw12 = args->lpo & 0xffffffff;
-	__u32 cdw13 = args->lpo >> 32;
-	__u32 cdw14 = NVME_SET(args->uuidx, LOG_CDW14_UUID) |
-			NVME_SET(!!args->ot, LOG_CDW14_OT) |
-			NVME_SET(args->csi, LOG_CDW14_CSI);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_admin_get_log_page,
-		.nsid		= args->nsid,
-		.addr		= (__u64)(uintptr_t)args->log,
-		.data_len	= args->len,
-		.cdw10		= cdw10,
-		.cdw11		= cdw11,
-		.cdw12		= cdw12,
-		.cdw13		= cdw13,
-		.cdw14		= cdw14,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(struct nvme_get_log_args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 static bool force_4k;
 
 __attribute__((constructor))
@@ -372,50 +336,21 @@ static void nvme_uring_cmd_exit(struct io_uring *ring)
 }
 
 static int nvme_uring_cmd_admin_passthru_async(nvme_link_t l, struct io_uring *ring,
-					       struct nvme_get_log_args *args)
+					       struct nvme_passthru_cmd *cmd, __u32 *result)
 {
 	struct io_uring_sqe *sqe;
-	struct nvme_uring_cmd *cmd;
 	int ret;
-
-	__u32 numd = (args->len >> 2) - 1;
-	__u16 numdu = numd >> 16, numdl = numd & 0xffff;
-
-	__u32 cdw10 = NVME_SET(args->lid, LOG_CDW10_LID) |
-			NVME_SET(args->lsp, LOG_CDW10_LSP) |
-			NVME_SET(!!args->rae, LOG_CDW10_RAE) |
-			NVME_SET(numdl, LOG_CDW10_NUMDL);
-	__u32 cdw11 = NVME_SET(numdu, LOG_CDW11_NUMDU) |
-			NVME_SET(args->lsi, LOG_CDW11_LSI);
-	__u32 cdw12 = args->lpo & 0xffffffff;
-	__u32 cdw13 = args->lpo >> 32;
-	__u32 cdw14 = NVME_SET(args->uuidx, LOG_CDW14_UUID) |
-			NVME_SET(!!args->ot, LOG_CDW14_OT) |
-			NVME_SET(args->csi, LOG_CDW14_CSI);
-
-	if (args->args_size < sizeof(struct nvme_get_log_args))
-		return -EINVAL;
 
 	sqe = io_uring_get_sqe(ring);
 	if (!sqe)
 		return -1;
 
-	cmd = (void *)&sqe->cmd;
-	cmd->opcode        = nvme_admin_get_log_page,
-	cmd->nsid          = args->nsid,
-	cmd->addr          = (__u64)(uintptr_t)args->log,
-	cmd->data_len      = args->len,
-	cmd->cdw10         = cdw10,
-	cmd->cdw11         = cdw11,
-	cmd->cdw12         = cdw12,
-	cmd->cdw13         = cdw13,
-	cmd->cdw14         = cdw14,
-	cmd->timeout_ms    = args->timeout,
+	memcpy(&sqe->cmd, cmd, sizeof(*cmd));
 
 	sqe->fd = l->fd;
 	sqe->opcode = IORING_OP_URING_CMD;
 	sqe->cmd_op = NVME_URING_CMD_ADMIN;
-	sqe->user_data = (__u64)(uintptr_t)args;
+	sqe->user_data = (__u64)(uintptr_t)result;
 
 	ret = io_uring_submit(ring);
 	if (ret < 0)
@@ -426,9 +361,9 @@ static int nvme_uring_cmd_admin_passthru_async(nvme_link_t l, struct io_uring *r
 
 static int nvme_uring_cmd_wait_complete(struct io_uring *ring, int n)
 {
-	struct nvme_get_log_args *args;
 	struct io_uring_cqe *cqe;
 	int i, ret = 0;
+	__u32 *result;
 
 	for (i = 0; i < n; i++) {
 		ret = io_uring_wait_cqe(ring, &cqe);
@@ -436,9 +371,9 @@ static int nvme_uring_cmd_wait_complete(struct io_uring *ring, int n)
 			return -1;
 
 		if (cqe->res) {
-			args = (struct nvme_get_log_args *)cqe->user_data;
-			if (args->result)
-				*args->result = cqe->res;
+			result = (__u32 *)cqe->user_data;
+			if (result)
+				*result = cqe->res;
 			ret = cqe->res;
 			break;
 		}
@@ -450,13 +385,21 @@ static int nvme_uring_cmd_wait_complete(struct io_uring *ring, int n)
 }
 #endif
 
-int nvme_get_log_page(nvme_link_t l, __u32 xfer_len, struct nvme_get_log_args *args)
+int nvme_get_log_partial(nvme_link_t l, struct nvme_passthru_cmd *cmd,
+			 __u64 lpo, void *log, __u32 len,
+			 __u32 xfer_len, __u32 *result)
 {
-	__u64 offset = 0, xfer, data_len = args->len;
-	__u64 start = args->lpo;
-	bool retain = args->rae;
-	void *ptr = args->log;
+	__u64 offset = 0, xfer, data_len = len;
+	__u64 start = lpo;
+	void *ptr = log;
 	int ret;
+	bool rae;
+	__u32 numd;
+	__u16 numdu, numdl;
+	bool retain = NVME_GET(cmd->cdw10, LOG_CDW10_RAE);
+	__u32 cdw10 = cmd->cdw10 & (NVME_VAL(LOG_CDW10_LID) |
+				    NVME_VAL(LOG_CDW10_LSP));
+	__u32 cdw11 = cmd->cdw11 & NVME_VAL(LOG_CDW11_LSI);
 
 	if (force_4k)
 		xfer_len = NVME_LOG_PAGE_PDU_SIZE;
@@ -495,10 +438,21 @@ int nvme_get_log_page(nvme_link_t l, __u32 xfer_len, struct nvme_get_log_args *a
 		 * last portion of this log page so the data remains latched
 		 * during the fetch sequence.
 		 */
-		args->lpo = start + offset;
-		args->len = xfer;
-		args->log = ptr;
-		args->rae = offset + xfer < data_len || retain;
+		lpo = start + offset;
+		numd = (xfer >> 2) - 1;
+		numdu = numd >> 16;
+		numdl = numd & 0xffff;
+		rae = offset + xfer < data_len || retain;
+
+		cmd->cdw10 = cdw10 |
+			NVME_SET(!!rae, LOG_CDW10_RAE) |
+			NVME_SET(numdl, LOG_CDW10_NUMDL);
+		cmd->cdw11 = cdw11 |
+			NVME_SET(numdu, LOG_CDW11_NUMDU);
+		cmd->cdw12 = lpo & 0xffffffff;
+		cmd->cdw13 = lpo >> 32;
+		cmd->data_len = xfer;
+		cmd->addr = (__u64)(uintptr_t)ptr;
 #ifdef CONFIG_LIBURING
 		if (io_uring_kernel_support == IO_URING_AVAILABLE && use_uring) {
 			if (n >= NVME_URING_ENTRIES) {
@@ -506,13 +460,13 @@ int nvme_get_log_page(nvme_link_t l, __u32 xfer_len, struct nvme_get_log_args *a
 				n = 0;
 			}
 			n += 1;
-			ret = nvme_uring_cmd_admin_passthru_async(l, &ring, args);
+			ret = nvme_uring_cmd_admin_passthru_async(l, &ring, cmd, result);
 
 			if (ret)
 				nvme_uring_cmd_exit(&ring);
 		} else
 #endif
-		ret = nvme_get_log(l, args);
+		ret = nvme_submit_admin_passthru(l, cmd, result);
 		if (ret)
 			return ret;
 
@@ -541,7 +495,7 @@ static int read_ana_chunk(nvme_link_t l, enum nvme_log_ana_lsp lsp, bool rae,
 		__u32 len = min_t(__u32, log_end - *read, NVME_LOG_PAGE_PDU_SIZE);
 		int ret;
 
-		ret = nvme_get_log_ana(l, lsp, rae, *read - log, len, *read);
+		ret = nvme_get_log_ana(l, rae, lsp, *read - log, *read, len);
 		if (ret)
 			return ret;
 
@@ -596,8 +550,9 @@ static int try_read_ana(nvme_link_t l, enum nvme_log_ana_lsp lsp, bool rae,
 	return 0;
 }
 
-int nvme_get_ana_log_atomic(nvme_link_t l, bool rgo, bool rae, unsigned int retries,
-			    struct nvme_ana_log *log, __u32 *len)
+int nvme_get_ana_log_atomic(nvme_link_t l, bool rae, bool rgo,
+			    struct nvme_ana_log *log, __u32 *len,
+			    unsigned int retries)
 {
 	const enum nvme_log_ana_lsp lsp =
 		rgo ? NVME_LOG_ANA_LSP_RGO_GROUPS_ONLY : 0;

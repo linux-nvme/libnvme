@@ -8,6 +8,7 @@
  */
 
 #include "nvme/api-types.h"
+#include "nvme/types.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -254,18 +255,6 @@ int nvme_get_telemetry_log(nvme_link_t l, bool create, bool ctrl, bool rae, size
 	void *tmp;
 	int err;
 	size_t dalb;
-	struct nvme_get_log_args args = {
-		.args_size = sizeof(args),
-		.nsid = NVME_NSID_NONE,
-		.lsp = NVME_LOG_LSP_NONE,
-		.lsi = NVME_LOG_LSI_NONE,
-		.uuidx = NVME_UUID_NONE,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
-		.csi = NVME_CSI_NVM,
-		.rae = rae,
-		.ot = false,
-	};
 
 	*size = 0;
 
@@ -274,14 +263,14 @@ int nvme_get_telemetry_log(nvme_link_t l, bool create, bool ctrl, bool rae, size
 		return -ENOMEM;
 
 	if (ctrl) {
-		err = nvme_get_log_telemetry_ctrl(l, true, 0, xfer, log);
+		err = nvme_get_log_telemetry_ctrl(l, true, 0, log, xfer);
 		lid = NVME_LOG_LID_TELEMETRY_CTRL;
 	} else {
 		lid = NVME_LOG_LID_TELEMETRY_HOST;
 		if (create)
 			err = nvme_get_log_create_telemetry_host_mcda(l, da, log);
 		else
-			err = nvme_get_log_telemetry_host(l, 0, xfer, log);
+			err = nvme_get_log_telemetry_host(l, 0, log, xfer);
 	}
 
 	if (err)
@@ -322,10 +311,11 @@ int nvme_get_telemetry_log(nvme_link_t l, bool create, bool ctrl, bool rae, size
 		return -ENOMEM;
 	log = tmp;
 
-	args.lid = lid;
-	args.log = log;
-	args.len = *size;
-	err = nvme_get_log_page(l, max_data_tx, &args);
+	err = nvme_get_log(l, NVME_NSID_NONE, rae, NVME_LOG_LSP_NONE,
+		lid, NVME_LOG_LSI_NONE, NVME_CSI_NVM,
+		false, NVME_UUID_NONE,
+		0, log, *size,
+		max_data_tx, NULL);
 	if (err)
 		return err;
 
@@ -375,24 +365,12 @@ int nvme_get_lba_status_log(nvme_link_t l, bool rae, struct nvme_lba_status_log 
 	__u32 size;
 	void *tmp;
 	int err;
-	struct nvme_get_log_args args = {
-		.args_size = sizeof(args),
-		.nsid = NVME_NSID_NONE,
-		.lsp = NVME_LOG_LSP_NONE,
-		.lsi = NVME_LOG_LSI_NONE,
-		.uuidx = NVME_UUID_NONE,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
-		.csi = NVME_CSI_NVM,
-		.rae = rae,
-		.ot = false,
-	};
 
 	buf = malloc(sizeof(*buf));
 	if (!buf)
 		return -ENOMEM;
 
-	err = nvme_get_log_lba_status(l, true, 0, sizeof(*buf), buf);
+	err = nvme_get_log_lba_status(l, true, 0, buf, sizeof(*buf));
 	if (err) {
 		*log = NULL;
 		return err;
@@ -412,10 +390,11 @@ int nvme_get_lba_status_log(nvme_link_t l, bool rae, struct nvme_lba_status_log 
 	}
 	buf = tmp;
 
-	args.lid = NVME_LOG_LID_LBA_STATUS;
-	args.log = buf;
-	args.len = size;
-	err = nvme_get_log_page(l, 4096, &args);
+	err = nvme_get_log(l, NVME_NSID_NONE, rae, NVME_LOG_LSP_NONE,
+		NVME_LOG_LID_LBA_STATUS, NVME_LOG_LSI_NONE, NVME_CSI_NVM,
+		false, NVME_UUID_NONE,
+		0, buf, size,
+		NVME_LOG_PAGE_PDU_SIZE, NULL);
 	if (err) {
 		*log = NULL;
 		return err;

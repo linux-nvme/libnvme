@@ -1900,7 +1900,6 @@ static int test_admin_get_log_split_cb(struct nvme_mi_ep *ep,
 
 static void test_admin_get_log_split(struct nvme_mi_ep *ep)
 {
-	struct nvme_get_log_args args = { 0 };
 	unsigned char buf[4096 * 2 + 4];
 	struct log_data ldata;
 	nvme_link_t link;
@@ -1911,14 +1910,11 @@ static void test_admin_get_log_split(struct nvme_mi_ep *ep)
 
 	link = nvme_mi_init_link(ep, 5);
 
-	args.args_size = sizeof(args);
-	args.lid = 1;
-	args.log = buf;
-	args.len = sizeof(buf);
-	args.lpo = 0;
-	args.ot = false;
-
-	rc = nvme_get_log_page(link, NVME_LOG_PAGE_PDU_SIZE, &args);
+	rc = nvme_get_log(link, NVME_NSID_NONE, false, NVME_LOG_LSP_NONE,
+		NVME_LOG_LID_ERROR, NVME_LOG_LSI_NONE, NVME_CSI_NVM,
+		false, NVME_UUID_NONE,
+		0, buf, sizeof(buf),
+		NVME_LOG_PAGE_PDU_SIZE, NULL);
 
 	assert(!rc);
 
