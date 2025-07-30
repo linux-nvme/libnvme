@@ -1217,16 +1217,6 @@ static inline int nvme_zns_identify_ctrl(nvme_link_t l, struct nvme_zns_id_ctrl 
 }
 
 /**
- * nvme_get_log() - NVMe Admin Get Log command
- * @l:		Link handle
- * @args:	&struct nvme_get_log_args argument structure
- *
- * Return: 0 on success, the nvme command status if a response was
- * received (see &enum nvme_status_field) or a negative error otherwise.
- */
-int nvme_get_log(nvme_link_t l, struct nvme_get_log_args *args);
-
-/**
  * nvme_get_log_page() - Get log page data
  * @l:		Link handle
  * @xfer_len:	Max log transfer size per request to split the total.
@@ -1236,6 +1226,16 @@ int nvme_get_log(nvme_link_t l, struct nvme_get_log_args *args);
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
 int nvme_get_log_page(nvme_link_t l, __u32 xfer_len, struct nvme_get_log_args *args);
+
+/**
+ * nvme_get_log() - NVMe Admin Get Log command
+ * @l:		Link handle
+ * @args:	&struct nvme_get_log_args argument structure
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise.
+ */
+int nvme_get_log(nvme_link_t l, struct nvme_get_log_args *args);
 
 static inline int nvme_get_nsid_log(nvme_link_t l, bool rae,
 			enum nvme_cmd_get_log_lid lid,
