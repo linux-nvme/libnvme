@@ -10,8 +10,10 @@
 #ifndef _LIBNVME_IOCTL_H
 #define _LIBNVME_IOCTL_H
 
+#include <endian.h>
 #include <errno.h>
 #include <stddef.h>
+#include <string.h>
 #include <sys/ioctl.h>
 
 #include <nvme/types.h>
@@ -2208,312 +2210,478 @@ static inline int nvme_get_log_lockdown(nvme_link_t l,
 /**
  * nvme_set_features() - Set a feature attribute
  * @l:		Link handle
- * @args:	&struct nvme_set_features_args argument structure
- *
- * Return: 0 on success, the nvme command status if a response was
- * received (see &enum nvme_status_field) or a negative error otherwise.
- */
-int nvme_set_features(nvme_link_t l, struct nvme_set_features_args *args);
-
-/**
- * nvme_set_features_data() - Helper function for @nvme_set_features()
- * @l:		Link handle
- * @fid:	Feature identifier
  * @nsid:	Namespace ID, if applicable
+ * @fid:	Feature identifier
+ * @sv:		Save value across power states
  * @cdw11:	Value to set the feature to
- * @save:	Save value across power states
- * @data_len:	Length of feature data, if applicable, in bytes
+ * @cdw12:	Feature specific command dword12 field
+ * @cdw13:	Feature specific command dword13 field
+ * @cdw15:	Feature specific command dword15 field
+ * @uidx:	UUID Index for differentiating vendor specific encoding
  * @data:	User address of feature data, if applicable
+ * @data_len:	Length of feature data, if applicable, in bytes
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_set_features_data(nvme_link_t l, __u8 fid, __u32 nsid,
-			__u32 cdw11, bool save, __u32 data_len, void *data,
-			__u32 *result)
+static inline int nvme_set_features(nvme_link_t l, __u32 nsid, __u8 fid,
+				    bool sv, __u32 cdw11, __u32 cdw12,
+				    __u32 cdw13, __u32 cdw15,
+				     __u8 uidx, void *data,
+				    __u32 data_len, __u32 *result)
 {
-	struct nvme_set_features_args args = {
-		.result = result,
-		.data = data,
-		.args_size = sizeof(args),
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.nsid = nsid,
-		.cdw11 = cdw11,
-		.cdw12 = 0,
-		.cdw13 = 0,
-		.cdw15 = 0,
-		.data_len = data_len,
-		.save = save,
-		.uuidx = NVME_UUID_NONE,
-		.fid = fid,
+	__u32 cdw10 = NVME_SET(fid, FEATURES_CDW10_FID) |
+		      NVME_SET(sv, SET_FEATURES_CDW10_SAVE);
+	__u32 cdw14 = NVME_SET(uidx, FEATURES_CDW14_UUID);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_admin_set_features,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len	= data_len,
+		.cdw10		= cdw10,
+		.cdw11		= cdw11,
+		.cdw12		= cdw12,
+		.cdw13		= cdw13,
+		.cdw14		= cdw14,
+		.cdw15		= cdw15,
+		.timeout_ms	= NVME_DEFAULT_IOCTL_TIMEOUT,
 	};
-	return nvme_set_features(l, &args);
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
+
+/**
+ * __nvme_set_features() - Internal helper function for @nvme_set_features()
+ * @l:		Link handle
+ * @fid:	Feature identifier
+ * @sv:		Save value across power states
+ * @cdw11:	Value to set the feature to
+ * @result:	The command completion result from CQE dword0
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise.
+ */
+static int __nvme_set_features(nvme_link_t l, __u8 fid, bool sv, __u32 cdw11,
+			       __u32 *result)
+{
+	return nvme_set_features(l, NVME_NSID_NONE, fid, sv, cdw11, 0, 0, 0,
+				 NVME_UUID_NONE, NULL, 0, result);
+}
+
+/**
+ * nvme_set_features_data() - Helper function for @nvme_set_features()
+ * @l:		Link handle
+ * @nsid:	Namespace ID, if applicable
+ * @fid:	Feature identifier
+ * @sv:		Save value across power states
+ * @cdw11:	Value to set the feature to
+ * @data:	User address of feature data, if applicable
+ * @data_len:	Length of feature data, if applicable, in bytes
+ * @result:	The command completion result from CQE dword0
+ *
+ * Return: 0 on success, the nvme command status if a response was
+ * received (see &enum nvme_status_field) or a negative error otherwise.
+ */
+static inline int nvme_set_features_data(nvme_link_t l, __u32 nsid, __u8 fid,
+					 bool sv, __u32 cdw11, void *data,
+					 __u32 data_len, __u32 *result)
+{
+	return nvme_set_features(l, nsid, fid, sv, cdw11, 0, 0, 0,
+				 NVME_UUID_NONE, data, data_len, result);
 }
 
 /**
  * nvme_set_features_simple() - Helper function for @nvme_set_features()
  * @l:		Link handle
- * @fid:	Feature identifier
  * @nsid:	Namespace ID, if applicable
+ * @fid:	Feature identifier
+ * @sv:		Save value across power states
  * @cdw11:	Value to set the feature to
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_set_features_simple(nvme_link_t l, __u8 fid, __u32 nsid,
-			__u32 cdw11, bool save, __u32 *result)
+static inline int nvme_set_features_simple(nvme_link_t l, __u32 nsid,
+					   __u8 fid, bool sv, __u32 cdw11,
+					   __u32 *result)
 {
-	return nvme_set_features_data(l, fid, nsid, cdw11, save, 0, NULL,
-				 result);
+	return nvme_set_features_data(l, nsid, fid, sv, cdw11, NULL, 0,
+				      result);
 }
 
 /**
  * nvme_set_features_arbitration() - Set arbitration features
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @ab:		Arbitration Burst
  * @lpw:	Low Priority Weight
  * @mpw:	Medium Priority Weight
  * @hpw:	High Priority Weight
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_arbitration(nvme_link_t l, __u8 ab, __u8 lpw, __u8 mpw,
-				  __u8 hpw, bool  save, __u32 *result);
+static inline int nvme_set_features_arbitration(nvme_link_t l, bool sv, __u8 ab,
+						__u8 lpw, __u8 mpw, __u8 hpw,
+						__u32 *result)
+{
+	__u32 cdw11 = NVME_SET(ab, FEAT_ARBITRATION_BURST) |
+		      NVME_SET(lpw, FEAT_ARBITRATION_LPW) |
+		      NVME_SET(mpw, FEAT_ARBITRATION_MPW) |
+		      NVME_SET(hpw, FEAT_ARBITRATION_HPW);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_ARBITRATION, sv, cdw11,
+				   result);
+}
 
 /**
  * nvme_set_features_power_mgmt() - Set power management feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @ps:		Power State
  * @wh:		Workload Hint
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_power_mgmt(nvme_link_t l, __u8 ps, __u8 wh, bool save,
-				 __u32 *result);
+static inline int nvme_set_features_power_mgmt(nvme_link_t l, bool sv,
+					       __u8 ps, __u8 wh,
+					       __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(ps, FEAT_PWRMGMT_PS) |
+		      NVME_SET(wh, FEAT_PWRMGMT_WH);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_POWER_MGMT, sv, cdw11,
+				   result);
+}
 
 /**
  * nvme_set_features_lba_range() - Set LBA range feature
  * @l:		Link handle
  * @nsid:	Namespace ID
- * @nr_ranges:	Number of ranges in @data
- * @save:	Save value across power states
+ * @sv:		Save value across power states
+ * @num:	Number of ranges in @data
  * @data:	User address of feature data
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_lba_range(nvme_link_t l, __u32 nsid, __u8 nr_ranges, bool save,
-				struct nvme_lba_range_type *data, __u32 *result);
+static inline int nvme_set_features_lba_range(nvme_link_t l, __u32 nsid,
+					      bool sv, __u8 num,
+					      struct nvme_lba_range_type *data,
+					      __u32 *result)
+{
+	return nvme_set_features_data(l, nsid,
+				      NVME_FEAT_FID_LBA_RANGE, sv,
+				      num - 1, data,
+				      sizeof(*data), result);
+}
 
 /**
  * nvme_set_features_temp_thresh() - Set temperature threshold feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @tmpth:	Temperature Threshold
  * @tmpsel:	Threshold Temperature Select
  * @thsel:	Threshold Type Select
  * @tmpthh:	Temperature Threshold Hysteresis
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_temp_thresh(nvme_link_t l, __u16 tmpth, __u8 tmpsel,
-				  enum nvme_feat_tmpthresh_thsel thsel, __u8 tmpthh,
-				  bool save, __u32 *result);
+static inline int nvme_set_features_temp_thresh(nvme_link_t l, bool sv, __u16 tmpth,
+						__u8 tmpsel,
+						enum nvme_feat_tmpthresh_thsel thsel,
+						__u8 tmpthh, __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(tmpth, FEAT_TT_TMPTH) |
+		      NVME_SET(tmpsel, FEAT_TT_TMPSEL) |
+		      NVME_SET(thsel, FEAT_TT_THSEL) |
+		      NVME_SET(tmpthh, FEAT_TT_TMPTHH);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_TEMP_THRESH, sv, cdw11,
+				   result);
+}
 
 /**
  * nvme_set_features_err_recovery() - Set error recovery feature
  * @l:		Link handle
  * @nsid:	Namespace ID
+ * @sv:		Save value across power states
  * @tler:	Time-limited error recovery value
  * @dulbe:	Deallocated or Unwritten Logical Block Error Enable
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_err_recovery(nvme_link_t l, __u32 nsid, __u16 tler,
-				   bool dulbe, bool save, __u32 *result);
+static inline int nvme_set_features_err_recovery(nvme_link_t l, __u32 nsid, bool sv,
+						 __u16 tler, bool dulbe, __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(tler, FEAT_ERROR_RECOVERY_TLER) |
+		      NVME_SET(dulbe, FEAT_ERROR_RECOVERY_DULBE);
+
+	return nvme_set_features_simple(l, nsid, NVME_FEAT_FID_ERR_RECOVERY, sv,
+					cdw11, result);
+}
 
 /**
  * nvme_set_features_volatile_wc() - Set volatile write cache feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @wce:	Write cache enable
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_volatile_wc(nvme_link_t l, bool wce, bool save,
-				  __u32 *result);
+static inline int nvme_set_features_volatile_wc(nvme_link_t l, bool sv, bool wce,
+						__u32 *result)
+{
+	__u32 cdw11 = NVME_SET(wce, FEAT_VWC_WCE);
 
+	return __nvme_set_features(l, NVME_FEAT_FID_VOLATILE_WC, sv, cdw11,
+				   result);
+}
 /**
  * nvme_set_features_irq_coalesce() - Set IRQ coalesce feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @thr:	Aggregation Threshold
  * @time:	Aggregation Time
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_irq_coalesce(nvme_link_t l, __u8 thr, __u8 time,
-				   bool save, __u32 *result);
+static inline int nvme_set_features_irq_coalesce(nvme_link_t l, bool sv,
+						 __u8 thr, __u8 time,
+						 __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(thr, FEAT_IRQC_THR) |
+		      NVME_SET(time, FEAT_IRQC_TIME);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_IRQ_COALESCE, sv, cdw11,
+				   result);
+}
 
 /**
  * nvme_set_features_irq_config() - Set IRQ config feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @iv:		Interrupt Vector
  * @cd:		Coalescing Disable
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_irq_config(nvme_link_t l, __u16 iv, bool cd, bool save,
-				 __u32 *result);
+static inline int nvme_set_features_irq_config(nvme_link_t l, bool sv, __u16 iv,
+					       bool cd, __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(iv, FEAT_ICFG_IV) |
+		      NVME_SET(cd, FEAT_ICFG_CD);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_IRQ_CONFIG, sv, cdw11,
+				   result);
+}
 
 /**
  * nvme_set_features_write_atomic() - Set write atomic feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @dn:		Disable Normal
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_write_atomic(nvme_link_t l, bool dn, bool save,
-				   __u32 *result);
+static inline int nvme_set_features_write_atomic(nvme_link_t l, bool sv,
+						 bool dn, __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(dn, FEAT_WA_DN);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_WRITE_ATOMIC, sv, cdw11,
+				   result);
+}
 
 /**
  * nvme_set_features_async_event() - Set asynchronous event feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @events:	Events to enable
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_async_event(nvme_link_t l, __u32 events, bool save,
-				  __u32 *result);
+static inline int nvme_set_features_async_event(nvme_link_t l, bool sv,
+						__u32 events, __u32 *result)
+{
+	return __nvme_set_features(l, NVME_FEAT_FID_ASYNC_EVENT, sv, events,
+				   result);
+}
 
 /**
  * nvme_set_features_auto_pst() - Set autonomous power state feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @apste:	Autonomous Power State Transition Enable
  * @apst:	Autonomous Power State Transition
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_auto_pst(nvme_link_t l, bool apste, bool save,
-			       struct nvme_feat_auto_pst *apst,
-			       __u32 *result);
+static inline int nvme_set_features_auto_pst(nvme_link_t l, bool sv, bool apste,
+					     struct nvme_feat_auto_pst *apst,
+					     __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(apste, FEAT_APST_APSTE);
+
+	return nvme_set_features_data(l, NVME_NSID_NONE,
+				      NVME_FEAT_FID_AUTO_PST, sv,
+				      cdw11, apst,
+				      sizeof(*apst), result);
+}
 
 /**
  * nvme_set_features_timestamp() - Set timestamp feature
  * @l:		Link handle
- * @save:	Save value across power states
- * @timestamp:	The current timestamp value to assign to this feature
+ * @sv:		Save value across power states
+ * @tstmp:	The current timestamp value to assign to this feature
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_timestamp(nvme_link_t l, bool save, __u64 timestamp);
+static inline int nvme_set_features_timestamp(nvme_link_t l, __u64 tstmp, bool sv)
+{
+	__le64 t = htole64(tstmp);
+	struct nvme_timestamp ts = {};
+
+	memcpy(ts.timestamp, &t, sizeof(ts.timestamp));
+	return nvme_set_features_data(l, NVME_NSID_NONE,
+				      NVME_FEAT_FID_TIMESTAMP, sv,
+				      0, &ts, sizeof(ts), NULL);
+}
 
 /**
  * nvme_set_features_hctm() - Set thermal management feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @tmt2:	Thermal Management Temperature 2
  * @tmt1:	Thermal Management Temperature 1
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_hctm(nvme_link_t l, __u16 tmt2, __u16 tmt1, bool save,
-			   __u32 *result);
+static inline int nvme_set_features_hctm(nvme_link_t l, bool sv,
+					 __u16 tmt2, __u16 tmt1,
+					 __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(tmt2, FEAT_HCTM_TMT2) |
+		      NVME_SET(tmt1, FEAT_HCTM_TMT1);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_HCTM, sv, cdw11,
+				   result);
+}
 
 /**
  * nvme_set_features_nopsc() - Set non-operational power state feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @noppme:	Non-Operational Power State Permissive Mode Enable
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_nopsc(nvme_link_t l, bool noppme, bool save, __u32 *result);
+static inline int nvme_set_features_nopsc(nvme_link_t l, bool sv,
+					  bool noppme, __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(noppme, FEAT_NOPS_NOPPME);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_NOPSC, sv, cdw11,
+				   result);
+}
 
 /**
  * nvme_set_features_rrl() - Set read recovery level feature
  * @l:		Link handle
- * @rrl:	Read recovery level setting
+ * @sv:		Save value across power states
  * @nvmsetid:	NVM set id
- * @save:	Save value across power states
+ * @rrl:	Read recovery level setting
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_rrl(nvme_link_t l, __u8 rrl, __u16 nvmsetid, bool save,
-			  __u32 *result);
+static inline int nvme_set_features_rrl(nvme_link_t l, bool sv, __u16 nvmsetid,
+					__u8 rrl, __u32 *result)
+{
+	return nvme_set_features(l, NVME_NSID_NONE,
+				 NVME_FEAT_FID_RRL, sv,
+				 nvmsetid, rrl, 0, 0,
+				 NVME_UUID_NONE, NULL, 0,
+				 result);
+}
 
 /**
  * nvme_set_features_plm_config() - Set predictable latency feature
  * @l:		Link handle
- * @enable:	Predictable Latency Enable
+ * @sv:		Save value across power states
  * @nvmsetid:	NVM Set Identifier
- * @save:	Save value across power states
+ * @lpe:	Predictable Latency Enable
  * @data:	Pointer to structure nvme_plm_config
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_plm_config(nvme_link_t l, bool enable, __u16 nvmsetid,
-				 bool save, struct nvme_plm_config *data,
-				 __u32 *result);
+static inline int nvme_set_features_plm_config(nvme_link_t l, bool sv, __u16 nvmsetid,
+					       bool lpe, struct nvme_plm_config *data,
+					       __u32 *result)
+{
+	return nvme_set_features(l, NVME_NSID_NONE,
+				 NVME_FEAT_FID_PLM_CONFIG, sv,
+				 nvmsetid, lpe, 0, 0,
+				 NVME_UUID_NONE, data, sizeof(*data),
+				 result);
+}
 
 /**
  * nvme_set_features_plm_window() - Set window select feature
  * @l:		Link handle
- * @sel:	Window Select
+ * @sv:		Save value across power states
  * @nvmsetid:	NVM Set Identifier
- * @save:	Save value across power states
+ * @wsel:	Window Select
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_plm_window(nvme_link_t l, enum nvme_feat_plm_window_select sel,
-				 __u16 nvmsetid, bool save, __u32 *result);
+static inline int nvme_set_features_plm_window(nvme_link_t l, bool sv, __u16 nvmsetid,
+					       enum nvme_feat_plm_window_select wsel,
+					       __u32 *result)
+{
+	return nvme_set_features(l, NVME_NSID_NONE,
+				 NVME_FEAT_FID_PLM_WINDOW, sv,
+				 nvmsetid, NVME_SET(wsel, FEAT_PLMW_WS), 0, 0,
+				 NVME_UUID_NONE, NULL, 0, result);
+}
 
 /**
  * nvme_set_features_lba_sts_interval() - Set LBA status information feature
  * @l:		Link handle
- * @save:	Save value across power states
+ * @sv:		Save value across power states
  * @lsiri:	LBA Status Information Report Interval
  * @lsipi:	LBA Status Information Poll Interval
  * @result:	The command completion result from CQE dword0
@@ -2521,125 +2689,184 @@ int nvme_set_features_plm_window(nvme_link_t l, enum nvme_feat_plm_window_select
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_lba_sts_interval(nvme_link_t l, __u16 lsiri, __u16 lsipi,
-				       bool save, __u32 *result);
+static inline int nvme_set_features_lba_sts_interval(nvme_link_t l, bool sv,
+						     __u16 lsiri, __u16 lsipi,
+						     __u32 *result)
+{
+	__u32 cdw11 = NVME_SET(lsiri, FEAT_LBAS_LSIRI) |
+		      NVME_SET(lsipi, FEAT_LBAS_LSIPI);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_LBA_STS_INTERVAL, sv,
+				   cdw11, result);
+}
 
 /**
  * nvme_set_features_host_behavior() - Set host behavior feature
  * @l:		Link handle
- * @save:	Save value across power states
+ * @sv:		Save value across power states
  * @data:	Pointer to structure nvme_feat_host_behavior
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_host_behavior(nvme_link_t l, bool save,
-				    struct nvme_feat_host_behavior *data);
+static inline int nvme_set_features_host_behavior(nvme_link_t l, bool sv,
+						  struct nvme_feat_host_behavior *data)
+{
+	return nvme_set_features_data(l, NVME_NSID_NONE,
+				      NVME_FEAT_FID_HOST_BEHAVIOR, sv,
+				      0, data, sizeof(*data), NULL);
+}
 
 /**
  * nvme_set_features_sanitize() - Set sanitize feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @nodrm:	No-Deallocate Response Mode
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_sanitize(nvme_link_t l, bool nodrm, bool save, __u32 *result);
+static inline int nvme_set_features_sanitize(nvme_link_t l, bool sv, bool nodrm,
+					     __u32 *result)
+{
+	return __nvme_set_features(l, NVME_FEAT_FID_SANITIZE, sv, nodrm,
+				   result);
+}
 
 /**
  * nvme_set_features_endurance_evt_cfg() - Set endurance event config feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @endgid:	Endurance Group Identifier
- * @egwarn:	Flags to enable warning, see &enum nvme_eg_critical_warning_flags
- * @save:	Save value across power states
+ * @egcw:	Flags to enable warning, see &enum nvme_eg_critical_warning_flags
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_endurance_evt_cfg(nvme_link_t l, __u16 endgid, __u8 egwarn,
-					bool save, __u32 *result);
+static inline int nvme_set_features_endurance_evt_cfg(nvme_link_t l, bool sv,
+						      __u16 endgid, __u8 egcw,
+						      __u32 *result)
+{
+	__u32 cdw11 = endgid | egcw << 16;
+
+	return __nvme_set_features(l, NVME_FEAT_FID_ENDURANCE_EVT_CFG, sv,
+				   cdw11, result);
+}
 
 /**
  * nvme_set_features_sw_progress() - Set pre-boot software load count feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @pbslc:	Pre-boot Software Load Count
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_sw_progress(nvme_link_t l, __u8 pbslc, bool save,
-				  __u32 *result);
+static inline int nvme_set_features_sw_progress(nvme_link_t l, bool sv, __u8 pbslc,
+						__u32 *result)
+{
+	return __nvme_set_features(l, NVME_FEAT_FID_SW_PROGRESS, sv, pbslc,
+				   result);
+}
 
 /**
  * nvme_set_features_host_id() - Set enable extended host identifiers feature
  * @l:		Link handle
+ * @sv:		Save value across power states
  * @exhid:	Enable Extended Host Identifier
- * @save:	Save value across power states
  * @hostid:	Host ID to set
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_host_id(nvme_link_t l, bool exhid, bool save, __u8 *hostid);
+static inline int nvme_set_features_host_id(nvme_link_t l, bool sv, bool exhid,
+					    __u8 *hostid)
+{
+	__u32 len = exhid ? 16 : 8;
+	__u32 cdw11 = exhid;
+
+	return nvme_set_features_data(l, NVME_NSID_NONE, NVME_FEAT_FID_HOST_ID,
+				      sv, cdw11, hostid, len, NULL);
+}
 
 /**
  * nvme_set_features_resv_mask() - Set reservation notification mask feature
  * @l:		Link handle
  * @nsid:	Namespace ID
+ * @sv:		Save value across power states
  * @mask:	Reservation Notification Mask Field
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_resv_mask(nvme_link_t l, __u32 nsid, __u32 mask, bool save,
-				__u32 *result);
+static inline int nvme_set_features_resv_mask(nvme_link_t l, __u32 nsid, bool sv,
+					      __u32 mask, __u32 *result)
+{
+	return nvme_set_features_simple(l, nsid, NVME_FEAT_FID_RESV_MASK,
+					sv, mask, result);
+}
 
 /**
  * nvme_set_features_resv_persist() - Set persist through power loss feature
  * @l:		Link handle
  * @nsid:	Namespace ID
+ * @sv:		Save value across power states
  * @ptpl:	Persist Through Power Loss
- * @save:	Save value across power states
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_resv_persist(nvme_link_t l, __u32 nsid, bool ptpl, bool save,
-				   __u32 *result);
+static inline int nvme_set_features_resv_persist(nvme_link_t l, __u32 nsid, bool sv,
+						 bool ptpl, __u32 *result)
+{
+	return nvme_set_features_simple(l, nsid,
+					NVME_FEAT_FID_RESV_PERSIST, sv,
+					ptpl, result);
+}
 
 /**
  * nvme_set_features_write_protect() - Set write protect feature
  * @l:		Link handle
  * @nsid:	Namespace ID
- * @state:	Write Protection State
- * @save:	Save value across power states
+ * @sv:		Save value across power states
+ * @wps:	Write Protection State
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_write_protect(nvme_link_t l, __u32 nsid,
-				    enum nvme_feat_nswpcfg_state state,
-				    bool save, __u32 *result);
+static inline int nvme_set_features_write_protect(nvme_link_t l, __u32 nsid,
+						  bool sv,
+						  enum nvme_feat_nswpcfg_state wps,
+						  __u32 *result)
+{
+	return nvme_set_features_simple(l, nsid,
+					NVME_FEAT_FID_WRITE_PROTECT, sv,
+					wps, result);
+}
 
 /**
  * nvme_set_features_iocs_profile() - Set I/O command set profile feature
  * @l:		Link handle
- * @iocsi:	I/O Command Set Combination Index
- * @save:	Save value across power states
+ * @sv:		Save value across power states
+ * @iocsci:	I/O Command Set Combination Index
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_features_iocs_profile(nvme_link_t l, __u16 iocsi, bool save);
+static inline int nvme_set_features_iocs_profile(nvme_link_t l, bool sv,
+						 __u16 iocsci)
+{
+	__u32 cdw11 = NVME_SET(iocsci, FEAT_IOCSP_IOCSCI);
+
+	return __nvme_set_features(l, NVME_FEAT_FID_IOCS_PROFILE,
+				   sv, cdw11, NULL);
+}
 
 /**
  * nvme_get_features() - Retrieve a feature attribute
@@ -4129,8 +4356,16 @@ int nvme_lm_migration_recv(nvme_link_t l, struct nvme_lm_migration_recv_args *ar
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_lm_set_features_ctrl_data_queue(nvme_link_t l, __u16 cdqid, __u32 hp, __u32 tpt, bool etpt,
-					 __u32 *result);
+static inline int nvme_lm_set_features_ctrl_data_queue(nvme_link_t l, __u16 cdqid, __u32 hp,
+						       __u32 tpt, bool etpt, __u32 *result)
+{
+	__u32 cdw11 = cdqid | NVME_SET(etpt, LM_CTRL_DATA_QUEUE_ETPT);
+
+	return nvme_set_features(l, NVME_NSID_NONE,
+				 NVME_FEAT_FID_CTRL_DATA_QUEUE, false,
+				 cdw11, hp, tpt, 0,
+				 NVME_UUID_NONE, NULL, 0, result);
+}
 
 /**
  * nvme_lm_get_features_ctrl_data_queue - Get Controller Data Queue feature

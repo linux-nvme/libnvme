@@ -1069,7 +1069,6 @@ static int test_admin_set_features_cb(struct nvme_mi_ep *ep,
 
 static void test_set_features(nvme_mi_ep_t ep)
 {
-	struct nvme_set_features_args args = { 0 };
 	struct nvme_timestamp tstamp = { 0 };
 	nvme_link_t link;
 	uint32_t res;
@@ -1083,16 +1082,10 @@ static void test_set_features(nvme_mi_ep_t ep)
 	for (i = 0; i < sizeof(tstamp.timestamp); i++)
 		tstamp.timestamp[i] = i;
 
-	args.args_size = sizeof(args);
-	args.fid = NVME_FEAT_FID_TIMESTAMP;
-	args.save = 1;
-	args.result = &res;
-	args.data = &tstamp;
-	args.data_len = sizeof(tstamp);
-
-	rc = nvme_set_features(link, &args);
+	rc = nvme_set_features(link, NVME_NSID_NONE, NVME_FEAT_FID_TIMESTAMP, true,
+			       0, 0, 0, 0, 0, &tstamp, sizeof(tstamp), &res);
 	assert(rc == 0);
-	assert(args.data_len == 8);
+	assert(sizeof(tstamp) == 8);
 }
 
 enum ns_type {
