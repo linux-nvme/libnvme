@@ -220,10 +220,10 @@ int do_identify(nvme_mi_ep_t ep, int argc, char **argv)
 	 * response.
 	 */
 	if (partial) {
-		rc = nvme_mi_admin_identify_partial(link, &id_args, 0,
-					    offsetof(struct nvme_id_ctrl, rab));
+		rc = nvme_identify_partial(link, offsetof(struct nvme_id_ctrl, rab),
+					   &id_args);
 	} else {
-		rc = nvme_mi_admin_identify(link, &id_args);
+		rc = nvme_identify(link, &id_args);
 	}
 
 	if (rc) {
