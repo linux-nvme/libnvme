@@ -577,6 +577,21 @@ int nvme_ns_rescan(nvme_link_t l);
 int nvme_get_nsid(nvme_link_t l, __u32 *nsid);
 
 /**
+ * nvme_identify_partial() - Send the NVMe Identify command
+ * @l:		Link handle
+ * @xfer_len:	Max log transfer size per request to split the total.
+ * @args:	&struct nvme_identify_args argument structure
+ *
+ * The Identify command returns a data buffer that describes information about
+ * the NVM subsystem, the controller or the namespace(s).
+ *
+ * Return: 0 on success, the nvme command status if a response was
+ * received (see &enum nvme_status_field) or a negative error otherwise.
+ */
+int nvme_identify_partial(nvme_link_t l, __u32 xfer_len,
+			  struct nvme_identify_args *args);
+
+/**
  * nvme_identify() - Send the NVMe Identify command
  * @l:		Link handle
  * @args:	&struct nvme_identify_args argument structure

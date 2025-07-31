@@ -282,7 +282,8 @@ enum features {
 	NVME_FEATURES_IOCSP_IOCSCI_MASK				= 0xff,
 };
 
-int nvme_identify(nvme_link_t l, struct nvme_identify_args *args)
+int nvme_identify_partial(nvme_link_t l, __u32 xfer_len,
+			  struct nvme_identify_args *args)
 {
 	__u32 cdw10 = NVME_SET(args->cntid, IDENTIFY_CDW10_CNTID) |
 			NVME_SET(args->cns, IDENTIFY_CDW10_CNS);
@@ -294,7 +295,7 @@ int nvme_identify(nvme_link_t l, struct nvme_identify_args *args)
 		.opcode		= nvme_admin_identify,
 		.nsid		= args->nsid,
 		.addr		= (__u64)(uintptr_t)args->data,
-		.data_len	= NVME_IDENTIFY_DATA_SIZE,
+		.data_len	= xfer_len,
 		.cdw10		= cdw10,
 		.cdw11		= cdw11,
 		.cdw14		= cdw14,
@@ -305,6 +306,11 @@ int nvme_identify(nvme_link_t l, struct nvme_identify_args *args)
 		return -EINVAL;
 
 	return nvme_submit_admin_passthru(l, &cmd, args->result);
+}
+
+int nvme_identify(nvme_link_t l, struct nvme_identify_args *args)
+{
+	return nvme_identify_partial(l, NVME_IDENTIFY_DATA_SIZE, args);
 }
 
 int nvme_get_log(nvme_link_t l, struct nvme_get_log_args *args)
