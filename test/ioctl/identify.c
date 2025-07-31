@@ -141,7 +141,7 @@ static void test_ns_csi(void)
 
 	arbitrary(expected_id, sizeof(expected_id));
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
-	err = nvme_identify_ns_csi(test_link, TEST_NSID, TEST_UUID, TEST_CSI, id);
+	err = nvme_identify_ns_csi(test_link, TEST_NSID, TEST_CSI, TEST_UUID, id);
 	end_mock_cmds();
 	check(err == 0, "identify returned error %d", err);
 	cmp(id, expected_id, sizeof(id), "incorrect identify data");
@@ -574,7 +574,7 @@ static void test_identify_iocs_ns_csi_user_data_format(void)
 	arbitrary(&expected_id, sizeof(expected_id));
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
 	err = nvme_identify_iocs_ns_csi_user_data_format(
-		test_link, TEST_FIDX, TEST_UUID, TEST_CSI, &id);
+		test_link, TEST_CSI, TEST_FIDX, TEST_UUID, &id);
 	end_mock_cmds();
 	check(err == 0, "identify returned error %d, errno %m", err);
 	cmp(&id, &expected_id, sizeof(id), "incorrect identify data");

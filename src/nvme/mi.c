@@ -211,7 +211,6 @@ static void __nvme_mi_format_mn(struct nvme_id_ctrl *id,
 
 void nvme_mi_ep_probe(struct nvme_mi_ep *ep)
 {
-	struct nvme_identify_args id_args = { 0 };
 	struct nvme_id_ctrl id = { 0 };
 	struct nvme_link *link;
 	int rc;
@@ -252,15 +251,9 @@ void nvme_mi_ep_probe(struct nvme_mi_ep *ep)
 	 *
 	 * all other fields - rab and onwards - will be zero!
 	 */
-	id_args.args_size = sizeof(id_args);
-	id_args.data = &id;
-	id_args.cns = NVME_IDENTIFY_CNS_CTRL;
-	id_args.nsid = NVME_NSID_NONE;
-	id_args.cntid = 0;
-	id_args.csi = NVME_CSI_NVM;
-
-	rc = nvme_identify_partial(link, offsetof(struct nvme_id_ctrl, rab),
-				   &id_args);
+	rc = nvme_identify_partial(link, NVME_NSID_NONE, 0, NVME_IDENTIFY_CNS_CTRL,
+				   NVME_CSI_NVM, 0, 0, &id,
+				   offsetof(struct nvme_id_ctrl, rab),  NULL);
 	if (rc) {
 		nvme_msg(ep->root, LOG_WARNING,
 			 "Identify Controller failed, no quirks applied\n");
