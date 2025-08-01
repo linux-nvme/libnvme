@@ -176,20 +176,15 @@ static void test_set_property(void)
 
 static void test_ns_attach(void)
 {
-	__u32 result;
 	struct nvme_ctrl_list expected_ctrlist, ctrlist;
-	struct nvme_ns_attach_args args = {
-		.result = &result,
-		.ctrlist = &ctrlist,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.sel = NVME_NS_ATTACH_SEL_CTRL_DEATTACH,
-	};
+	enum nvme_ns_attach_sel sel = NVME_NS_ATTACH_SEL_CTRL_DEATTACH;
+	__u32 nsid = TEST_NSID;
+	__u32 result;
 
 	struct mock_cmd mock_admin_cmd = {
 		.opcode = nvme_admin_ns_attach,
-		.nsid = TEST_NSID,
-		.cdw10 = NVME_NS_ATTACH_SEL_CTRL_DEATTACH,
+		.nsid = nsid,
+		.cdw10 = sel,
 		.data_len = sizeof(expected_ctrlist),
 		.out_data = &expected_ctrlist,
 	};
@@ -198,7 +193,7 @@ static void test_ns_attach(void)
 
 	arbitrary(&expected_ctrlist, sizeof(expected_ctrlist));
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
-	err = nvme_ns_attach(test_link, &args);
+	err = nvme_ns_attach(test_link, nsid, sel, &ctrlist, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);

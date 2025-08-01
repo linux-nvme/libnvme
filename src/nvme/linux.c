@@ -406,36 +406,28 @@ int nvme_get_lba_status_log(nvme_link_t l, bool rae, struct nvme_lba_status_log 
 }
 
 static int nvme_ns_attachment(nvme_link_t l, __u32 nsid, __u16 num_ctrls,
-			      __u16 *ctrlist, bool attach, __u32 timeout)
+			      __u16 *ctrlist, bool attach)
 {
 	struct nvme_ctrl_list cntlist = { 0 };
-	struct nvme_ns_attach_args args = {
-		.args_size = sizeof(args),
-		.nsid = nsid,
-		.sel = NVME_NS_ATTACH_SEL_CTRL_DEATTACH,
-		.ctrlist = &cntlist,
-		.timeout = timeout,
-	};
+	enum nvme_ns_attach_sel sel = NVME_NS_ATTACH_SEL_CTRL_DEATTACH;
 
 	if (attach)
-		args.sel = NVME_NS_ATTACH_SEL_CTRL_ATTACH;
+		sel = NVME_NS_ATTACH_SEL_CTRL_ATTACH;
 
-	nvme_init_ctrl_list(args.ctrlist, num_ctrls, ctrlist);
-	return nvme_ns_attach(l, &args);
+	nvme_init_ctrl_list(&cntlist, num_ctrls, ctrlist);
+	return nvme_ns_attach(l, nsid, sel, &cntlist, NULL);
 }
 
 int nvme_namespace_attach_ctrls(nvme_link_t l, __u32 nsid, __u16 num_ctrls,
 				__u16 *ctrlist)
 {
-	return nvme_ns_attachment(l, nsid, num_ctrls, ctrlist, true,
-				  NVME_DEFAULT_IOCTL_TIMEOUT);
+	return nvme_ns_attachment(l, nsid, num_ctrls, ctrlist, true);
 }
 
 int nvme_namespace_detach_ctrls(nvme_link_t l, __u32 nsid, __u16 num_ctrls,
 				__u16 *ctrlist)
 {
-	return nvme_ns_attachment(l, nsid, num_ctrls, ctrlist, false,
-				  NVME_DEFAULT_IOCTL_TIMEOUT);
+	return nvme_ns_attachment(l, nsid, num_ctrls, ctrlist, false);
 }
 
 size_t nvme_get_ana_log_len_from_id_ctrl(const struct nvme_id_ctrl *id_ctrl,

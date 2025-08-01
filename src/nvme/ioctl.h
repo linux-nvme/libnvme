@@ -3198,12 +3198,31 @@ static inline int nvme_ns_mgmt_delete(nvme_link_t l, __u32 nsid)
 /**
  * nvme_ns_attach() - Attach or detach namespace to controller(s)
  * @l:		Link handle
- * @args:	&struct nvme_ns_attach_args Argument structure
+ * @nsid:	Namespace ID to execute attach selection
+ * @sel:	Attachment selection, see &enum nvme_ns_attach_sel
+ * @ctrlist:	Controller list to modify attachment state of nsid
+ * @result:	NVMe command result
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_ns_attach(nvme_link_t l, struct nvme_ns_attach_args *args);
+static inline int nvme_ns_attach(nvme_link_t l, __u32 nsid,
+				 enum nvme_ns_attach_sel sel,
+				 struct nvme_ctrl_list *ctrlist,
+				 __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(sel, NAMESPACE_ATTACH_CDW10_SEL);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_admin_ns_attach,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)ctrlist,
+		.data_len	= sizeof(*ctrlist),
+		.cdw10		= cdw10,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_ns_attach_ctrls() - Attach namespace to controllers
@@ -3217,16 +3236,8 @@ int nvme_ns_attach(nvme_link_t l, struct nvme_ns_attach_args *args);
 static inline int nvme_ns_attach_ctrls(nvme_link_t l, __u32 nsid,
 			struct nvme_ctrl_list *ctrlist)
 {
-	struct nvme_ns_attach_args args = {
-		.result = NULL,
-		.ctrlist = ctrlist,
-		.args_size = sizeof(args),
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.nsid = nsid,
-		.sel = NVME_NS_ATTACH_SEL_CTRL_ATTACH,
-	};
-
-	return nvme_ns_attach(l, &args);
+	return nvme_ns_attach(l, nsid, NVME_NS_ATTACH_SEL_CTRL_ATTACH,
+			      ctrlist, NULL);
 }
 
 /**
@@ -3241,16 +3252,8 @@ static inline int nvme_ns_attach_ctrls(nvme_link_t l, __u32 nsid,
 static inline int nvme_ns_detach_ctrls(nvme_link_t l, __u32 nsid,
 			struct nvme_ctrl_list *ctrlist)
 {
-	struct nvme_ns_attach_args args = {
-		.result = NULL,
-		.ctrlist = ctrlist,
-		.args_size = sizeof(args),
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.nsid = nsid,
-		.sel = NVME_NS_ATTACH_SEL_CTRL_DEATTACH,
-	};
-
-	return nvme_ns_attach(l, &args);
+	return nvme_ns_attach(l, nsid, NVME_NS_ATTACH_SEL_CTRL_DEATTACH,
+			      ctrlist, NULL);
 }
 
 /**
