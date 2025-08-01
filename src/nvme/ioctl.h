@@ -3260,7 +3260,10 @@ static inline int nvme_ns_detach_ctrls(nvme_link_t l, __u32 nsid,
  * nvme_fw_download() - Download part or all of a firmware image to the
  *			controller
  * @l:		Link handle
- * @args:	&struct nvme_fw_download_args argument structure
+ * @data:	Userspace address of the firmware data
+ * @data_len:	Length of data in this command in bytes
+ * @offset:	Offset in the firmware data
+ * @result:	The command completion result from CQE dword0
  *
  * The Firmware Image Download command downloads all or a portion of an image
  * for a future update to the controller. The Firmware Image Download command
@@ -3278,7 +3281,28 @@ static inline int nvme_ns_detach_ctrls(nvme_link_t l, __u32 nsid,
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_fw_download(nvme_link_t l, struct nvme_fw_download_args *args);
+static inline int nvme_fw_download(nvme_link_t l, void *data, __u32 data_len,
+				   __u32 offset, __u32 *result)
+{
+	__u32 cdw10 = (data_len >> 2) - 1;
+	__u32 cdw11 = offset >> 2;
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_admin_fw_download,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len	= data_len,
+		.cdw10		= cdw10,
+		.cdw11		= cdw11,
+	};
+
+	if ((data_len & 0x3) || (!data_len))
+		return -EINVAL;
+
+	if (offset & 0x3)
+		return -EINVAL;
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_fw_commit() - Commit firmware using the specified action

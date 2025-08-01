@@ -187,28 +187,20 @@ const char *nvme_link_get_name(nvme_link_t l)
 int nvme_fw_download_seq(nvme_link_t l, __u32 size, __u32 xfer, __u32 offset,
 			 void *buf)
 {
-	int err = 0;
-	struct nvme_fw_download_args args = {
-		.args_size = sizeof(args),
-		.offset = offset,
-		.data_len = xfer,
-		.data = buf,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
-	};
+	int err;
 
 	while (size > 0) {
-		args.data_len = MIN(xfer, size);
-		err = nvme_fw_download(l, &args);
+		err = nvme_fw_download(l, buf, MIN(xfer, size),
+				       offset, NULL);
 		if (err)
-			break;
+			return err;
 
-		args.data += xfer;
+		buf += xfer;
 		size -= xfer;
-		args.offset += xfer;
+		offset += xfer;
 	}
 
-	return err;
+	return 0;
 }
 
 int nvme_get_telemetry_max(nvme_link_t l, enum nvme_telemetry_da *da, size_t *data_tx)

@@ -1567,7 +1567,6 @@ static int test_admin_fw_download_cb(struct nvme_mi_ep *ep,
 
 static void test_admin_fw_download(struct nvme_mi_ep *ep)
 {
-	struct nvme_fw_download_args args;
 	struct fw_download_info info;
 	unsigned char fw[4096];
 	nvme_link_t link;
@@ -1579,8 +1578,6 @@ static void test_admin_fw_download(struct nvme_mi_ep *ep)
 	info.offset = 0;
 	info.len = 0;
 	info.data = fw;
-	args.data = fw;
-	args.args_size = sizeof(args);
 
 	test_set_transport_callback(ep, test_admin_fw_download_cb, &info);
 
@@ -1588,39 +1585,39 @@ static void test_admin_fw_download(struct nvme_mi_ep *ep)
 	assert(link);
 
 	/* invalid (zero) len */
-	args.data_len = info.len = 1;
-	args.offset = info.offset = 0;
-	rc = nvme_fw_download(link, &args);
+	info.len = 1;
+	info.offset = 0;
+	rc = nvme_fw_download(link, fw, info.len, info.offset, NULL);
 	assert(rc);
 
 	/* invalid (unaligned) len */
-	args.data_len = info.len = 1;
-	args.offset = info.offset = 0;
-	rc = nvme_fw_download(link, &args);
+	info.len = 1;
+	info.offset = 0;
+	rc = nvme_fw_download(link, fw, info.len, info.offset, NULL);
 	assert(rc);
 
 	/* invalid offset */
-	args.data_len = info.len = 4;
-	args.offset = info.offset = 1;
-	rc = nvme_fw_download(link, &args);
+	info.len = 4;
+	info.offset = 1;
+	rc = nvme_fw_download(link, fw, info.len, info.offset, NULL);
 	assert(rc);
 
 	/* smallest len */
-	args.data_len = info.len = 4;
-	args.offset = info.offset = 0;
-	rc = nvme_fw_download(link, &args);
+	info.len = 4;
+	info.offset = 0;
+	rc = nvme_fw_download(link, fw, info.len, info.offset, NULL);
 	assert(!rc);
 
 	/* largest len */
-	args.data_len = info.len = 4096;
-	args.offset = info.offset = 0;
-	rc = nvme_fw_download(link, &args);
+	info.len = 4096;
+	info.offset = 0;
+	rc = nvme_fw_download(link, fw, info.len, info.offset, NULL);
 	assert(!rc);
 
 	/* offset value */
-	args.data_len = info.len = 4096;
-	args.offset = info.offset = 4096;
-	rc = nvme_fw_download(link, &args);
+	info.len = 4096;
+	info.offset = 4096;
+	rc = nvme_fw_download(link, fw, info.len, info.offset, NULL);
 	assert(!rc);
 }
 
