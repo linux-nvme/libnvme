@@ -277,13 +277,13 @@ enum nvme_cmd_dword_fields {
 	NVME_VIRT_MGMT_CDW10_RT_MASK				= 0x7,
 	NVME_VIRT_MGMT_CDW10_CNTLID_MASK			= 0xffff,
 	NVME_VIRT_MGMT_CDW11_NR_MASK				= 0xffff,
-	NVME_FORMAT_CDW10_LBAF_SHIFT				= 0,
+	NVME_FORMAT_CDW10_LBAFL_SHIFT				= 0,
 	NVME_FORMAT_CDW10_MSET_SHIFT				= 4,
 	NVME_FORMAT_CDW10_PI_SHIFT				= 5,
 	NVME_FORMAT_CDW10_PIL_SHIFT				= 8,
 	NVME_FORMAT_CDW10_SES_SHIFT				= 9,
 	NVME_FORMAT_CDW10_LBAFU_SHIFT				= 12,
-	NVME_FORMAT_CDW10_LBAF_MASK				= 0xf,
+	NVME_FORMAT_CDW10_LBAFL_MASK				= 0xf,
 	NVME_FORMAT_CDW10_MSET_MASK				= 0x1,
 	NVME_FORMAT_CDW10_PI_MASK				= 0x7,
 	NVME_FORMAT_CDW10_PIL_MASK				= 0x1,
@@ -3081,7 +3081,13 @@ int nvme_get_features_iocs_profile(nvme_link_t l, enum nvme_get_features_sel sel
 /**
  * nvme_format_nvm() - Format nvme namespace(s)
  * @l:		Link handle
- * @args:	&struct nvme_format_nvme_args argument structure
+ * @nsid:	Namespace ID to format
+ * @lbaf:	Logical block address format
+ * @mset:	Metadata settings (extended or separated), true if extended
+ * @pi:		Protection information type
+ * @pil:	Protection information location (beginning or end), true if end
+ * @ses:	Secure erase settings
+ * @result:	The command completion result from CQE dword0
  *
  * The Format NVM command low level formats the NVM media. This command is used
  * by the host to change the LBA data size and/or metadata size. A low level
@@ -3091,7 +3097,28 @@ int nvme_get_features_iocs_profile(nvme_link_t l, enum nvme_get_features_sel sel
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_format_nvm(nvme_link_t l, struct nvme_format_nvm_args *args);
+static inline int nvme_format_nvm(nvme_link_t l, __u32 nsid, __u8 lbaf,
+				  enum nvme_cmd_format_mset mset,
+				  enum nvme_cmd_format_pi pi,
+				  enum nvme_cmd_format_pil pil,
+				  enum nvme_cmd_format_ses ses,
+				  __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(lbaf, FORMAT_CDW10_LBAFL) |
+		      NVME_SET(mset, FORMAT_CDW10_MSET) |
+		      NVME_SET(pi, FORMAT_CDW10_PI) |
+		      NVME_SET(pil, FORMAT_CDW10_PIL) |
+		      NVME_SET(ses, FORMAT_CDW10_SES) |
+		      NVME_SET((lbaf >> 4), FORMAT_CDW10_LBAFU);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_admin_format_nvm,
+		.nsid		= nsid,
+		.cdw10		= cdw10,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_ns_mgmt() - Issue a Namespace management command

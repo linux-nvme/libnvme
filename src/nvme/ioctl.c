@@ -1336,36 +1336,6 @@ int nvme_get_features_iocs_profile(nvme_link_t l, enum nvme_get_features_sel sel
 	return __nvme_get_features(l, NVME_FEAT_FID_IOCS_PROFILE, sel, result);
 }
 
-int nvme_format_nvm(nvme_link_t l, struct nvme_format_nvm_args *args)
-{
-	const size_t size_v1 = sizeof_args(struct nvme_format_nvm_args, lbaf, __u64);
-	const size_t size_v2 = sizeof_args(struct nvme_format_nvm_args, lbafu, __u64);
-	__u32 cdw10;
-
-	if (args->args_size < size_v1 || args->args_size > size_v2)
-		return -EINVAL;
-
-	cdw10 = NVME_SET(args->lbaf, FORMAT_CDW10_LBAF) |
-		NVME_SET(args->mset, FORMAT_CDW10_MSET) |
-		NVME_SET(args->pi, FORMAT_CDW10_PI) |
-		NVME_SET(args->pil, FORMAT_CDW10_PIL) |
-		NVME_SET(args->ses, FORMAT_CDW10_SES);
-
-	if (args->args_size == size_v2) {
-		/* set lbafu extension */
-		cdw10 |= NVME_SET(args->lbafu, FORMAT_CDW10_LBAFU);
-	}
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_admin_format_nvm,
-		.nsid		= args->nsid,
-		.cdw10		= cdw10,
-		.timeout_ms	= args->timeout,
-	};
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_ns_mgmt(nvme_link_t l, struct nvme_ns_mgmt_args *args)
 {
 	const size_t size_v1 = sizeof_args(struct nvme_ns_mgmt_args, csi, __u64);
