@@ -1336,24 +1336,6 @@ int nvme_get_features_iocs_profile(nvme_link_t l, enum nvme_get_features_sel sel
 	return __nvme_get_features(l, NVME_FEAT_FID_IOCS_PROFILE, sel, result);
 }
 
-int nvme_fw_commit(nvme_link_t l, struct nvme_fw_commit_args *args)
-{
-	__u32 cdw10 = NVME_SET(args->slot, FW_COMMIT_CDW10_FS) |
-			NVME_SET(args->action, FW_COMMIT_CDW10_CA) |
-			NVME_SET(args->bpid, FW_COMMIT_CDW10_BPID);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_admin_fw_commit,
-		.cdw10		= cdw10,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_security_send(nvme_link_t l, struct nvme_security_send_args *args)
 {
 	__u32 cdw10 = NVME_SET(args->secp, SECURITY_SECP) |

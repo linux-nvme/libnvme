@@ -1654,13 +1654,9 @@ static int test_admin_fw_commit_cb(struct nvme_mi_ep *ep,
 
 static void test_admin_fw_commit(struct nvme_mi_ep *ep)
 {
-	struct nvme_fw_commit_args args;
 	struct fw_commit_info info;
 	nvme_link_t link;
 	int rc;
-
-	args.args_size = sizeof(args);
-	info.bpid = args.bpid = 0;
 
 	test_set_transport_callback(ep, test_admin_fw_commit_cb, &info);
 
@@ -1668,24 +1664,24 @@ static void test_admin_fw_commit(struct nvme_mi_ep *ep)
 	assert(link);
 
 	/* all zeros */
-	info.bpid = args.bpid = 0;
-	info.slot = args.slot = 0;
-	info.action = args.action = 0;
-	rc = nvme_fw_commit(link, &args);
+	info.bpid = 0;
+	info.slot = 0;
+	info.action = 0;
+	rc = nvme_fw_commit(link, info.slot, info.action, info.bpid, NULL);
 	assert(!rc);
 
 	/* all ones */
-	info.bpid = args.bpid = 1;
-	info.slot = args.slot = 0x7;
-	info.action = args.action = 0x7;
-	rc = nvme_fw_commit(link, &args);
+	info.bpid = 1;
+	info.slot = 0x7;
+	info.action = 0x7;
+	rc = nvme_fw_commit(link, info.slot, info.action, info.bpid, NULL);
 	assert(!rc);
 
 	/* correct fields */
-	info.bpid = args.bpid = 1;
-	info.slot = args.slot = 2;
-	info.action = args.action = 3;
-	rc = nvme_fw_commit(link, &args);
+	info.bpid = 1;
+	info.slot = 2;
+	info.action = 3;
+	rc = nvme_fw_commit(link, info.slot, info.action, info.bpid, NULL);
 	assert(!rc);
 }
 

@@ -3307,7 +3307,10 @@ static inline int nvme_fw_download(nvme_link_t l, void *data, __u32 data_len,
 /**
  * nvme_fw_commit() - Commit firmware using the specified action
  * @l:		Link handle
- * @args:	&struct nvme_fw_commit_args argument structure
+ * @fs:		Firmware slot to commit the downloaded image
+ * @ca:		Action to use for the firmware image, see &enum nvme_fw_commit_ca
+ * @bpid:	Set to true to select the boot partition id
+ * @result:	The command completion result from CQE dword0
  *
  * The Firmware Commit command modifies the firmware image or Boot Partitions.
  *
@@ -3316,7 +3319,20 @@ static inline int nvme_fw_download(nvme_link_t l, void *data, __u32 data_len,
  * status response may specify additional reset actions required to complete
  * the commit process.
  */
-int nvme_fw_commit(nvme_link_t l, struct nvme_fw_commit_args *args);
+static inline int nvme_fw_commit(nvme_link_t l, __u8 fs, enum nvme_fw_commit_ca ca,
+				 bool bpid, __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(fs, FW_COMMIT_CDW10_FS) |
+		      NVME_SET(ca, FW_COMMIT_CDW10_CA) |
+		      NVME_SET(bpid, FW_COMMIT_CDW10_BPID);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_admin_fw_commit,
+		.cdw10		= cdw10,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_security_send() - Security Send command
