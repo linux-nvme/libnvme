@@ -3337,7 +3337,14 @@ static inline int nvme_fw_commit(nvme_link_t l, __u8 fs, enum nvme_fw_commit_ca 
 /**
  * nvme_security_send() - Security Send command
  * @l:		Link handle
- * @args:	&struct nvme_security_send argument structure
+ * @nsid:	Namespace ID to issue security command on
+ * @nssf:	NVMe Security Specific field
+ * @spsp:	Security Protocol Specific field
+ * @secp:	Security Protocol
+ * @tl:		Protocol specific transfer length
+ * @data:	Security data payload to send
+ * @data_len:	Data length of the payload in bytes
+ * @result:	The command completion result from CQE dword0
  *
  * The Security Send command transfers security protocol data to the
  * controller. The data structure transferred to the controller as part of this
@@ -3351,7 +3358,28 @@ static inline int nvme_fw_commit(nvme_link_t l, __u8 fs, enum nvme_fw_commit_ca 
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_security_send(nvme_link_t l, struct nvme_security_send_args *args);
+static inline int nvme_security_send(nvme_link_t l, __u32 nsid,__u8 nssf,
+				     __u16 spsp, __u8 secp, __u32 tl,
+				     void *data, __u32 data_len,
+				     __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(secp, SECURITY_SECP) |
+		      NVME_SET(spsp, SECURITY_SPSP0)  |
+		      NVME_SET((spsp >> 8), SECURITY_SPSP1) |
+		      NVME_SET(nssf, SECURITY_NSSF);
+	__u32 cdw11 = tl;
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_admin_security_send,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len	= data_len,
+		.cdw10		= cdw10,
+		.cdw11		= cdw11,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_security_receive() - Security Receive command
