@@ -1418,12 +1418,12 @@ static void test_admin_ns_mgmt_create(struct nvme_mi_ep *ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	rc = nvme_ns_mgmt_create(link, NULL, &ns, 0, NVME_CSI_NVM, &data);
+	rc = nvme_ns_mgmt_create(link, NVME_CSI_NVM, &data, &ns);
 	assert(!rc);
 	assert(ns == 0x01020304);
 
 	data.nsze = cpu_to_le64(42);
-	rc = nvme_ns_mgmt_create(link, NULL, &ns, 0, NVME_CSI_NVM, &data);
+	rc = nvme_ns_mgmt_create(link, NVME_CSI_NVM, &data, &ns);
 	assert(rc);
 }
 

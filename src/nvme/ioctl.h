@@ -3123,22 +3123,45 @@ static inline int nvme_format_nvm(nvme_link_t l, __u32 nsid, __u8 lbaf,
 /**
  * nvme_ns_mgmt() - Issue a Namespace management command
  * @l:		Link handle
- * @args:	&struct nvme_ns_mgmt_args Argument structure
+ * @nsid:	Namespace identifier
+ * @sel:	Type of management operation to perform
+ * @csi:	Command Set Identifier
+ * @data:	Host Software Specified Fields
+ * @result:	NVMe command result
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_ns_mgmt(nvme_link_t l, struct nvme_ns_mgmt_args *args);
+static inline int nvme_ns_mgmt(nvme_link_t l, __u32 nsid,
+			       enum nvme_ns_mgmt_sel sel, __u8 csi,
+			       struct nvme_ns_mgmt_host_sw_specified *data,
+			       __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(sel, NAMESPACE_MGMT_CDW10_SEL);
+	__u32 cdw11 = NVME_SET(csi, NAMESPACE_MGMT_CDW11_CSI);
+	__u32 len = 0;
+
+	if (data)
+		len = sizeof(*data);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode	    = nvme_admin_ns_mgmt,
+		.nsid	    = nsid,
+		.addr       = (__u64)(uintptr_t)data,
+		.data_len   = len,
+		.cdw10	    = cdw10,
+		.cdw11	    = cdw11,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_ns_mgmt_create() - Create a non attached namespace
  * @l:		Link handle
- * @ns:		Namespace identification that defines ns creation parameters
- * @nsid:		On success, set to the namespace id that was created
- * @timeout:		Override the default timeout to this value in milliseconds;
- *			set to 0 to use the system default.
- * @csi:		Command Set Identifier
+ * @csi:	Command Set Identifier
  * @data:	Host Software Specified Fields that defines ns creation parameters
+ * @nsid:	On success, set to the namespace id that was created
  *
  * On successful creation, the namespace exists in the subsystem, but is not
  * attached to any controller. Use the nvme_ns_attach_ctrls() to assign the
@@ -3147,56 +3170,12 @@ int nvme_ns_mgmt(nvme_link_t l, struct nvme_ns_mgmt_args *args);
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_ns_mgmt_create(nvme_link_t l, struct nvme_id_ns *ns,
-			__u32 *nsid, __u32 timeout, __u8 csi,
-			struct nvme_ns_mgmt_host_sw_specified *data)
+static inline int nvme_ns_mgmt_create(nvme_link_t l, __u8 csi,
+				      struct nvme_ns_mgmt_host_sw_specified *data,
+				      __u32 *nsid)
 {
-	struct nvme_ns_mgmt_args args = {
-		.result = nsid,
-		.ns = ns,
-		.args_size = sizeof(args),
-		.timeout = timeout,
-		.nsid = NVME_NSID_NONE,
-		.sel = NVME_NS_MGMT_SEL_CREATE,
-		.csi = csi,
-		.rsvd1 = { 0, },
-		.rsvd2 = NULL,
-		.data = data,
-	};
-
-	return nvme_ns_mgmt(l, &args);
-}
-
-/**
- * nvme_ns_mgmt_delete_timeout() - Delete a non attached namespace with timeout
- * @l:		Link handle
- * @nsid:	Namespace identifier to delete
- * @timeout:	Override the default timeout to this value in milliseconds;
- *		set to 0 to use the system default.
- *
- * It is recommended that a namespace being deleted is not attached to any
- * controller. Use the nvme_ns_detach_ctrls() first if the namespace is still
- * attached.
- *
- * Return: 0 on success, the nvme command status if a response was
- * received (see &enum nvme_status_field) or a negative error otherwise.
- */
-static inline int nvme_ns_mgmt_delete_timeout(nvme_link_t l, __u32 nsid, __u32 timeout)
-{
-	struct nvme_ns_mgmt_args args = {
-		.result = NULL,
-		.ns = NULL,
-		.args_size = sizeof(args),
-		.timeout = timeout,
-		.nsid = nsid,
-		.sel = NVME_NS_MGMT_SEL_DELETE,
-		.csi = 0,
-		.rsvd1 = { 0, },
-		.rsvd2 = NULL,
-		.data = NULL,
-	};
-
-	return nvme_ns_mgmt(l, &args);
+	return nvme_ns_mgmt(l, NVME_NSID_NONE, NVME_NS_MGMT_SEL_CREATE,
+			    csi, data, nsid);
 }
 
 /**
@@ -3213,7 +3192,7 @@ static inline int nvme_ns_mgmt_delete_timeout(nvme_link_t l, __u32 nsid, __u32 t
  */
 static inline int nvme_ns_mgmt_delete(nvme_link_t l, __u32 nsid)
 {
-	return nvme_ns_mgmt_delete_timeout(l, nsid, 0);
+	return nvme_ns_mgmt(l, nsid, NVME_NS_MGMT_SEL_DELETE, 0, NULL, NULL);
 }
 
 /**
