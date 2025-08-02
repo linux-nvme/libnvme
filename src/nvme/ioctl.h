@@ -329,6 +329,14 @@ enum nvme_cmd_dword_fields {
 	NVME_ZNS_MGMT_RECV_ZRAS_FEAT_MASK			= 0x1,
 	NVME_DIM_TAS_SHIFT					= 0,
 	NVME_DIM_TAS_MASK					= 0xF,
+	NVME_DSM_CDW10_NR_SHIFT					= 0,
+	NVME_DSM_CDW10_NR_MASK					= 0xff,
+	NVME_DSM_CDW11_IDR_SHIFT				= 0,
+	NVME_DSM_CDW11_IDR_MASK					= 0x1,
+	NVME_DSM_CDW11_IDW_SHIFT				= 1,
+	NVME_DSM_CDW11_IDW_MASK					= 0x1,
+	NVME_DSM_CDW11_AD_SHIFT					= 2,
+	NVME_DSM_CDW11_AD_MASK					= 0x1,
 };
 
 /**
@@ -4078,7 +4086,11 @@ static inline int nvme_verify(nvme_link_t l, struct nvme_io_args *args)
 /**
  * nvme_dsm() - Send an nvme data set management command
  * @l:		Link handle
- * @args:	&struct nvme_dsm_args argument structure
+ * @nsid:	Namespace identifier
+ * @nr_ranges:	Number of block ranges in the data set management attributes
+ * @attrs:	DSM attributes, see &enum nvme_dsm_attributes
+ * @dsm:	The data set management attributes
+ * @result:	The command completion result from CQE dword0
  *
  * The Dataset Management command is used by the host to indicate attributes
  * for ranges of logical blocks. This includes attributes like frequency that
@@ -4089,7 +4101,24 @@ static inline int nvme_verify(nvme_link_t l, struct nvme_io_args *args)
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_dsm(nvme_link_t l, struct nvme_dsm_args *args);
+static inline int nvme_dsm(nvme_link_t l, __u32 nsid, __u16 nr_ranges,
+			   __u32 attrs, struct nvme_dsm_range *dsm,
+			    __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(nr_ranges - 1, DSM_CDW10_NR);
+	__u32 cdw11 = attrs;
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_cmd_dsm,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)dsm,
+		.data_len	= (__u32)(nr_ranges * sizeof(*dsm)),
+		.cdw10		= cdw10,
+		.cdw11		= cdw11,
+	};
+
+	return nvme_submit_io_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_copy() - Copy command

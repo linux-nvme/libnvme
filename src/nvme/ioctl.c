@@ -1404,24 +1404,6 @@ int nvme_io(nvme_link_t l, struct nvme_io_args *args, __u8 opcode)
 	return nvme_submit_io_passthru(l, &cmd, args->result);
 }
 
-int nvme_dsm(nvme_link_t l, struct nvme_dsm_args *args)
-{
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_cmd_dsm,
-		.nsid		= args->nsid,
-		.addr		= (__u64)(uintptr_t)args->dsm,
-		.data_len	= args->nr_ranges * sizeof(*args->dsm),
-		.cdw10		= args->nr_ranges - 1,
-		.cdw11		= args->attrs,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_io_passthru(l, &cmd, args->result);
-}
-
 int nvme_copy(nvme_link_t l, struct nvme_copy_args *args)
 {
 	const size_t size_v1 = sizeof_args(struct nvme_copy_args, format, __u64);
