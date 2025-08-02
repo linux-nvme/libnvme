@@ -831,32 +831,22 @@ static void test_read(void)
 {
 	__u8 expected_data[512], data[512] = {};
 	__u32 result = 0;
-
-	struct nvme_io_args args = {
-		.slba = 0xffffffffff,
-		.storage_tag = 0xef,
-		.result = &result,
-		.data = &data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.reftag = 0xab,
-		.data_len = sizeof(data),
-		.nlb = 0x3,
-		.control = NVME_IO_FUA,
-		.apptag = 0x12,
-		.appmask = 0x34,
-		.dspec = 0x0,
-		.dsm = NVME_IO_DSM_LATENCY_LOW,
-	};
+	__u64 slba = 0xffffffffff;
+	__u16 nlb = 0x3;
+	__u16 control = NVME_IO_FUA;
+	__u8 dsm = NVME_IO_DSM_LATENCY_LOW;
+	__u16 dspec = 0x0;
+	__u16 apptag = 0x12;
+	__u16 appmask = 0x34;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_read,
 		.nsid = TEST_NSID,
-		.cdw10 = args.slba & 0xffffffff,
-		.cdw11 = args.slba >> 32,
-		.cdw12 = args.nlb | (args.control << 16),
-		.cdw13 = args.dsm | (args.dspec << 16),
-		.cdw15 = args.apptag | (args.appmask << 16),
+		.cdw10 = slba & 0xffffffff,
+		.cdw11 = slba >> 32,
+		.cdw12 = nlb | (control << 16),
+		.cdw13 = dsm | (dspec << 16),
+		.cdw15 = apptag | (appmask << 16),
 		.data_len = sizeof(expected_data),
 		.out_data = &expected_data,
 	};
@@ -865,7 +855,8 @@ static void test_read(void)
 
 	arbitrary(&expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_read(test_link, &args);
+	err = nvme_read(test_link, TEST_NSID, slba, 0xef, 0xab, nlb, control, apptag, appmask,
+			dspec, dsm, 0, 0, 0, &data, sizeof(data), NULL, 0, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -875,32 +866,22 @@ static void test_write(void)
 {
 	__u8 expected_data[512], data[512] = {};
 	__u32 result = 0;
-
-	struct nvme_io_args args = {
-		.slba = 0xfffffffabcde,
-		.storage_tag = 0xab,
-		.result = &result,
-		.data = &expected_data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.reftag = 0xef,
-		.data_len = sizeof(expected_data),
-		.nlb = 0x5,
-		.control = NVME_IO_FUA,
-		.apptag = 0x59,
-		.appmask = 0x94,
-		.dspec = 0xa,
-		.dsm = NVME_IO_DSM_COMPRESSED,
-	};
+	__u64 slba = 0xfffffffabcde;
+	__u16 nlb = 0x5;
+	__u16 control = NVME_IO_FUA;
+	__u8 dsm = NVME_IO_DSM_COMPRESSED;
+	__u16 dspec = 0xa;
+	__u16 apptag = 0x59;
+	__u16 appmask = 0x94;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_write,
 		.nsid = TEST_NSID,
-		.cdw10 = args.slba & 0xffffffff,
-		.cdw11 = args.slba >> 32,
-		.cdw12 = args.nlb | (args.control << 16),
-		.cdw13 = args.dsm | (args.dspec << 16),
-		.cdw15 = args.apptag | (args.appmask << 16),
+		.cdw10 = slba & 0xffffffff,
+		.cdw11 = slba >> 32,
+		.cdw12 = nlb | (control << 16),
+		.cdw13 = dsm | (dspec << 16),
+		.cdw15 = apptag | (appmask << 16),
 		.data_len = sizeof(data),
 		.in_data = &data,
 	};
@@ -910,7 +891,9 @@ static void test_write(void)
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_write(test_link, &args);
+	err = nvme_write(test_link, TEST_NSID, slba, 0xab, 0xef, nlb, control, apptag, appmask,
+			 dspec, dsm, 0, 0, 0, &expected_data, sizeof(expected_data), NULL, 0,
+			 &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -920,32 +903,22 @@ static void test_compare(void)
 {
 	__u8 expected_data[512], data[512] = {};
 	__u32 result = 0;
-
-	struct nvme_io_args args = {
-		.slba = 0xabcde,
-		.storage_tag = 0xab,
-		.result = &result,
-		.data = &expected_data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.reftag = 0xff,
-		.data_len = sizeof(expected_data),
-		.nlb = 0x0,
-		.control = NVME_IO_LR,
-		.apptag = 0x59,
-		.appmask = 0x94,
-		.dspec = 0xa,
-		.dsm = NVME_IO_DSM_COMPRESSED,
-	};
+	__u64 slba = 0xabcde;
+	__u16 nlb = 0x0;
+	__u16 control = NVME_IO_LR;
+	__u8 dsm = NVME_IO_DSM_COMPRESSED;
+	__u16 dspec = 0xa;
+	__u16 apptag = 0x59;
+	__u16 appmask = 0x94;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_compare,
 		.nsid = TEST_NSID,
-		.cdw10 = args.slba & 0xffffffff,
-		.cdw11 = args.slba >> 32,
-		.cdw12 = args.nlb | (args.control << 16),
-		.cdw13 = args.dsm | (args.dspec << 16),
-		.cdw15 = args.apptag | (args.appmask << 16),
+		.cdw10 = slba & 0xffffffff,
+		.cdw11 = slba >> 32,
+		.cdw12 = nlb | (control << 16),
+		.cdw13 = dsm | (dspec << 16),
+		.cdw15 = apptag | (appmask << 16),
 		.data_len = sizeof(data),
 		.in_data = &data,
 	};
@@ -955,7 +928,9 @@ static void test_compare(void)
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_compare(test_link, &args);
+	err = nvme_compare(test_link, TEST_NSID, slba, 0xab, 0xff, nlb, control, apptag, appmask,
+			   dspec, dsm, 0, 0, 0, &expected_data, sizeof(expected_data), NULL, 0,
+			   &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -965,32 +940,22 @@ static void test_write_zeros(void)
 {
 	__u8 expected_data[512], data[512] = {};
 	__u32 result = 0;
-
-	struct nvme_io_args args = {
-		.slba = 0x0,
-		.storage_tag = 0xab,
-		.result = &result,
-		.data = &expected_data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.reftag = 0xff,
-		.data_len = sizeof(expected_data),
-		.nlb = 0xffff,
-		.control = NVME_IO_LR,
-		.apptag = 0xfa,
-		.appmask = 0x72,
-		.dspec = 0xbb,
-		.dsm = NVME_IO_DSM_FREQ_ONCE,
-	};
+	__u64 slba = 0x0;
+	__u16 nlb = 0xffff;
+	__u16 control = NVME_IO_LR;
+	__u8 dsm = NVME_IO_DSM_FREQ_ONCE;
+	__u16 dspec = 0xbb;
+	__u16 apptag = 0xfa;
+	__u16 appmask = 0x72;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_write_zeroes,
 		.nsid = TEST_NSID,
-		.cdw10 = args.slba & 0xffffffff,
-		.cdw11 = args.slba >> 32,
-		.cdw12 = args.nlb | (args.control << 16),
-		.cdw13 = args.dsm | (args.dspec << 16),
-		.cdw15 = args.apptag | (args.appmask << 16),
+		.cdw10 = slba & 0xffffffff,
+		.cdw11 = slba >> 32,
+		.cdw12 = nlb | (control << 16),
+		.cdw13 = dsm | (dspec << 16),
+		.cdw15 = apptag | (appmask << 16),
 		.data_len = sizeof(data),
 		.in_data = &data,
 	};
@@ -1000,7 +965,9 @@ static void test_write_zeros(void)
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_write_zeros(test_link, &args);
+	err = nvme_write_zeros(test_link, TEST_NSID, slba, 0xab, 0xff, nlb, control, apptag,
+			       appmask, dspec, dsm, 0, 0, 0, &expected_data, sizeof(expected_data),
+			       NULL, 0, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -1010,32 +977,22 @@ static void test_write_uncorrectable(void)
 {
 	__u8 expected_data[512], data[512] = {};
 	__u32 result = 0;
-
-	struct nvme_io_args args = {
-		.slba = 0x0,
-		.storage_tag = 0x0,
-		.result = &result,
-		.data = &expected_data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.reftag = 0x0,
-		.data_len = sizeof(expected_data),
-		.nlb = 0x0,
-		.control = 0x0,
-		.apptag = 0x0,
-		.appmask = 0x0,
-		.dspec = 0x0,
-		.dsm = 0x0,
-	};
+	__u64 slba = 0x0;
+	__u16 nlb = 0x0;
+	__u16 control = 0x0;
+	__u8 dsm = 0x0;
+	__u16 dspec = 0x0;
+	__u16 apptag = 0x0;
+	__u16 appmask = 0x0;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_write_uncor,
 		.nsid = TEST_NSID,
-		.cdw10 = args.slba & 0xffffffff,
-		.cdw11 = args.slba >> 32,
-		.cdw12 = args.nlb | (args.control << 16),
-		.cdw13 = args.dsm | (args.dspec << 16),
-		.cdw15 = args.apptag | (args.appmask << 16),
+		.cdw10 = slba & 0xffffffff,
+		.cdw11 = slba >> 32,
+		.cdw12 = nlb | (control << 16),
+		.cdw13 = dsm | (dspec << 16),
+		.cdw15 = apptag | (appmask << 16),
 		.data_len = sizeof(data),
 		.in_data = &data,
 	};
@@ -1045,7 +1002,9 @@ static void test_write_uncorrectable(void)
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_write_uncorrectable(test_link, &args);
+	err = nvme_write_uncorrectable(test_link, TEST_NSID, slba, 0x0, 0x0, nlb, control, apptag,
+				       appmask, dspec, dsm, 0, 0, 0, &expected_data,
+				       sizeof(expected_data), NULL, 0, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -1055,32 +1014,22 @@ static void test_verify(void)
 {
 	__u8 expected_data[512], data[512] = {};
 	__u32 result = 0;
-
-	struct nvme_io_args args = {
-		.slba = 0xffffffffffffffff,
-		.storage_tag = 0xffffffffffffffff,
-		.result = &result,
-		.data = &expected_data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.reftag = 0xffffffff,
-		.data_len = sizeof(expected_data),
-		.nlb = 0xffff,
-		.control = 0xffff,
-		.apptag = 0xffff,
-		.appmask = 0xffff,
-		.dspec = 0xffff,
-		.dsm = 0xff,
-	};
+	__u64 slba = 0xffffffffffffffff;
+	__u16 nlb = 0xffff;
+	__u16 control = 0xffff;
+	__u8 dsm = 0xff;
+	__u16 dspec = 0xffff;
+	__u16 apptag = 0xffff;
+	__u16 appmask = 0xffff;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_verify,
 		.nsid = TEST_NSID,
-		.cdw10 = args.slba & 0xffffffff,
-		.cdw11 = args.slba >> 32,
-		.cdw12 = args.nlb | (args.control << 16),
-		.cdw13 = args.dsm | (args.dspec << 16),
-		.cdw15 = args.apptag | (args.appmask << 16),
+		.cdw10 = slba & 0xffffffff,
+		.cdw11 = slba >> 32,
+		.cdw12 = nlb | (control << 16),
+		.cdw13 = dsm | (dspec << 16),
+		.cdw15 = apptag | (appmask << 16),
 		.data_len = sizeof(data),
 		.in_data = &data,
 	};
@@ -1090,7 +1039,9 @@ static void test_verify(void)
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_verify(test_link, &args);
+	err = nvme_verify(test_link, TEST_NSID, slba, 0xffffffffffffffff, 0xffffffff, nlb, control,
+			  apptag, appmask, dspec, dsm, 0, 0, 0, &expected_data,
+			  sizeof(expected_data), NULL, 0, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
