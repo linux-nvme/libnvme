@@ -1315,55 +1315,6 @@ int nvme_io_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 			     timeout_ms, result);
 }
 
-int nvme_copy(nvme_link_t l, struct nvme_copy_args *args)
-{
-	const size_t size_v1 = sizeof_args(struct nvme_copy_args, format, __u64);
-	const size_t size_v2 = sizeof_args(struct nvme_copy_args, ilbrt_u64, __u64);
-	__u32 cdw3, cdw12, cdw14, data_len;
-
-	if (args->args_size < size_v1 || args->args_size > size_v2)
-		return -EINVAL;
-
-	cdw12 = ((args->nr - 1) & 0xff) | ((args->format & 0xf) <<  8) |
-		((args->prinfor & 0xf) << 12) | ((args->dtype & 0xf) << 20) |
-		((args->prinfow & 0xf) << 26) | ((args->fua & 0x1) << 30) |
-		((args->lr & 0x1) << 31);
-
-	if (args->args_size == size_v1) {
-		cdw3 = 0;
-		cdw14 = args->ilbrt;
-	} else {
-		cdw3 = (args->ilbrt_u64 >> 32) & 0xffffffff;
-		cdw14 = args->ilbrt_u64 & 0xffffffff;
-	}
-
-	if (args->format == 1)
-		data_len = args->nr * sizeof(struct nvme_copy_range_f1);
-	else if (args->format == 2)
-		data_len = args->nr * sizeof(struct nvme_copy_range_f2);
-	else if (args->format == 3)
-		data_len = args->nr * sizeof(struct nvme_copy_range_f3);
-	else
-		data_len = args->nr * sizeof(struct nvme_copy_range);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode         = nvme_cmd_copy,
-		.nsid           = args->nsid,
-		.addr           = (__u64)(uintptr_t)args->copy,
-		.data_len       = data_len,
-		.cdw3           = cdw3,
-		.cdw10          = args->sdlba & 0xffffffff,
-		.cdw11          = args->sdlba >> 32,
-		.cdw12          = cdw12,
-		.cdw13		= (args->dspec & 0xffff) << 16,
-		.cdw14          = cdw14,
-		.cdw15		= (args->lbatm << 16) | args->lbat,
-		.timeout_ms	= args->timeout,
-	};
-
-	return nvme_submit_io_passthru(l, &cmd, args->result);
-}
-
 int nvme_resv_acquire(nvme_link_t l, struct nvme_resv_acquire_args *args)
 {
 	__le64 payload[2] = {
