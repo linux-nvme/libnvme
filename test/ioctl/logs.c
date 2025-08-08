@@ -14,7 +14,7 @@
 #define TEST_CNTID 0x4321
 #define TEST_DOMID 0xFEDC
 #define TEST_ENDGID 0x0123
-#define TEST_RAE true
+#define TEST_RAE 0x1
 #define TEST_MCDA NVME_TELEMETRY_DA_3
 #define TEST_OFFSET 0xFFFFFFFF1
 #define TEST_OFFSET_32 0xFFFFFFFF
@@ -32,7 +32,7 @@ static void test_get_log_sanitize(void)
 		.opcode = nvme_admin_get_log_page,
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
-		.cdw10 = (NVME_LOG_LID_SANITIZE << 0) | (!!TEST_RAE << 15) |
+		.cdw10 = (NVME_LOG_LID_SANITIZE << 0) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -96,7 +96,7 @@ static void test_get_log_error(void)
 		.opcode = nvme_admin_get_log_page,
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
-		.cdw10 = (NVME_LOG_LID_ERROR << 0) | (!!TEST_RAE << 15) |
+		.cdw10 = (NVME_LOG_LID_ERROR << 0) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -117,7 +117,7 @@ static void test_get_log_smart(void)
 		.opcode = nvme_admin_get_log_page,
 		.nsid = TEST_NSID,
 		.data_len = sizeof(expected_log),
-		.cdw10 = (NVME_LOG_LID_SMART << 0) | (!!TEST_RAE << 15) |
+		.cdw10 = (NVME_LOG_LID_SMART << 0) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -138,7 +138,7 @@ static void test_get_log_fw_slot(void)
 		.opcode = nvme_admin_get_log_page,
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
-		.cdw10 = (NVME_LOG_LID_FW_SLOT << 0) | (!!TEST_RAE << 15) |
+		.cdw10 = (NVME_LOG_LID_FW_SLOT << 0) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -301,7 +301,7 @@ static void test_get_log_telemetry_ctrl(void)
 			 (((NVME_TELEMETRY_DA_CTRL_DETERMINE << 1) |
 			   NVME_LOG_TELEM_HOST_LSP_RETAIN)
 			  << 8) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.cdw12 = TEST_OFFSET & 0xffffffff,
 		.cdw13 = TEST_OFFSET >> 32,
@@ -370,7 +370,7 @@ static void test_get_log_predictable_lat_event(void)
 		.nsid = NVME_NSID_NONE,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_PREDICTABLE_LAT_AGG << 0) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.cdw12 = TEST_OFFSET_32,
 		.out_data = &expected_log,
@@ -517,7 +517,7 @@ static void test_get_log_ana_groups(void)
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_ANA << 0) |
 			 (NVME_LOG_ANA_LSP_RGO_GROUPS_ONLY << 8) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -538,7 +538,7 @@ static void test_get_log_lba_status(void)
 		.opcode = nvme_admin_get_log_page,
 		.nsid = NVME_NSID_NONE,
 		.data_len = sizeof(expected_log),
-		.cdw10 = (NVME_LOG_LID_LBA_STATUS << 0) | (!!TEST_RAE << 15) |
+		.cdw10 = (NVME_LOG_LID_LBA_STATUS << 0) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.cdw12 = TEST_OFFSET & 0xffffffff,
 		.cdw13 = TEST_OFFSET >> 32,
@@ -563,7 +563,7 @@ static void test_get_log_endurance_grp_evt(void)
 		.nsid = NVME_NSID_NONE,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_ENDURANCE_GRP_EVT << 0) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.cdw12 = TEST_OFFSET_32,
 		.out_data = &expected_log,
@@ -587,7 +587,7 @@ static void test_get_log_fid_supported_effects(void)
 		.nsid = NVME_NSID_NONE,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_FID_SUPPORTED_EFFECTS << 0) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -609,7 +609,7 @@ static void test_get_log_mi_cmd_supported_effects(void)
 		.nsid = NVME_NSID_NONE,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_MI_CMD_SUPPORTED_EFFECTS << 0) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -631,7 +631,7 @@ static void test_get_log_boot_partition(void)
 		.nsid = NVME_NSID_NONE,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_BOOT_PARTITION << 0) | (TEST_LSP << 8) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -722,7 +722,7 @@ static void test_get_log_reachability_groups(void)
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_REACHABILITY_GROUPS << 0) |
-			 (!!TEST_LSP << 8) | (!!TEST_RAE << 15) |
+			 (0x1 << 8) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -730,7 +730,7 @@ static void test_get_log_reachability_groups(void)
 
 	arbitrary(&expected_log, sizeof(expected_log));
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
-	err = nvme_get_log_reachability_groups(test_link, TEST_RAE, !!TEST_LSP,
+	err = nvme_get_log_reachability_groups(test_link, !!TEST_RAE, true,
 					       &log, sizeof(log));
 	end_mock_cmds();
 	check(err == 0, "get log returned error %d", err);
@@ -745,7 +745,7 @@ static void test_get_log_reachability_associations(void)
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_REACHABILITY_ASSOCIATIONS << 0) |
-			 (!!TEST_LSP << 8) | (!!TEST_RAE << 15) |
+			 (0x1 << 8) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -754,7 +754,7 @@ static void test_get_log_reachability_associations(void)
 	arbitrary(&expected_log, sizeof(expected_log));
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
 	err = nvme_get_log_reachability_associations(
-		test_link, !!TEST_LSP, TEST_RAE, &log, sizeof(log));
+		test_link, !!TEST_RAE, true, &log, sizeof(log));
 	end_mock_cmds();
 	check(err == 0, "get log returned error %d", err);
 	cmp(&log, &expected_log, sizeof(log), "incorrect log data");
@@ -768,7 +768,7 @@ static void test_get_log_changed_alloc_ns_list(void)
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_CHANGED_ALLOC_NS_LIST << 0) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -790,7 +790,7 @@ static void test_get_log_discovery(void)
 		.opcode = nvme_admin_get_log_page,
 		.nsid = NVME_NSID_NONE,
 		.data_len = sizeof(expected_log),
-		.cdw10 = (NVME_LOG_LID_DISCOVER << 0) | (!!TEST_RAE << 15) |
+		.cdw10 = (NVME_LOG_LID_DISCOVER << 0) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.cdw12 = TEST_OFFSET_32,
 		.out_data = &expected_log,
@@ -813,8 +813,8 @@ static void test_get_log_host_discover(void)
 		.opcode = nvme_admin_get_log_page,
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
-		.cdw10 = (NVME_LOG_LID_HOST_DISCOVER << 0) | (!!TEST_LSP << 8) |
-			 (!!TEST_RAE << 15) |
+		.cdw10 = (NVME_LOG_LID_HOST_DISCOVER << 0) | (0x1 << 8) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -822,7 +822,7 @@ static void test_get_log_host_discover(void)
 
 	arbitrary(&expected_log, sizeof(expected_log));
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
-	err = nvme_get_log_host_discover(test_link, TEST_RAE, !!TEST_LSP,
+	err = nvme_get_log_host_discover(test_link, !!TEST_RAE, true,
 					 &log, sizeof(log));
 	end_mock_cmds();
 	check(err == 0, "get log returned error %d", err);
@@ -836,7 +836,7 @@ static void test_get_log_ave_discover(void)
 		.opcode = nvme_admin_get_log_page,
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
-		.cdw10 = (NVME_LOG_LID_AVE_DISCOVER << 0) | (!!TEST_RAE << 15) |
+		.cdw10 = (NVME_LOG_LID_AVE_DISCOVER << 0) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -858,7 +858,7 @@ static void test_get_log_pull_model_ddc_req(void)
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_PULL_MODEL_DDC_REQ << 0) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -924,7 +924,7 @@ static void test_get_log_reservation(void)
 		.opcode = nvme_admin_get_log_page,
 		.nsid = NVME_NSID_ALL,
 		.data_len = sizeof(expected_log),
-		.cdw10 = (NVME_LOG_LID_RESERVATION << 0) | (!!TEST_RAE << 15) |
+		.cdw10 = (NVME_LOG_LID_RESERVATION << 0) | (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.out_data = &expected_log,
 	};
@@ -946,7 +946,7 @@ static void test_get_log_zns_changed_zones(void)
 		.nsid = TEST_NSID,
 		.data_len = sizeof(expected_log),
 		.cdw10 = (NVME_LOG_LID_ZNS_CHANGED_ZONES << 0) |
-			 (!!TEST_RAE << 15) |
+			 (TEST_RAE << 15) |
 			 (((sizeof(expected_log) >> 2) - 1) << 16),
 		.cdw14 = NVME_CSI_ZNS << 24,
 		.out_data = &expected_log,
