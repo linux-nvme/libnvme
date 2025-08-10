@@ -1194,8 +1194,8 @@ static void test_resv_release(void)
 
 
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_resv_release(test_link, TEST_NSID, 0xffffffffffffffff, rtype, rrela,
-				    iekey, &result);
+	err = nvme_resv_release(test_link, TEST_NSID, rrela, 0xffffffffffffffff,
+				iekey, false, rtype,  &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -1203,33 +1203,24 @@ static void test_resv_release(void)
 
 static void test_resv_report(void)
 {
-	__u32 result = 0;
-
 	struct nvme_resv_status expected_status, status = {};
-
-	struct nvme_resv_report_args args = {
-		.result = &result,
-		.report = &status,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.len = sizeof(status),
-		.eds = false,
-	};
+	__u32 len = sizeof(status);
+	__u32 result = 0;
+	bool eds = false;
+	int err;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_resv_report,
 		.nsid = TEST_NSID,
-		.cdw10 = (args.len >> 2) - 1,
-		.cdw11 = args.eds ? 1 : 0,
-		.data_len = args.len,
+		.cdw10 = (len >> 2) - 1,
+		.cdw11 = eds ? 1 : 0,
+		.data_len = len,
 		.out_data = &expected_status,
 	};
 
-	int err;
-
 	arbitrary(&expected_status, sizeof(expected_status));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_resv_report(test_link, &args);
+	err = nvme_resv_report(test_link, TEST_NSID, eds, &status, len, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);

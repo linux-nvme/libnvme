@@ -4701,18 +4701,19 @@ static inline int nvme_resv_register(nvme_link_t l, __u32 nsid, enum nvme_resv_r
  * nvme_resv_release() - Send an nvme reservation release
  * @l:		Link handle
  * @nsid:	Namespace identifier
- * @crkey:	The current reservation key to release
- * @rtype:	The type of reservation to be create, see &enum nvme_resv_rtype
  * @rrela:	Reservation release action, see &enum nvme_resv_rrela
+ * @crkey:	The current reservation key to release
  * @iekey:	Set to ignore the existing key
+ * @disnsrs:	Disperse Namespace Reservation Support
+ * @rtype:	The type of reservation to be create, see &enum nvme_resv_rtype
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_resv_release(nvme_link_t l, __u32 nsid, __u64 crkey,
-				    enum nvme_resv_rtype rtype, enum nvme_resv_rrela rrela,
-				    bool iekey, __u32 *result)
+static inline int nvme_resv_release(nvme_link_t l, __u32 nsid, enum nvme_resv_rrela rrela,
+				    __u64 crkey, bool iekey, bool disnsrs,
+				    enum nvme_resv_rtype rtype, __u32 *result)
 {
 	__le64 payload[1] = { htole64(crkey) };
 	__u32 cdw10 = (rrela & 0x7) | (iekey ? 1 << 3 : 0) | (rtype << 8);
@@ -4731,7 +4732,12 @@ static inline int nvme_resv_release(nvme_link_t l, __u32 nsid, __u64 crkey,
 /**
  * nvme_resv_report() - Send an nvme reservation report
  * @l:		Link handle
- * @args:	struct nvme_resv_report_args argument structure
+ * @nsid:	Namespace identifier
+ * @eds:	Request extended Data Structure
+ * @report:	The user space destination address to store the reservation
+ *		report
+ * @len:	Number of bytes to request transferred with this command
+ * @result:	The command completion result from CQE dword0
  *
  * Returns a Reservation Status data structure to memory that describes the
  * registration and reservation status of a namespace. See the definition for
@@ -4740,7 +4746,20 @@ static inline int nvme_resv_release(nvme_link_t l, __u32 nsid, __u64 crkey,
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_resv_report(nvme_link_t l, struct nvme_resv_report_args *args);
+static inline int nvme_resv_report(nvme_link_t l, __u32 nsid, bool eds,
+				   struct nvme_resv_status *report, __u32 len, __u32 *result)
+{
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_cmd_resv_report,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)report,
+		.data_len	= len,
+		.cdw10		= (len >> 2) - 1,
+		.cdw11		= (__u32)(eds ? 1 : 0),
+	};
+
+	return nvme_submit_io_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_io_mgmt_recv() - I/O Management Receive command
