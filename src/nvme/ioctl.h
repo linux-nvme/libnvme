@@ -4616,7 +4616,16 @@ static inline int nvme_copy(nvme_link_t l, __u32 nsid, __u64 sdlba, __u16 nr, __
 /**
  * nvme_resv_acquire() - Send an nvme reservation acquire
  * @l:		Link handle
- * @args:	&struct nvme_resv_acquire argument structure
+ * @nsid:	Namespace identifier
+ * @racqa:	The action that is performed by the command, see &enum nvme_resv_racqa
+ * @iekey:	Set to ignore the existing key
+ * @disnsrs:	Disperse Namespace Reservation Support
+ * @rtype:	The type of reservation to be create, see &enum nvme_resv_rtype
+ * @crkey:	The current reservation key associated with the host
+ * @prkey:	Preempt Reserveration Key
+ * @nrkey:	The reservation key to be unregistered from the namespace if
+ *		the action is preempt
+ * @result:	The command completion result from CQE dword0
  *
  * The Reservation Acquire command acquires a reservation on a namespace,
  * preempt a reservation held on a namespace, and abort a reservation held on a
@@ -4625,7 +4634,28 @@ static inline int nvme_copy(nvme_link_t l, __u32 nsid, __u64 sdlba, __u16 nr, __
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_resv_acquire(nvme_link_t l, struct nvme_resv_acquire_args *args);
+static inline int nvme_resv_acquire(nvme_link_t l, __u32 nsid, enum nvme_resv_racqa racqa,
+				    bool iekey, bool disnsrs, enum nvme_resv_rtype rtype,
+				    __u16 prkey, __u64 crkey, __u64 nrkey,
+				    __u32 *result)
+
+{
+	__le64 payload[2] = {
+		htole64(crkey),
+		htole64(nrkey)
+	};
+	__u32 cdw10 = (racqa & 0x7) | (iekey ? 1 << 3 : 0) | (rtype << 8);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_cmd_resv_acquire,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)(payload),
+		.data_len	= sizeof(payload),
+		.cdw10		= cdw10,
+	};
+
+	return nvme_submit_io_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_resv_register() - Send an nvme reservation register

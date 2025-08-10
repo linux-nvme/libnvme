@@ -273,7 +273,6 @@ LIBNVME_2_0 {
 		nvme_read_key;
 		nvme_refresh_topology;
 		nvme_rescan_ctrl;
-		nvme_resv_acquire;
 		nvme_resv_register;
 		nvme_resv_release;
 		nvme_resv_report;
