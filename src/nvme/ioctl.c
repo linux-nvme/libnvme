@@ -1315,31 +1315,6 @@ int nvme_io_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 			     timeout_ms, result);
 }
 
-int nvme_resv_register(nvme_link_t l, struct nvme_resv_register_args *args)
-{
-	__le64 payload[2] = {
-		cpu_to_le64(args->crkey),
-		cpu_to_le64(args->nrkey)
-	};
-	__u32 cdw10 = (args->rrega & 0x7) |
-		(args->iekey ? 1 << 3 : 0) |
-		(args->cptpl << 30);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_cmd_resv_register,
-		.nsid		= args->nsid,
-		.cdw10		= cdw10,
-		.data_len	= sizeof(payload),
-		.addr		= (__u64)(uintptr_t)(payload),
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_io_passthru(l, &cmd, args->result);
-}
-
 int nvme_resv_release(nvme_link_t l, struct nvme_resv_release_args *args)
 {
 	__le64 payload[1] = { cpu_to_le64(args->crkey) };
