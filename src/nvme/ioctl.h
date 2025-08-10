@@ -4700,12 +4700,33 @@ static inline int nvme_resv_register(nvme_link_t l, __u32 nsid, enum nvme_resv_r
 /**
  * nvme_resv_release() - Send an nvme reservation release
  * @l:		Link handle
- * @args:	&struct nvme_resv_release_args argument structure
+ * @nsid:	Namespace identifier
+ * @crkey:	The current reservation key to release
+ * @rtype:	The type of reservation to be create, see &enum nvme_resv_rtype
+ * @rrela:	Reservation release action, see &enum nvme_resv_rrela
+ * @iekey:	Set to ignore the existing key
+ * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_resv_release(nvme_link_t l, struct nvme_resv_release_args *args);
+static inline int nvme_resv_release(nvme_link_t l, __u32 nsid, __u64 crkey,
+				    enum nvme_resv_rtype rtype, enum nvme_resv_rrela rrela,
+				    bool iekey, __u32 *result)
+{
+	__le64 payload[1] = { htole64(crkey) };
+	__u32 cdw10 = (rrela & 0x7) | (iekey ? 1 << 3 : 0) | (rtype << 8);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_cmd_resv_release,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)(payload),
+		.data_len	= sizeof(payload),
+		.cdw10		= cdw10,
+	};
+
+	return nvme_submit_io_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_resv_report() - Send an nvme reservation report
