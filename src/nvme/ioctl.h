@@ -5129,12 +5129,75 @@ static inline int nvme_lm_track_send(nvme_link_t l, __u8 sel, __u16 mos,
 /**
  * nvme_lm_migration_send() - Migration Send command
  * @l:		Link handle
- * @args:	&struct nvme_lm_migration_send_args argument structure
+ * @sel:	Select (SEL): This field specifies the type of management
+ * 		operation to perform.
+ * @mos:	Management Operation Specific (MOS): This field is specific
+ * 		to the SEL type
+ * @cntlid:	Controller ID: This field specifies the identifier of the
+ * 		controller to which the operation is performed.
+ * @stype:	Suspend Type (STYPE): This field specifies the type of suspend.
+ * @dudmq:	Delete User Data Migration Queue (DUDMQ): If set, the migration
+ * 		queue is deleted is deleted as part of the Suspend operation.
+ * 		If cleared, it is retained.
+ * @csvi:	Controller State Version Index (CSVI): A non-zero value in this
+ * 		field specifies the index to a specific entry in the NVMe
+ * 		Controller State Version list of the Supported Controller State
+ * 		Formats data structure.
+ * @csuuidi:	Controller State UUID Index (CSUUIDI): A non-zero value in this
+ * 		field specifies the index to a specific entry in the
+ * 		Vendor Specific Controller State UUID Supported.
+ *		list of the Supported Controller State Formats data structure.
+ * @cso:	Offset: This field specifies the offset, in bytes, within
+ * 		the data available to be returned and specifies the starting
+ * 		point for that data for what is actually returned to the host.
+ * @uidx:	UUID Index (UIDX): If this field is set to a non-zero value,
+ * 		then the value of this field is the index of a UUID in the
+ * 		UUID List (refer to Figure 320) that is used by the command.
+ * @data:	Pointer to data
+ * @data_len:	Length of @data
+ * @result:	Set on completion to the command's CQE DWORD 0 controller response
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_lm_migration_send(nvme_link_t l, struct nvme_lm_migration_send_args *args);
+static inline int nvme_lm_migration_send(nvme_link_t l, __u16 sel, __u16 mos,
+					 __u16 cntlid, __u8 stype, bool dudmq,
+					 __u8 csvi, __u16 csuuidi, __u64 cso,
+					 __u8 uidx, void *data, __u32 data_len,
+					 __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(sel, LM_MIGRATION_SEND_SEL) |
+		      NVME_SET(mos, LM_MIGRATION_SEND_MOS);
+	__u32 cdw11 = 0;
+	__u32 cdw14 = NVME_SET(uidx, LM_MIGRATION_SEND_UIDX);
+
+	if (sel == NVME_LM_SEL_SUSPEND) {
+		cdw11 = NVME_SET(stype, LM_STYPE) |
+			NVME_SET(cntlid, LM_SUSPEND_CNTLID);
+		if (dudmq)
+			cdw11 |= NVME_LM_DUDMQ;
+	} else if (sel == NVME_LM_SEL_RESUME) {
+		cdw11 = NVME_SET(cntlid, LM_RESUME_CNTLID);
+	} else if (sel == NVME_LM_SEL_SET_CONTROLLER_STATE) {
+		cdw11 = NVME_SET(csuuidi, LM_SET_CONTROLLER_STATE_CSUUIDI) |
+			NVME_SET(csvi, LM_SET_CONTROLLER_STATE_CSVI) |
+			NVME_SET(cntlid, LM_SET_CONTROLLER_STATE_CNTLID);
+	}
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode = nvme_admin_migration_send,
+		.addr = (__u64)(uintptr_t)data,
+		.data_len = data_len,
+		.cdw10 = cdw10,
+		.cdw11 = cdw11,
+		.cdw12 = (__u32)cso,
+		.cdw13 = (__u32)(cso >> 32),
+		.cdw14 = cdw14,
+		.cdw15 = (__u32)(data_len / sizeof(__u32)),
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_lm_migration_recv - Migration Receive command

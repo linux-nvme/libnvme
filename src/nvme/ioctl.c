@@ -1315,44 +1315,6 @@ int nvme_io_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 			     timeout_ms, result);
 }
 
-int nvme_lm_migration_send(nvme_link_t l, struct nvme_lm_migration_send_args *args)
-{
-	__u32 cdw10 = NVME_SET(args->sel, LM_MIGRATION_SEND_SEL) |
-		      NVME_SET(args->mos, LM_MIGRATION_SEND_MOS);
-	__u32 cdw11 = 0;
-
-	if (args->sel == NVME_LM_SEL_SUSPEND) {
-		cdw11 = NVME_SET(args->stype, LM_STYPE) |
-			NVME_SET(args->cntlid, LM_SUSPEND_CNTLID);
-		if (args->dudmq)
-			cdw11 |= NVME_LM_DUDMQ;
-	} else if (args->sel == NVME_LM_SEL_RESUME) {
-		cdw11 = NVME_SET(args->cntlid, LM_RESUME_CNTLID);
-	} else if (args->sel == NVME_LM_SEL_SET_CONTROLLER_STATE) {
-		cdw11 = NVME_SET(args->csuuidi, LM_SET_CONTROLLER_STATE_CSUUIDI) |
-			NVME_SET(args->csvi, LM_SET_CONTROLLER_STATE_CSVI) |
-			NVME_SET(args->cntlid, LM_SET_CONTROLLER_STATE_CNTLID);
-	}
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode = nvme_admin_migration_send,
-		.cdw10 = cdw10,
-		.cdw11 = cdw11,
-		.cdw12 = (__u32)args->offset,
-		.cdw13 = (__u32)(args->offset >> 32),
-		.cdw14 = NVME_SET(args->uidx, LM_MIGRATION_SEND_UIDX),
-		.cdw15 = args->numd,
-		.addr = (__u64)(uintptr_t)args->data,
-		.data_len = args->numd << 2,
-		.timeout_ms = args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_lm_migration_recv(nvme_link_t l, struct nvme_lm_migration_recv_args *args)
 {
 	__u32 cdw10 = NVME_SET(args->sel, LM_MIGRATION_RECV_SEL) |
