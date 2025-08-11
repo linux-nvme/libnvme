@@ -1315,47 +1315,6 @@ int nvme_io_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 			     timeout_ms, result);
 }
 
-int nvme_zns_append(nvme_link_t l, struct nvme_zns_append_args *args)
-{
-	const size_t size_v1 = sizeof_args(struct nvme_zns_append_args, lbatm, __u64);
-	const size_t size_v2 = sizeof_args(struct nvme_zns_append_args, ilbrt_u64, __u64);
-	__u32 cdw3, cdw10, cdw11, cdw12, cdw14, cdw15;
-
-	if (args->args_size < size_v1 || args->args_size > size_v2)
-		return -EINVAL;
-
-	cdw10 = args->zslba & 0xffffffff;
-	cdw11 = args->zslba >> 32;
-	cdw12 = args->nlb | (args->control << 16);
-	cdw15 = args->lbat | (args->lbatm << 16);
-
-	if (args->args_size == size_v1) {
-		cdw3 = 0;
-		cdw14 = args->ilbrt;
-	} else {
-		cdw3 = (args->ilbrt_u64 >> 32) & 0xffffffff;
-		cdw14 = args->ilbrt_u64 & 0xffffffff;
-	}
-
-	struct nvme_passthru_cmd64 cmd = {
-		.opcode		= nvme_zns_cmd_append,
-		.nsid		= args->nsid,
-		.cdw3		= cdw3,
-		.cdw10		= cdw10,
-		.cdw11		= cdw11,
-		.cdw12		= cdw12,
-		.cdw14		= cdw14,
-		.cdw15		= cdw15,
-		.data_len	= args->data_len,
-		.addr		= (__u64)(uintptr_t)args->data,
-		.metadata_len	= args->metadata_len,
-		.metadata	= (__u64)(uintptr_t)args->metadata,
-		.timeout_ms	= args->timeout,
-	};
-
-	return nvme_submit_io_passthru64(l, &cmd, args->result);
-}
-
 int nvme_dim_send(nvme_link_t l, struct nvme_dim_args *args)
 {
 	__u32 cdw10 = NVME_SET(args->tas, DIM_TAS);

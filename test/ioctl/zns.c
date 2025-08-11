@@ -17,39 +17,35 @@ static nvme_link_t test_link;
 static void test_zns_append(void)
 {
 	__u8 expected_data[8], data[8] = {};
+	__u64 zslba = TEST_SLBA;
+	__u64 ilbrt_u64 = 0x76;
+	__u16 control = 0xcd;
+	__u16 cev = 0;
+	__u16 dspec = 0;
+	__u16 lbatm = 0x98;
+	__u16 lbat = 0xef;
+	__u16 nlb = 0xab;
 	__u64 result = 0;
-	struct nvme_zns_append_args args = {
-		.zslba = TEST_SLBA,
-		.result = &result,
-		.data = &data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.data_len = sizeof(data),
-		.nlb = 0xab,
-		.control = 0xcd,
-		.lbat = 0xef,
-		.lbatm = 0x98,
-		.ilbrt_u64 = 0x76,
-	};
+	int err;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_zns_cmd_append,
 		.nsid = TEST_NSID,
-		.cdw3 = (args.ilbrt_u64 >> 32) & 0xffffffff,
-		.cdw10 = args.zslba & 0xffffffff,
-		.cdw11 = args.zslba >> 32,
-		.cdw12 = args.nlb | (args.control << 16),
-		.cdw14 = args.ilbrt_u64 & 0xffffffff,
-		.cdw15 = args.lbat | (args.lbatm << 16),
+		.cdw3 = (ilbrt_u64 >> 32) & 0xffffffff,
+		.cdw10 = zslba & 0xffffffff,
+		.cdw11 = zslba >> 32,
+		.cdw12 = nlb | (control << 16),
+		.cdw14 = ilbrt_u64 & 0xffffffff,
+		.cdw15 = lbat | (lbatm << 16),
 		.data_len = sizeof(expected_data),
 		.out_data = &expected_data,
 	};
 
-	int err;
-
 	arbitrary(&expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_zns_append(test_link, &args);
+	err = nvme_zns_append(test_link, TEST_NSID, zslba, nlb, control,
+			      cev, dspec, lbat, lbatm, ilbrt_u64,
+			      NULL, 0, &data, sizeof(data), &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "wrong result");
