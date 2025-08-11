@@ -1315,24 +1315,6 @@ int nvme_io_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 			     timeout_ms, result);
 }
 
-int nvme_lm_track_send(nvme_link_t l, struct nvme_lm_track_send_args *args)
-{
-	__u32 cdw10 = NVME_SET(args->sel, LM_TRACK_SEND_SEL) |
-		      NVME_SET(args->mos, LM_TRACK_SEND_MOS);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode = nvme_admin_track_send,
-		.cdw10 = cdw10,
-		.cdw11 = args->cdqid,
-		.timeout_ms = args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_lm_migration_send(nvme_link_t l, struct nvme_lm_migration_send_args *args)
 {
 	__u32 cdw10 = NVME_SET(args->sel, LM_MIGRATION_SEND_SEL) |
