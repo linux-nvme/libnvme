@@ -1315,25 +1315,6 @@ int nvme_io_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 			     timeout_ms, result);
 }
 
-int nvme_dim_send(nvme_link_t l, struct nvme_dim_args *args)
-{
-	__u32 cdw10 = NVME_SET(args->tas, DIM_TAS);
-
-	struct nvme_passthru_cmd  cmd = {
-		.opcode     = nvme_admin_discovery_info_mgmt,
-		.cdw10      = cdw10,
-		.addr       = (__u64)(uintptr_t)args->data,
-		.data_len   = args->data_len,
-		.timeout_ms = args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
-
 int nvme_lm_cdq(nvme_link_t l, struct nvme_lm_cdq_args *args)
 {
 	const size_t size_v1 = sizeof_args(struct nvme_lm_cdq_args, sz_u8, __u64);

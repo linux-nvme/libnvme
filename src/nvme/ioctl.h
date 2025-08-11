@@ -5024,12 +5024,28 @@ static inline int nvme_zns_append(nvme_link_t l, __u32 nsid, __u64 zslba, __u16 
 /**
  * nvme_dim_send - Send a Discovery Information Management (DIM) command
  * @l:		Link handle
- * @args:	&struct nvme_dim_args argument structure
+ * @tas:	Task field of the Command Dword 10 (cdw10)
+ * @data:	Pointer to the DIM data
+ * @data_len:	Length of @data
+ * @result:	Set on completion to the command's CQE DWORD 0 controller response.
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_dim_send(nvme_link_t l, struct nvme_dim_args *args);
+static inline int nvme_dim_send(nvme_link_t l, __u8 tas, void *data,
+				__u32 data_len, __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(tas, DIM_TAS);
+
+	struct nvme_passthru_cmd  cmd = {
+		.opcode     = nvme_admin_discovery_info_mgmt,
+		.addr       = (__u64)(uintptr_t)data,
+		.data_len   = data_len,
+		.cdw10      = cdw10,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_lm_cdq() - Controller Data Queue - Controller Data Queue command

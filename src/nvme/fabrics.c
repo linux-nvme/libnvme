@@ -1601,13 +1601,6 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 	__u32 tel;
 	int ret;
 
-	struct nvme_dim_args args = {
-		.args_size = sizeof(args),
-		.result = result,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.tas = tas
-	};
-
 	if (!c->s) {
 		nvme_msg(r, LOG_ERR,
 			 "%s: failed to perform DIM. subsystem undefined.\n",
@@ -1673,9 +1666,7 @@ static int nvmf_dim(nvme_ctrl_t c, enum nvmf_dim_tas tas, __u8 trtype,
 	die = &dim->die->extended;
 	nvmf_fill_die(die, c->s->h, tel, trtype, adrfam, reg_addr, tsas);
 
-	args.data_len = tdl;
-	args.data = dim;
-	return nvme_dim_send(nvme_ctrl_get_link(c), &args);
+	return nvme_dim_send(nvme_ctrl_get_link(c), tas, dim, tdl, result);
 }
 
 /**
