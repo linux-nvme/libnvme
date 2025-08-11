@@ -1255,29 +1255,24 @@ static void test_io_mgmt_recv(void)
 static void test_io_mgmt_send(void)
 {
 	__u8 expected_data[8], data[8] = {};
-	struct nvme_io_mgmt_send_args args = {
-		.data = &expected_data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.data_len = sizeof(expected_data),
-		.mos = 0x1,
-		.mo = 0x2,
-	};
+	__u32 data_len = sizeof(expected_data);
+	__u16 mos = 0x1;
+	__u8 mo = 0x2;
+	int err;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_io_mgmt_send,
 		.nsid = TEST_NSID,
-		.cdw10 = args.mo | (args.mos << 16),
-		.data_len = args.data_len,
+		.cdw10 = mo | (mos << 16),
+		.data_len = data_len,
 		.in_data = &data,
 	};
-
-	int err;
 
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_io_mgmt_send(test_link, &args);
+	err = nvme_io_mgmt_send(test_link, TEST_NSID, mo, mos,
+				&expected_data, data_len, NULL);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	cmp(&data, &expected_data, sizeof(data), "incorrect data");
@@ -1322,8 +1317,8 @@ static void test_fdp_reclaim_unit_handle_update(void)
 
 	arbitrary(&pids, sizeof(pids));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_fdp_reclaim_unit_handle_update(test_link, TEST_NSID, npids,
-						  &pids);
+	err = nvme_fdp_reclaim_unit_handle_update(test_link, TEST_NSID, &pids,
+						  npids, NULL);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 }

@@ -4814,37 +4814,53 @@ static inline int nvme_fdp_reclaim_unit_handle_status(nvme_link_t l, __u32 nsid,
 /**
  * nvme_io_mgmt_send() - I/O Management Send command
  * @l:		Link handle
- * @args:	&struct nvme_io_mgmt_send_args argument structure
+ * @nsid:	Namespace identifier
+ * @mo:		Management Operation
+ * @mos:	Management Operation Specific
+ * @data:	Userspace address of the data
+ * @data_len:	Length of @data
+ * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_io_mgmt_send(nvme_link_t l, struct nvme_io_mgmt_send_args *args);
+static inline int nvme_io_mgmt_send(nvme_link_t l, __u32 nsid, __u8 mo, __u16 mos,
+				    void *data, __u32 data_len, __u32 *result)
+{
+	__u32 cdw10 = mo | (mos << 16);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_cmd_io_mgmt_send,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len	= data_len,
+		.cdw10		= cdw10,
+	};
+
+	return nvme_submit_io_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_fdp_reclaim_unit_handle_update() - Update a list of reclaim unit handles
  * @l:		Link handle
  * @nsid:	Namespace identifier
- * @npids:	Number of placement identifiers
  * @pids:	List of placement identifiers
+ * @npids:	Number of placement identifiers
+ * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
 static inline int nvme_fdp_reclaim_unit_handle_update(nvme_link_t l, __u32 nsid,
-			unsigned int npids, __u16 *pids)
+						      __u16 *pids,
+						      unsigned int npids,
+						      __u32 *result)
 {
-	struct nvme_io_mgmt_send_args args = {
-		.data = (void *)pids,
-		.args_size = sizeof(args),
-		.nsid = nsid,
-		.data_len = (__u32)(npids * sizeof(__u16)),
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.mos = (__u16)(npids - 1),
-		.mo = NVME_IO_MGMT_SEND_RUH_UPDATE,
-	};
-
-	return nvme_io_mgmt_send(l, &args);
+	return nvme_io_mgmt_send(l, nsid, NVME_IO_MGMT_SEND_RUH_UPDATE,
+				 (__u16)(npids - 1),
+				 (void *)pids,
+				 (__u32)(npids * sizeof(__u16)),
+				 result);
 }
 
 /**
