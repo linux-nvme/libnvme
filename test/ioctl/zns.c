@@ -58,12 +58,12 @@ static void test_zns_append(void)
 
 static void test_zns_report_zones(void)
 {
+	enum nvme_zns_report_options opts = NVME_ZNS_ZRAS_REPORT_CLOSED;
 	__u8 expected_data[8], data[8] = {};
-	__u32 result = 0;
-	uint32_t timeout = 1234;
 	bool extended = true;
 	bool partial = true;
-	enum nvme_zns_report_options opts = NVME_ZNS_ZRAS_REPORT_CLOSED;
+	__u32 result = 0;
+	int err;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_zns_cmd_mgmt_recv,
@@ -75,16 +75,12 @@ static void test_zns_report_zones(void)
 			 (!!partial << 16),
 		.data_len = sizeof(expected_data),
 		.out_data = &expected_data,
-		.timeout_ms = timeout,
 	};
-
-	int err;
 
 	arbitrary(&expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_zns_report_zones(test_link, TEST_NSID, TEST_SLBA, opts,
-				    extended, partial, sizeof(data), &data,
-				    timeout, &result);
+	err = nvme_zns_report_zones(test_link, TEST_NSID, TEST_SLBA, opts, extended, partial,
+				    sizeof(data), &data, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -124,40 +120,26 @@ static void test_zns_mgmt_send(void)
 
 static void test_zns_mgmt_recv(void)
 {
+	enum nvme_zns_recv_action zra = NVME_ZNS_ZRA_REPORT_ZONES;
 	__u8 expected_data[8], data[8] = {};
+	__u16 zrasf = (__u16)NVME_ZNS_ZRAS_REPORT_ALL;
+	bool zras_feat = false;
 	__u32 result = 0;
-	uint32_t timeout = 1234;
-	bool partial = false;
-
-	struct nvme_zns_mgmt_recv_args args = {
-		.slba = 0,
-		.result = &result,
-		.data = data,
-		.args_size = sizeof(args),
-		.timeout = timeout,
-		.nsid = TEST_NSID,
-		.zra = NVME_ZNS_ZRA_REPORT_ZONES,
-		.data_len = sizeof(data),
-		.zrasf = (__u16)NVME_ZNS_ZRAS_REPORT_ALL,
-		.zras_feat = partial,
-	};
+	int err;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_zns_cmd_mgmt_recv,
 		.nsid = TEST_NSID,
 		.cdw12 = (sizeof(expected_data) >> 2) - 1,
-		.cdw13 = (!!args.zra << 0) | ((__u16)args.zrasf << 8) |
-			 (!!args.zras_feat << 16),
+		.cdw13 = (!!zra << 0) | ((__u16)zrasf << 8) | (!!zras_feat << 16),
 		.data_len = sizeof(expected_data),
 		.out_data = &expected_data,
-		.timeout_ms = timeout,
 	};
-
-	int err;
 
 	arbitrary(&expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_zns_mgmt_recv(test_link, &args);
+	err = nvme_zns_mgmt_recv(test_link, TEST_NSID, 0, zra, zrasf, zras_feat, data, sizeof(data),
+				 &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);

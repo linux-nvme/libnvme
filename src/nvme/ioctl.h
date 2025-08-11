@@ -323,10 +323,10 @@ enum nvme_cmd_dword_fields {
 	NVME_ZNS_MGMT_SEND_ZSA_MASK				= 0xff,
 	NVME_ZNS_MGMT_RECV_ZRA_SHIFT				= 0,
 	NVME_ZNS_MGMT_RECV_ZRA_MASK				= 0xff,
-	NVME_ZNS_MGMT_RECV_ZRASF_SHIFT				= 8,
-	NVME_ZNS_MGMT_RECV_ZRASF_MASK				= 0xff,
-	NVME_ZNS_MGMT_RECV_ZRAS_FEAT_SHIFT			= 16,
-	NVME_ZNS_MGMT_RECV_ZRAS_FEAT_MASK			= 0x1,
+	NVME_ZNS_MGMT_RECV_ZRAS_SHIFT				= 8,
+	NVME_ZNS_MGMT_RECV_ZRAS_MASK				= 0xff,
+	NVME_ZNS_MGMT_RECV_ZRASPF_SHIFT				= 16,
+	NVME_ZNS_MGMT_RECV_ZRASPF_MASK				= 0x1,
 	NVME_DIM_TAS_SHIFT					= 0,
 	NVME_DIM_TAS_MASK					= 0xF,
 	NVME_DSM_CDW10_NR_SHIFT					= 0,
@@ -4906,12 +4906,43 @@ static inline int nvme_zns_mgmt_send(nvme_link_t l, __u32 nsid, __u64 slba,
 /**
  * nvme_zns_mgmt_recv() - ZNS management receive command
  * @l:		Link handle
- * @args:	&struct nvme_zns_mgmt_recv_args argument structure
+ * @nsid:	Namespace ID
+ * @slba:	Starting logical block address
+ * @zra:	zone receive action
+ * @zras:	Zone receive action specific field
+ * @zraspf:	Zone receive action specific features
+ * @data:	Userspace address of the data
+ * @data_len:	Length of @data
+ * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_zns_mgmt_recv(nvme_link_t l, struct nvme_zns_mgmt_recv_args *args);
+static inline int nvme_zns_mgmt_recv(nvme_link_t l, __u32 nsid, __u64 slba,
+				     enum nvme_zns_recv_action zra, __u16 zras,
+				     bool zraspf, void *data, __u32 data_len,
+				     __u32 *result)
+{
+	__u32 cdw10 = slba & 0xffffffff;
+	__u32 cdw11 = slba >> 32;
+	__u32 cdw12 = (data_len >> 2) - 1;
+	__u32 cdw13 = NVME_SET(zra, ZNS_MGMT_RECV_ZRA) |
+		      NVME_SET(zras, ZNS_MGMT_RECV_ZRAS) |
+		      NVME_SET(zraspf, ZNS_MGMT_RECV_ZRASPF);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_zns_cmd_mgmt_recv,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len	= data_len,
+		.cdw10		= cdw10,
+		.cdw11		= cdw11,
+		.cdw12		= cdw12,
+		.cdw13		= cdw13,
+	};
+
+	return nvme_submit_io_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_zns_report_zones() - Return the list of zones
@@ -4923,33 +4954,18 @@ int nvme_zns_mgmt_recv(nvme_link_t l, struct nvme_zns_mgmt_recv_args *args);
  * @partial:	Partial report requested
  * @data_len:	Length of the data buffer
  * @data:	Userspace address of the report zones data
- * @timeout:	timeout in ms
  * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
 static inline int nvme_zns_report_zones(nvme_link_t l, __u32 nsid, __u64 slba,
-			  enum nvme_zns_report_options opts,
-			  bool extended, bool partial,
-			  __u32 data_len, void *data,
-			  __u32 timeout, __u32 *result)
+					enum nvme_zns_report_options opts, bool extended,
+					bool partial, __u32 data_len, void *data, __u32 *result)
 {
-	struct nvme_zns_mgmt_recv_args args = {
-		.slba = slba,
-		.result = result,
-		.data = data,
-		.args_size = sizeof(args),
-		.timeout = timeout,
-		.nsid = nsid,
-		.zra = extended ? NVME_ZNS_ZRA_EXTENDED_REPORT_ZONES :
-		NVME_ZNS_ZRA_REPORT_ZONES,
-		.data_len = data_len,
-		.zrasf = (__u16)opts,
-		.zras_feat = partial,
-	};
-
-	return nvme_zns_mgmt_recv(l, &args);
+	return nvme_zns_mgmt_recv(l, nsid, slba, extended ? NVME_ZNS_ZRA_EXTENDED_REPORT_ZONES :
+				  NVME_ZNS_ZRA_REPORT_ZONES, (__u16)opts, partial, data, data_len,
+				  result);
 }
 
 /**

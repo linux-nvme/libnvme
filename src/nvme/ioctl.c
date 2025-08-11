@@ -1315,33 +1315,6 @@ int nvme_io_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 			     timeout_ms, result);
 }
 
-int nvme_zns_mgmt_recv(nvme_link_t l, struct nvme_zns_mgmt_recv_args *args)
-{
-	__u32 cdw10 = args->slba & 0xffffffff;
-	__u32 cdw11 = args->slba >> 32;
-	__u32 cdw12 = (args->data_len >> 2) - 1;
-	__u32 cdw13 = NVME_SET(args->zra, ZNS_MGMT_RECV_ZRA) |
-			NVME_SET(args->zrasf, ZNS_MGMT_RECV_ZRASF) |
-			NVME_SET(args->zras_feat, ZNS_MGMT_RECV_ZRAS_FEAT);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_zns_cmd_mgmt_recv,
-		.nsid		= args->nsid,
-		.cdw10		= cdw10,
-		.cdw11		= cdw11,
-		.cdw12		= cdw12,
-		.cdw13		= cdw13,
-		.addr		= (__u64)(uintptr_t)args->data,
-		.data_len	= args->data_len,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_io_passthru(l, &cmd, args->result);
-}
-
 int nvme_zns_append(nvme_link_t l, struct nvme_zns_append_args *args)
 {
 	const size_t size_v1 = sizeof_args(struct nvme_zns_append_args, lbatm, __u64);
