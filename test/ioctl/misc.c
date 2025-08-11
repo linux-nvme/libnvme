@@ -1352,22 +1352,16 @@ static void test_lm_cdq(void)
 {
 	__u32 result = 0;
 	__u8 expected_data[8], data[8] = {};
-	struct nvme_lm_cdq_args args = {
-		.result = 0,
-		.data = &data,
-		.args_size = sizeof(args),
-		.mos = 0x1,
-		.cntlid = 0x2,
-		.cdqid = 0x3,
-		.sel = NVME_LM_SEL_DELETE_CDQ,
-		.sz = 0x4,
-	};
+	__u16 mos = 0x1;
+	__u16 cdqid = 0x3;
+	__u8 sel = NVME_LM_SEL_DELETE_CDQ;
+	__u32 sz = 0x4;
 
 	struct mock_cmd mock_admin_cmd = {
 		.opcode = nvme_admin_ctrl_data_queue,
-		.cdw10 = args.sel | (args.mos << 16),
-		.cdw11 = args.cdqid,
-		.cdw12 = args.sz,
+		.cdw10 = sel | (mos << 16),
+		.cdw11 = cdqid,
+		.cdw12 = sz,
 		.data_len = 0,
 		.in_data = &expected_data,
 	};
@@ -1377,7 +1371,7 @@ static void test_lm_cdq(void)
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
-	err = nvme_lm_cdq(test_link, &args);
+	err = nvme_lm_cdq(test_link, sel, mos, 0x2, sz, &data, &cdqid, NULL);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);

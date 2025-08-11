@@ -5050,12 +5050,51 @@ static inline int nvme_dim_send(nvme_link_t l, __u8 tas, void *data,
 /**
  * nvme_lm_cdq() - Controller Data Queue - Controller Data Queue command
  * @l:		Link handle
- * @args:	&struct nvme_lm_cdq_args argument structure
+ * @sel:	Select (SEL): This field specifies the type of management operation to perform.
+ * @mos:	Management Operation Specific (MOS): This field is specific to the SEL type
+ * @cntlid:	Controller ID: For Create CDQ, specifies the target migratable controller
+ * @sz:		For Create CDQ, specifies the size of CDQ, in dwords - 4 byte
+ * @data:	Pointer to data
+ * @cdqid:	Controller Data Queue ID (CDQID): For Create CDQ, this field is the CDQID created
+ *		by the controller if no error is present. For Delete CDQ, this field is the CDQID
+ *		to delete.
+ * @result:	Set on completion to the command's CQE DWORD 0 controller response
  *
  * Return: The nvme command status if a response was received (see
  * &enum nvme_status_field) or -1 with errno set otherwise.)
  */
-int nvme_lm_cdq(nvme_link_t l, struct nvme_lm_cdq_args *args);
+static inline int nvme_lm_cdq(nvme_link_t l, __u8 sel, __u16 mos, __u16 cntlid,
+			      __u32 sz, void *data, __u16 *cdqid, __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(sel, LM_CDQ_SEL) |
+		      NVME_SET(mos, LM_CDQ_MOS);
+	__u32 cdw11 = 0, data_len = 0;
+	int err;
+
+	if (sel == NVME_LM_SEL_CREATE_CDQ) {
+		cdw11 = NVME_SET(NVME_SET(cntlid, LM_CREATE_CDQ_CNTLID), LM_CQS) |
+			NVME_LM_CREATE_CDQ_PC;
+		data_len = sz << 2;
+	} else if (sel == NVME_LM_SEL_DELETE_CDQ) {
+		cdw11 = NVME_SET(*cdqid, LM_DELETE_CDQ_CDQID);
+	}
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode = nvme_admin_ctrl_data_queue,
+		.addr = (__u64)(uintptr_t)data,
+		.data_len = data_len,
+		.cdw10 = cdw10,
+		.cdw11 = cdw11,
+		.cdw12 = sz,
+	};
+
+	err = nvme_submit_admin_passthru(l, &cmd, result);
+
+	if (!err)
+		*cdqid = NVME_GET(cmd.result, LM_CREATE_CDQ_CDQID);
+
+	return err;
+}
 
 /**
  * nvme_lm_track_send() - Track Send command

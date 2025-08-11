@@ -168,7 +168,6 @@ LIBNVME_2_0 {
 		nvme_link_is_chardev;
 		nvme_link_is_direct;
 		nvme_link_is_mi;
-		nvme_lm_cdq;
 		nvme_lm_get_features_ctrl_data_queue;
 		nvme_lm_migration_recv;
 		nvme_lm_migration_send;
