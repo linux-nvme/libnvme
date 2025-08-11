@@ -1230,29 +1230,23 @@ static void test_resv_report(void)
 static void test_io_mgmt_recv(void)
 {
 	__u8 expected_data[8], data[8] = {};
-	struct nvme_io_mgmt_recv_args args = {
-		.data = &data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.data_len = sizeof(data),
-		.mos = 0x1,
-		.mo = 0x2,
-	};
+	__u32 data_len = sizeof(data);
+	__u16 mos = 0x1;
+	__u8 mo = 0x2;
+	int err;
 
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_io_mgmt_recv,
 		.nsid = TEST_NSID,
-		.cdw10 = args.mo | (args.mos << 16),
-		.cdw11 = (args.data_len >> 2) - 1,
-		.data_len = args.data_len,
+		.cdw10 = mo | (mos << 16),
+		.cdw11 = (data_len >> 2) - 1,
+		.data_len = data_len,
 		.out_data = &expected_data,
 	};
 
-	int err;
-
 	arbitrary(&expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_io_mgmt_recv(test_link, &args);
+	err = nvme_io_mgmt_recv(test_link, TEST_NSID, mo, mos, &data, data_len, NULL);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	cmp(&data, &expected_data, sizeof(data), "incorrect data");
@@ -1293,6 +1287,8 @@ static void test_fdp_reclaim_unit_handle_status(void)
 {
 	__u8 expected_data[8], data[8] = {};
 	__u32 data_len = sizeof(data);
+	int err;
+
 	struct mock_cmd mock_io_cmd = {
 		.opcode = nvme_cmd_io_mgmt_recv,
 		.nsid = TEST_NSID,
@@ -1302,12 +1298,9 @@ static void test_fdp_reclaim_unit_handle_status(void)
 		.out_data = &expected_data,
 	};
 
-	int err;
-
 	arbitrary(&expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_fdp_reclaim_unit_handle_status(test_link, TEST_NSID, data_len,
-						  &data);
+	err = nvme_fdp_reclaim_unit_handle_status(test_link, TEST_NSID, &data, data_len, NULL);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	cmp(&data, &expected_data, sizeof(data), "incorrect data");

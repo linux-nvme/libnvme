@@ -4764,37 +4764,51 @@ static inline int nvme_resv_report(nvme_link_t l, __u32 nsid, bool eds,
 /**
  * nvme_io_mgmt_recv() - I/O Management Receive command
  * @l:		Link handle
- * @args:	&struct nvme_io_mgmt_recv_args argument structure
+ * @nsid:	Namespace identifier
+ * @mo:		Management Operation
+ * @mos:	Management Operation Specific
+ * @data:	Userspace address of the data
+ * @data_len:	Length of @data
+ * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_io_mgmt_recv(nvme_link_t l, struct nvme_io_mgmt_recv_args *args);
+static inline int nvme_io_mgmt_recv(nvme_link_t l, __u32 nsid, __u8 mo,
+				    __u16 mos, void *data, __u32 data_len,
+				    __u32 *result)
+{
+	__u32 cdw10 = mo | (mos << 16);
+	__u32 cdw11 = (data_len >> 2) - 1;
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_cmd_io_mgmt_recv,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len	= data_len,
+		.cdw10		= cdw10,
+		.cdw11		= cdw11,
+	};
+
+	return nvme_submit_io_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_fdp_reclaim_unit_handle_status() - Get reclaim unit handle status
  * @l:		Link handle
  * @nsid:	Namespace identifier
- * @data_len:	Length of response buffer
  * @data:	Response buffer
+ * @data_len:	Length of response buffer
+ * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_fdp_reclaim_unit_handle_status(nvme_link_t l, __u32 nsid,
-			__u32 data_len, void *data)
+static inline int nvme_fdp_reclaim_unit_handle_status(nvme_link_t l, __u32 nsid, void *data,
+						      __u32 data_len, __u32 *result)
 {
-	struct nvme_io_mgmt_recv_args args = {
-		.data = data,
-		.args_size = sizeof(args),
-		.nsid = nsid,
-		.data_len = data_len,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.mos = 0,
-		.mo = NVME_IO_MGMT_RECV_RUH_STATUS,
-	};
-
-	return nvme_io_mgmt_recv(l, &args);
+	return nvme_io_mgmt_recv(l, nsid, NVME_IO_MGMT_RECV_RUH_STATUS, 0,
+				 data, data_len, result);
 }
 
 /**
