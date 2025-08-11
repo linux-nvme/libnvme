@@ -962,7 +962,6 @@ static int test_admin_get_features_cb(struct nvme_mi_ep *ep,
 
 static void test_get_features_nodata(nvme_mi_ep_t ep)
 {
-	struct nvme_get_features_args args = { 0 };
 	nvme_link_t link;
 	uint32_t res;
 	int rc;
@@ -972,20 +971,14 @@ static void test_get_features_nodata(nvme_mi_ep_t ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	args.args_size = sizeof(args);
-	args.fid = NVME_FEAT_FID_ARBITRATION;
-	args.sel = 0;
-	args.result = &res;
-
-	rc = nvme_get_features(link, &args);
+	rc = nvme_get_features(link, NVME_NSID_NONE, NVME_FEAT_FID_ARBITRATION,
+			       0, 0, NVME_UUID_NONE, NULL, 0, &res);
 	assert(rc == 0);
-	assert(args.data_len == 0);
 	assert(res == 0x04030201);
 }
 
 static void test_get_features_data(nvme_mi_ep_t ep)
 {
-	struct nvme_get_features_args args = { 0 };
 	struct nvme_timestamp tstamp;
 	nvme_link_t link;
 	uint8_t exp[6];
@@ -997,20 +990,13 @@ static void test_get_features_data(nvme_mi_ep_t ep)
 	link = nvme_mi_init_link(ep, 5);
 	assert(link);
 
-	args.args_size = sizeof(args);
-	args.fid = NVME_FEAT_FID_TIMESTAMP;
-	args.sel = 0;
-	args.result = &res;
-	args.data = &tstamp;
-	args.data_len = sizeof(tstamp);
-
 	/* expected timestamp value */
 	for (i = 0; i < sizeof(tstamp.timestamp); i++)
 		exp[i] = i;
 
-	rc = nvme_get_features(link, &args);
+	rc = nvme_get_features(link, NVME_NSID_NONE, NVME_FEAT_FID_TIMESTAMP,
+			       0, 0, NVME_UUID_NONE, &tstamp, sizeof(tstamp), &res);
 	assert(rc == 0);
-	assert(args.data_len == sizeof(tstamp));
 	assert(tstamp.attr == 1);
 	assert(!memcmp(tstamp.timestamp, exp, sizeof(tstamp.timestamp)));
 }
