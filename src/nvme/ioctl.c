@@ -1315,38 +1315,6 @@ int nvme_io_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 			     timeout_ms, result);
 }
 
-int nvme_lm_migration_recv(nvme_link_t l, struct nvme_lm_migration_recv_args *args)
-{
-	__u32 cdw10 = NVME_SET(args->sel, LM_MIGRATION_RECV_SEL) |
-		      NVME_SET(args->mos, LM_MIGRATION_RECV_MOS);
-	__u32 cdw11 = 0, data_len = 0;
-
-	if (args->sel == NVME_LM_SEL_GET_CONTROLLER_STATE) {
-		cdw11 = NVME_SET(args->csuidxp, LM_GET_CONTROLLER_STATE_CSUIDXP) |
-			NVME_SET(args->csuuidi, LM_GET_CONTROLLER_STATE_CSUUIDI) |
-			NVME_SET(args->cntlid, LM_GET_CONTROLLER_STATE_CNTLID);
-		data_len = (args->numd + 1 /*0's based*/) << 2;
-	}
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode = nvme_admin_migration_receive,
-		.cdw10 = cdw10,
-		.cdw11 = cdw11,
-		.cdw12 = (__u32)args->offset,
-		.cdw13 = (__u32)(args->offset >> 32),
-		.cdw14 = NVME_SET(args->uidx, LM_MIGRATION_RECV_UIDX),
-		.cdw15 = args->numd,
-		.addr = (__u64)(uintptr_t)args->data,
-		.data_len = data_len,
-		.timeout_ms = args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_lm_get_features_ctrl_data_queue(nvme_link_t l, __u16 cdqid,
 					 struct nvme_lm_ctrl_data_queue_fid_data *data,
 					 __u32 *result)

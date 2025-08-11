@@ -169,7 +169,6 @@ LIBNVME_2_0 {
 		nvme_link_is_direct;
 		nvme_link_is_mi;
 		nvme_lm_get_features_ctrl_data_queue;
-		nvme_lm_migration_recv;
 		nvme_lm_set_features_ctrl_data_queue;
 		nvme_lockdown;
 		nvme_lookup_ctrl;

@@ -5202,12 +5202,55 @@ static inline int nvme_lm_migration_send(nvme_link_t l, __u16 sel, __u16 mos,
 /**
  * nvme_lm_migration_recv - Migration Receive command
  * @l:		Link handle
- * @args:	&struct nvme_lm_migration_rev_args argument structure
+ * @offset:	Offset: This field specifies the offset, in bytes, within the data available to be
+ *		returned and specifies the starting point for that data for what is actually
+ *		returned to the host.
+ * @mos:	Management Operation Specific (MOS): This field is specific to the SEL type
+ * @cntlid:	Controller ID: This field specifies the identifier of the controller to which the
+ *		operation is performed.
+ * @csuuidi:	Controller State UUID Index (CSUUIDI): A non-zero value in this field specifies the
+ *		index to a specific entry in the Vendor Specific Controller State UUID Supported.
+ *		list of the Supported Controller State Formats data structure.
+ * @sel:	Select (SEL): This field specifies the type of management operation to perform
+ * @uidx:	UUID Index (UIDX): If this field is set to a non-zero value, then the value of this
+ *		field is the index of a UUID in the UUID List (refer to Figure 320) that is used by
+ *		the command.
+ * @csuidxp:	Controller State UUID Index Parameter (CSUIDXP): This field is vendor specific.
+ * @data:	Pointer to data
+ * @len:	Length of @data
+ * @result:	Set on completion to the command's CQE DWORD 0 controller response
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_lm_migration_recv(nvme_link_t l, struct nvme_lm_migration_recv_args *args);
+static inline int nvme_lm_migration_recv(nvme_link_t l, __u64 offset, __u16 mos, __u16 cntlid,
+					 __u16 csuuidi, __u8 sel, __u8 uidx, __u8 csuidxp,
+					 void *data, __u32 len, __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(sel, LM_MIGRATION_RECV_SEL) | NVME_SET(mos, LM_MIGRATION_RECV_MOS);
+	__u32 cdw11 = 0, data_len = 0;
+
+	if (sel == NVME_LM_SEL_GET_CONTROLLER_STATE) {
+		cdw11 = NVME_SET(csuidxp, LM_GET_CONTROLLER_STATE_CSUIDXP) |
+			NVME_SET(csuuidi, LM_GET_CONTROLLER_STATE_CSUUIDI) |
+			NVME_SET(cntlid, LM_GET_CONTROLLER_STATE_CNTLID);
+		data_len = len;
+	}
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode = nvme_admin_migration_receive,
+		.addr = (__u64)(uintptr_t)data,
+		.data_len = data_len,
+		.cdw10 = cdw10,
+		.cdw11 = cdw11,
+		.cdw12 = (__u32)offset,
+		.cdw13 = (__u32)(offset >> 32),
+		.cdw14 = NVME_SET(uidx, LM_MIGRATION_RECV_UIDX),
+		.cdw15 = len ? (__u32)((len - 1) / sizeof(__u32)) : 0, /* 0's based */
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_lm_set_features_ctrl_data_queue - Set Controller Datea Queue feature
