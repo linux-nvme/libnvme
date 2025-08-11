@@ -1315,31 +1315,6 @@ int nvme_io_passthru(nvme_link_t l, __u8 opcode, __u8 flags, __u16 rsvd,
 			     timeout_ms, result);
 }
 
-int nvme_zns_mgmt_send(nvme_link_t l, struct nvme_zns_mgmt_send_args *args)
-{
-	__u32 cdw10 = args->slba & 0xffffffff;
-	__u32 cdw11 = args->slba >> 32;
-	__u32 cdw13 = NVME_SET(args->zsaso, ZNS_MGMT_SEND_ZSASO) |
-			NVME_SET(!!args->select_all, ZNS_MGMT_SEND_SEL) |
-			NVME_SET(args->zsa, ZNS_MGMT_SEND_ZSA);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_zns_cmd_mgmt_send,
-		.nsid		= args->nsid,
-		.cdw10		= cdw10,
-		.cdw11		= cdw11,
-		.cdw13		= cdw13,
-		.addr		= (__u64)(uintptr_t)args->data,
-		.data_len	= args->data_len,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_io_passthru(l, &cmd, args->result);
-}
-
 int nvme_zns_mgmt_recv(nvme_link_t l, struct nvme_zns_mgmt_recv_args *args)
 {
 	__u32 cdw10 = args->slba & 0xffffffff;

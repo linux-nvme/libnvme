@@ -4866,13 +4866,42 @@ static inline int nvme_fdp_reclaim_unit_handle_update(nvme_link_t l, __u32 nsid,
 /**
  * nvme_zns_mgmt_send() - ZNS management send command
  * @l:		Link handle
- * @args:	&struct nvme_zns_mgmt_send_args argument structure
+ * @nsid:	Namespace ID
+ * @slba:	Starting logical block address
+ * @zsa:	Zone send action
+ * @selall:	Select all flag
+ * @zsaso:	Zone Send Action Specific Option
+ * @zm:		Zone Management
+ * @data:	Userspace address of the data
+ * @data_len:	Length of @data
+ * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_zns_mgmt_send(nvme_link_t l, struct nvme_zns_mgmt_send_args *args);
+static inline int nvme_zns_mgmt_send(nvme_link_t l, __u32 nsid, __u64 slba,
+				     enum nvme_zns_send_action zsa, bool selall,
+				     __u8 zsaso, __u8 zm, void *data, __u32 data_len,
+				     __u32 *result)
+{
+	__u32 cdw10 = slba & 0xffffffff;
+	__u32 cdw11 = slba >> 32;
+	__u32 cdw13 = NVME_SET(zsa, ZNS_MGMT_SEND_ZSA) |
+		      NVME_SET(selall, ZNS_MGMT_SEND_SEL) |
+		      NVME_SET(zsaso, ZNS_MGMT_SEND_ZSASO);
 
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_zns_cmd_mgmt_send,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len	= data_len,
+		.cdw10		= cdw10,
+		.cdw11		= cdw11,
+		.cdw13		= cdw13,
+	};
+
+	return nvme_submit_io_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_zns_mgmt_recv() - ZNS management receive command
