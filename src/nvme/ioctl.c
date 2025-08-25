@@ -1017,30 +1017,6 @@ int nvme_get_features_iocs_profile(nvme_link_t l, enum nvme_get_features_sel sel
 	return __nvme_get_features(l, NVME_FEAT_FID_IOCS_PROFILE, sel, result);
 }
 
-int nvme_security_receive(nvme_link_t l, struct nvme_security_receive_args *args)
-{
-	__u32 cdw10 = NVME_SET(args->secp, SECURITY_SECP) |
-			NVME_SET(args->spsp0, SECURITY_SPSP0)  |
-			NVME_SET(args->spsp1, SECURITY_SPSP1) |
-			NVME_SET(args->nssf, SECURITY_NSSF);
-	__u32 cdw11 = args->al;
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_admin_security_recv,
-		.nsid		= args->nsid,
-		.cdw10		= cdw10,
-		.cdw11		= cdw11,
-		.data_len	= args->data_len,
-		.addr		= (__u64)(uintptr_t)args->data,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_get_lba_status(nvme_link_t l, struct nvme_get_lba_status_args *args)
 {
 	__u32 cdw10 = args->slba & 0xffffffff;

@@ -3713,12 +3713,43 @@ static inline int nvme_security_send(nvme_link_t l, __u32 nsid,__u8 nssf,
 /**
  * nvme_security_receive() - Security Receive command
  * @l:		Link handle
- * @args:	&struct nvme_security_receive argument structure
+ * @nsid:	Namespace ID to issue security command on
+ * @nssf:	NVMe Security Specific field
+ * @spsp0:	Security Protocol Specific field
+ * @spsp1:	Security Protocol Specific field
+ * @secp:	Security Protocol
+ * @al:		Protocol specific allocation length
+ * @data:	Security data payload to send
+ * @data_len:	Data length of the payload in bytes
+ * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_security_receive(nvme_link_t l, struct nvme_security_receive_args *args);
+static inline int nvme_security_receive(nvme_link_t l, __u32 nsid,
+					__u8 nssf, __u8 spsp0,
+					__u8 spsp1, __u8 secp,
+					__u32 al, void *data,
+					__u32 data_len, __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(secp, SECURITY_SECP) |
+		      NVME_SET(spsp0, SECURITY_SPSP0) |
+		      NVME_SET(spsp1, SECURITY_SPSP1) |
+		      NVME_SET(nssf, SECURITY_NSSF);
+	__u32 cdw11 = al;
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode		= nvme_admin_security_recv,
+		.nsid		= nsid,
+		.addr		= (__u64)(uintptr_t)data,
+		.data_len	= data_len,
+		.cdw10		= cdw10,
+		.cdw11		= cdw11,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
+
 
 /**
  * nvme_get_lba_status() - Retrieve information on possibly unrecoverable LBAs

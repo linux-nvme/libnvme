@@ -537,7 +537,6 @@ static const char *sec_proto_description(uint8_t id)
 
 int do_security_info(nvme_mi_ep_t ep, int argc, char **argv)
 {
-	struct nvme_security_receive_args args = { 0 };
 	nvme_link_t link;
 	int i, rc, n_proto;
 	unsigned long tmp;
@@ -547,6 +546,9 @@ int do_security_info(nvme_mi_ep_t ep, int argc, char **argv)
 		uint16_t	len;
 		uint8_t		protocols[256];
 	} proto_info;
+	/* protocol 0x00, spsp 0x0000: retrieve supported protocols */
+	void *data = &proto_info;
+	__u32 data_len = sizeof(proto_info);
 
 	if (argc != 2) {
 		fprintf(stderr, "no controller ID specified\n");
@@ -567,27 +569,21 @@ int do_security_info(nvme_mi_ep_t ep, int argc, char **argv)
 		return -1;
 	}
 
-	/* protocol 0x00, spsp 0x0000: retrieve supported protocols */
-	args.args_size = sizeof(args);
-	args.data = &proto_info;
-	args.data_len = sizeof(proto_info);
-
-	rc = nvme_security_receive(link, &args);
+	rc = nvme_security_receive(link, 0, 0, 0, 0, 0, 0, data, data_len, NULL);
 	if (rc) {
 		warnx("can't perform Security Receive command: rc %d", rc);
 		return -1;
 	}
 
-	if (args.data_len < 6) {
-		warnx("Short response in security receive command (%d bytes)",
-		      args.data_len);
+	if (data_len < 6) {
+		warnx("Short response in security receive command (%d bytes)", data_len);
 		return -1;
 	}
 
 	n_proto = be16_to_cpu(proto_info.len);
-	if (args.data_len < 6 + n_proto) {
-		warnx("Short response in security receive command (%d bytes), "
-		      "for %d protocols", args.data_len, n_proto);
+	if (data_len < 6 + n_proto) {
+		warnx("Short response in security receive command (%d bytes), for %d protocols",
+		      data_len, n_proto);
 		return -1;
 	}
 
