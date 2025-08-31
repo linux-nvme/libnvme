@@ -1017,52 +1017,6 @@ int nvme_get_features_iocs_profile(nvme_link_t l, enum nvme_get_features_sel sel
 	return __nvme_get_features(l, NVME_FEAT_FID_IOCS_PROFILE, sel, result);
 }
 
-int nvme_directive_send(nvme_link_t l, struct nvme_directive_send_args *args)
-{
-	__u32 cdw10 = args->data_len ? (args->data_len >> 2) - 1 : 0;
-	__u32 cdw11 = NVME_SET(args->doper, DIRECTIVE_CDW11_DOPER) |
-			NVME_SET(args->dtype, DIRECTIVE_CDW11_DTYPE) |
-			NVME_SET(args->dspec, DIRECTIVE_CDW11_DPSEC);
-
-        struct nvme_passthru_cmd cmd = {
-                .opcode         = nvme_admin_directive_send,
-                .nsid           = args->nsid,
-                .cdw10          = cdw10,
-                .cdw11          = cdw11,
-                .cdw12          = args->cdw12,
-                .data_len       = args->data_len,
-                .addr           = (__u64)(uintptr_t)args->data,
-		.timeout_ms	= args->timeout,
-        };
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
-int nvme_directive_send_id_endir(nvme_link_t l, __u32 nsid, bool endir,
-				 enum nvme_directive_dtype dtype,
-				 struct nvme_id_directives *id)
-{
-	__u32 cdw12 = NVME_SET(dtype, DIRECTIVE_SEND_IDENTIFY_CDW12_DTYPE) |
-		NVME_SET(endir, DIRECTIVE_SEND_IDENTIFY_CDW12_ENDIR);
-	struct nvme_directive_send_args args = {
-		.args_size = sizeof(args),
-		.nsid = nsid,
-		.dspec = 0,
-		.dtype = NVME_DIRECTIVE_DTYPE_IDENTIFY,
-		.doper = NVME_DIRECTIVE_SEND_IDENTIFY_DOPER_ENDIR,
-		.cdw12 = cdw12,
-		.data_len = sizeof(*id),
-		.data = id,
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.result = NULL,
-	};
-
-	return nvme_directive_send(l, &args);
-}
-
 int nvme_directive_recv(nvme_link_t l, struct nvme_directive_recv_args *args)
 {
 	__u32 cdw10 = args->data_len ? (args->data_len >> 2) - 1 : 0;

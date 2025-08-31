@@ -396,37 +396,31 @@ static void test_get_lba_status(void)
 
 static void test_directive_send(void)
 {
+	enum nvme_directive_send_doper doper = NVME_DIRECTIVE_SEND_STREAMS_DOPER_RELEASE_RESOURCE;
+	enum nvme_directive_dtype dtype = NVME_DIRECTIVE_DTYPE_STREAMS;
 	__u8 expected_data[8], data[8];
+	__u32 cdw12 = 0xffff;
+	__u16 dspec = 0x0;
 	__u32 result = 0;
-
-	struct nvme_directive_send_args args = {
-		.result = &result,
-		.data = &expected_data,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.doper = NVME_DIRECTIVE_SEND_STREAMS_DOPER_RELEASE_RESOURCE,
-		.dtype = NVME_DIRECTIVE_DTYPE_STREAMS,
-		.cdw12 = 0xffff,
-		.data_len = sizeof(expected_data),
-		.dspec = 0x0,
-	};
+	__u32 data_len = sizeof(expected_data);
+	int err;
 
 	struct mock_cmd mock_admin_cmd = {
 		.opcode = nvme_admin_directive_send,
 		.nsid = TEST_NSID,
-		.cdw10 = args.data_len ? (args.data_len >> 2) - 1 : 0,
-		.cdw11 = args.doper | (args.dtype << 8) | (args.dspec << 16),
-		.cdw12 = args.cdw12,
-		.data_len = args.data_len,
+		.cdw10 = data_len ? (data_len >> 2) - 1 : 0,
+		.cdw11 = doper | (dtype << 8) | (dspec << 16),
+		.cdw12 = cdw12,
+		.data_len = data_len,
 		.in_data = &data,
 	};
-
-	int err;
 
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
-	err = nvme_directive_send(test_link, &args);
+	err = nvme_directive_send(test_link, TEST_NSID, doper, dtype, dspec,
+				  cdw12, &expected_data,
+				  data_len, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned wrong result");
