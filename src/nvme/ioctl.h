@@ -4113,7 +4113,11 @@ int nvme_dev_self_test(nvme_link_t l, struct nvme_dev_self_test_args *args);
 /**
  * nvme_virtual_mgmt() - Virtualization resource management
  * @l:		Link handle
- * @args:	&struct nvme_virtual_mgmt_args argument structure
+ * @act:	Virtual resource action, see &enum nvme_virt_mgmt_act
+ * @rt:		Resource type to modify, see &enum nvme_virt_mgmt_rt
+ * @cntlid:	Controller id for which resources are bing modified
+ * @nr:		Number of resources being allocated or assigned
+ * @result:	If successful, the CQE dword0
  *
  * The Virtualization Management command is supported by primary controllers
  * that support the Virtualization Enhancements capability. This command is
@@ -4126,7 +4130,23 @@ int nvme_dev_self_test(nvme_link_t l, struct nvme_dev_self_test_args *args);
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_virtual_mgmt(nvme_link_t l, struct nvme_virtual_mgmt_args *args);
+static inline int nvme_virtual_mgmt(nvme_link_t l, enum nvme_virt_mgmt_act act,
+				    enum nvme_virt_mgmt_rt rt, __u16 cntlid,
+				    __u16 nr, __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(act, VIRT_MGMT_CDW10_ACT) |
+		      NVME_SET(rt, VIRT_MGMT_CDW10_RT) |
+		      NVME_SET(cntlid, VIRT_MGMT_CDW10_CNTLID);
+	__u32 cdw11 = NVME_SET(nr, VIRT_MGMT_CDW11_NR);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode = nvme_admin_virtual_mgmt,
+		.cdw10 = cdw10,
+		.cdw11 = cdw11,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_flush() - Send an nvme flush command
