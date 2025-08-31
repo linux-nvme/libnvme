@@ -4059,7 +4059,8 @@ int nvme_set_property(nvme_link_t l, struct nvme_set_property_args *args);
 /**
  * nvme_get_property() - Get a controller property
  * @l:		Link handle
- * @args:	&struct nvme_get_propert_args argument structure
+ * @offset:	Property offset from the base to retrieve
+ * @value:	Where the property's value will be stored on success
  *
  * This is an NVMe-over-Fabrics specific command, not applicable to PCIe. These
  * properties align to the PCI MMIO controller registers.
@@ -4067,7 +4068,19 @@ int nvme_set_property(nvme_link_t l, struct nvme_set_property_args *args);
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_get_property(nvme_link_t l, struct nvme_get_property_args *args);
+static inline int nvme_get_property(nvme_link_t l, int offset, __u64 *value)
+{
+	__u32 cdw10 = nvme_is_64bit_reg(offset);
+
+	struct nvme_passthru_cmd64 cmd = {
+		.opcode = nvme_admin_fabrics,
+		.nsid = nvme_fabrics_type_property_get,
+		.cdw10 = cdw10,
+		.cdw11 = (__u32)offset,
+	};
+
+	return nvme_submit_admin_passthru64(l, &cmd, value);
+}
 
 /**
  * nvme_sanitize_nvm() - Start a sanitize operation

@@ -120,11 +120,7 @@ static void test_ns_mgmt_delete(void)
 static void test_get_property(void)
 {
 	__u64 expected_result, result;
-	struct nvme_get_property_args args = {
-		.value = &result,
-		.args_size = sizeof(args),
-		.offset = NVME_REG_ACQ,
-	};
+	int err;
 
 	arbitrary(&expected_result, sizeof(expected_result));
 
@@ -136,10 +132,8 @@ static void test_get_property(void)
 		.result = expected_result,
 	};
 
-	int err;
-
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
-	err = nvme_get_property(test_link, &args);
+	err = nvme_get_property(test_link, NVME_REG_ACQ, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == expected_result, "returned wrong result");

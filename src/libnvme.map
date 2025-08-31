@@ -125,7 +125,6 @@ LIBNVME_2_0 {
 		nvme_get_ns_attr;
 		nvme_get_nsid;
 		nvme_get_path_attr;
-		nvme_get_property;
 		nvme_get_subsys_attr;
 		nvme_get_telemetry_log;
 		nvme_get_telemetry_max;
