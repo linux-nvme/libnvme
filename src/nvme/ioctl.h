@@ -3754,7 +3754,14 @@ static inline int nvme_security_receive(nvme_link_t l, __u32 nsid,
 /**
  * nvme_get_lba_status() - Retrieve information on possibly unrecoverable LBAs
  * @l:		Link handle
- * @args:	&struct nvme_get_lba_status_args argument structure
+ * @nsid:	Namespace ID to retrieve LBA status
+ * @slba:	Starting logical block address to check statuses
+ * @mndw:	Maximum number of dwords to return
+ * @atype:	Action type mechanism to determine LBA status descriptors to
+ *		return, see &enum nvme_lba_status_atype
+ * @rl:		Range length from slba to perform the action
+ * @lbas:	Data payload to return status descriptors
+ * @result:	The command completion result from CQE dword0
  *
  * The Get LBA Status command requests information about Potentially
  * Unrecoverable LBAs. Refer to the specification for action type descriptions.
@@ -3762,7 +3769,31 @@ static inline int nvme_security_receive(nvme_link_t l, __u32 nsid,
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_get_lba_status(nvme_link_t l, struct nvme_get_lba_status_args *args);
+static inline int nvme_get_lba_status(nvme_link_t l, __u32 nsid, __u64 slba,
+				      __u32 mndw,
+				      enum nvme_lba_status_atype atype, __u16 rl,
+				      struct nvme_lba_status *lbas,
+				      __u32 *result)
+{
+	__u32 cdw10 = slba & 0xffffffff;
+	__u32 cdw11 = slba >> 32;
+	__u32 cdw12 = mndw;
+	__u32 cdw13 = NVME_SET(rl, GET_LBA_STATUS_CDW13_RL) |
+		      NVME_SET(atype, GET_LBA_STATUS_CDW13_ATYPE);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode =  nvme_admin_get_lba_status,
+		.nsid = nsid,
+		.addr = (__u64)(uintptr_t)lbas,
+		.data_len = (mndw + 1) << 2,
+		.cdw10 = cdw10,
+		.cdw11 = cdw11,
+		.cdw12 = cdw12,
+		.cdw13 = cdw13,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_directive_send() - Send directive command

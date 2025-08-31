@@ -1017,32 +1017,6 @@ int nvme_get_features_iocs_profile(nvme_link_t l, enum nvme_get_features_sel sel
 	return __nvme_get_features(l, NVME_FEAT_FID_IOCS_PROFILE, sel, result);
 }
 
-int nvme_get_lba_status(nvme_link_t l, struct nvme_get_lba_status_args *args)
-{
-	__u32 cdw10 = args->slba & 0xffffffff;
-	__u32 cdw11 = args->slba >> 32;
-	__u32 cdw12 = args->mndw;
-	__u32 cdw13 = NVME_SET(args->rl, GET_LBA_STATUS_CDW13_RL) |
-			NVME_SET(args->atype, GET_LBA_STATUS_CDW13_ATYPE);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode =  nvme_admin_get_lba_status,
-		.nsid = args->nsid,
-		.addr = (__u64)(uintptr_t)args->lbas,
-		.data_len = (args->mndw + 1) << 2,
-		.cdw10 = cdw10,
-		.cdw11 = cdw11,
-		.cdw12 = cdw12,
-		.cdw13 = cdw13,
-		.timeout_ms = args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_directive_send(nvme_link_t l, struct nvme_directive_send_args *args)
 {
 	__u32 cdw10 = args->data_len ? (args->data_len >> 2) - 1 : 0;
