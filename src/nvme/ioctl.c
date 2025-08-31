@@ -1035,26 +1035,6 @@ int nvme_capacity_mgmt(nvme_link_t l, struct nvme_capacity_mgmt_args *args)
 	return nvme_submit_admin_passthru(l, &cmd, args->result);
 }
 
-int nvme_lockdown(nvme_link_t l, struct nvme_lockdown_args *args)
-{
-	__u32 cdw10 =  args->ofi << 8 |
-		(args->ifc & 0x3) << 5 |
-		(args->prhbt & 0x1) << 4 |
-		(args->scp & 0xF);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode         = nvme_admin_lockdown,
-		.cdw10          = cdw10,
-		.cdw14          = args->uuidx & 0x3F,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_submit_io_passthru64(nvme_link_t l, struct nvme_passthru_cmd64 *cmd,
 			      __u64 *result)
 {

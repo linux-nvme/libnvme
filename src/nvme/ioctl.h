@@ -4036,12 +4036,30 @@ int nvme_capacity_mgmt(nvme_link_t l, struct nvme_capacity_mgmt_args *args);
 /**
  * nvme_lockdown() - Issue lockdown command
  * @l:		Link handle
- * @args:	&struct nvme_lockdown_args argument structure
+ * @scp:	Scope of the command
+ * @prhbt:	Prohibit or allow the command opcode or Set Features command
+ * @ifc:	Affected interface
+ * @ofi:	Opcode or Feature Identifier
+ * @uuidx:	UUID Index if controller supports this id selection method
+ * @result:	The command completion result from CQE dword0
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_lockdown(nvme_link_t l, struct nvme_lockdown_args *args);
+static inline int nvme_lockdown(nvme_link_t l, __u8 scp, __u8 prhbt,
+				__u8 ifc, __u8 ofi, __u8 uuidx,
+				__u32 *result)
+{
+	__u32 cdw10 = ofi << 8 | (ifc & 0x3) << 5 | (prhbt & 0x1) << 4 | (scp & 0xF);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode = nvme_admin_lockdown,
+		.cdw10 = cdw10,
+		.cdw14 = (__u32)(uuidx & 0x3F),
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_set_property() - Set controller property

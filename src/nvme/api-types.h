@@ -98,25 +98,4 @@ struct nvme_capacity_mgmt_args {
 	__u8 op;
 };
 
-/**
- * struct nvme_lockdown_args - Arguments for the NVME Lockdown command
- * @args_size:	Size of &struct nvme_lockdown_args
- * @result:	The command completion result from CQE dword0
- * @timeout:	Timeout in ms (0 for default timeout)
- * @scp:	Scope of the command
- * @prhbt:	Prohibit or allow the command opcode or Set Features command
- * @ifc:	Affected interface
- * @ofi:	Opcode or Feature Identifier
- * @uuidx:	UUID Index if controller supports this id selection method
- */
-struct nvme_lockdown_args {
-	__u32 *result;
-	int args_size;
-	__u32 timeout;
-	__u8 scp;
-	__u8 prhbt;
-	__u8 ifc;
-	__u8 ofi;
-	__u8 uuidx;
-};
 #endif /* _LIBNVME_API_TYPES_H */
