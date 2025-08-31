@@ -4046,7 +4046,9 @@ int nvme_lockdown(nvme_link_t l, struct nvme_lockdown_args *args);
 /**
  * nvme_set_property() - Set controller property
  * @l:		Link handle
- * @args:	&struct nvme_set_property_args argument structure
+ * @offset:	Property offset from the base to set
+ * @value:	The value to set the property
+ * @result:	The command completion result from CQE dword0
  *
  * This is an NVMe-over-Fabrics specific command, not applicable to PCIe. These
  * properties align to the PCI MMIO controller registers.
@@ -4054,7 +4056,21 @@ int nvme_lockdown(nvme_link_t l, struct nvme_lockdown_args *args);
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_set_property(nvme_link_t l, struct nvme_set_property_args *args);
+static inline int nvme_set_property(nvme_link_t l, int offset, __u64 value, __u32 *result)
+{
+	__u32 cdw10 = nvme_is_64bit_reg(offset);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode = nvme_admin_fabrics,
+		.nsid = nvme_fabrics_type_property_set,
+		.cdw10 = cdw10,
+		.cdw11 = (__u32)offset,
+		.cdw12 = (__u32)(value & 0xffffffff),
+		.cdw13 = (__u32)(value >> 32),
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_get_property() - Get a controller property

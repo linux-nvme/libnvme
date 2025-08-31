@@ -119,20 +119,4 @@ struct nvme_lockdown_args {
 	__u8 ofi;
 	__u8 uuidx;
 };
-
-/**
- * struct nvme_set_property_args - Arguments for NVMe Set Property command
- * @args_size:	Size of &struct nvme_set_property_args
- * @result:	The command completion result from CQE dword0
- * @timeout:	Timeout in ms
- * @offset:	Property offset from the base to set
- * @value:	The value to set the property
- */
-struct nvme_set_property_args {
-	__u64 value;
-	__u32 *result;
-	int args_size;
-	__u32 timeout;
-	int offset;
-};
 #endif /* _LIBNVME_API_TYPES_H */

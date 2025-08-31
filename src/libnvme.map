@@ -277,7 +277,6 @@ LIBNVME_2_0 {
 		nvme_scan_topology;
 		nvme_set_debug;
 		nvme_set_keyring;
-		nvme_set_property;
 		nvme_set_root;
 		nvme_status_to_errno;
 		nvme_status_to_string;

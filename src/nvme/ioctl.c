@@ -1055,26 +1055,6 @@ int nvme_lockdown(nvme_link_t l, struct nvme_lockdown_args *args)
 	return nvme_submit_admin_passthru(l, &cmd, args->result);
 }
 
-int nvme_set_property(nvme_link_t l, struct nvme_set_property_args *args)
-{
-	__u32 cdw10 = nvme_is_64bit_reg(args->offset);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_admin_fabrics,
-		.nsid		= nvme_fabrics_type_property_set,
-		.cdw10		= cdw10,
-		.cdw11		= args->offset,
-		.cdw12		= args->value & 0xffffffff,
-		.cdw13		= args->value >> 32,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_submit_io_passthru64(nvme_link_t l, struct nvme_passthru_cmd64 *cmd,
 			      __u64 *result)
 {
