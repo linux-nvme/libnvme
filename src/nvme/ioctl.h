@@ -3903,12 +3903,41 @@ static inline int nvme_directive_send_stream_release_resource(nvme_link_t l,
 /**
  * nvme_directive_recv() - Receive directive specific data
  * @l:		Link handle
- * @args:	&struct nvme_directive_recv_args argument structure
+ * @nsid:	Namespace ID, if applicable
+ * @doper:	Directive send operation, see &enum nvme_directive_send_doper
+ * @dtype:	Directive type, see &enum nvme_directive_dtype
+ * @dspec:	Directive specific field
+ * @cdw12:	Directive specific command dword12
+ * @data:	Userspace address of data payload
+ * @data_len:	Length of data payload in bytes
+ * @result:	If successful, the CQE dword0 value
  *
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_directive_recv(nvme_link_t l, struct nvme_directive_recv_args *args);
+static inline int nvme_directive_recv(nvme_link_t l, __u32 nsid,
+				      enum nvme_directive_receive_doper doper,
+				      enum nvme_directive_dtype dtype,
+				      __u16 dspec, __u32 cdw12,
+				      void *data, __u32 data_len, __u32 *result)
+{
+	__u32 cdw10 = data_len ? (data_len >> 2) - 1 : 0;
+	__u32 cdw11 = NVME_SET(doper, DIRECTIVE_CDW11_DOPER) |
+		      NVME_SET(dtype, DIRECTIVE_CDW11_DTYPE) |
+		      NVME_SET(dspec, DIRECTIVE_CDW11_DPSEC);
+
+        struct nvme_passthru_cmd cmd = {
+                .opcode         = nvme_admin_directive_recv,
+                .nsid           = nsid,
+                .addr           = (__u64)(uintptr_t)data,
+                .data_len       = data_len,
+                .cdw10          = cdw10,
+                .cdw11          = cdw11,
+                .cdw12          = cdw12,
+        };
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_directive_recv_identify_parameters() - Directive receive identifier parameters
@@ -3919,23 +3948,14 @@ int nvme_directive_recv(nvme_link_t l, struct nvme_directive_recv_args *args);
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_directive_recv_identify_parameters(nvme_link_t l, __u32 nsid,
-			struct nvme_id_directives *id)
+static inline int nvme_directive_recv_identify_parameters(nvme_link_t l,
+							  __u32 nsid,
+							  struct nvme_id_directives *id)
 {
-	struct nvme_directive_recv_args args = {
-		.result = NULL,
-		.data = id,
-		.args_size = sizeof(args),
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.nsid = nsid,
-		.doper = NVME_DIRECTIVE_RECEIVE_IDENTIFY_DOPER_PARAM,
-		.dtype = NVME_DIRECTIVE_DTYPE_IDENTIFY,
-		.cdw12 = 0,
-		.data_len = sizeof(*id),
-		.dspec = 0,
-	};
-
-	return nvme_directive_recv(l, &args);
+	return nvme_directive_recv(l, nsid,
+				   NVME_DIRECTIVE_RECEIVE_IDENTIFY_DOPER_PARAM,
+				   NVME_DIRECTIVE_DTYPE_IDENTIFY,
+				   0, 0, id, sizeof(*id), NULL);
 }
 
 /**
@@ -3947,23 +3967,14 @@ static inline int nvme_directive_recv_identify_parameters(nvme_link_t l, __u32 n
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_directive_recv_stream_parameters(nvme_link_t l, __u32 nsid,
-			struct nvme_streams_directive_params *parms)
+static inline int nvme_directive_recv_stream_parameters(nvme_link_t l,
+							__u32 nsid,
+							struct nvme_streams_directive_params *parms)
 {
-	struct nvme_directive_recv_args args = {
-		.result = NULL,
-		.data = parms,
-		.args_size = sizeof(args),
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.nsid = nsid,
-		.doper = NVME_DIRECTIVE_RECEIVE_STREAMS_DOPER_PARAM,
-		.dtype = NVME_DIRECTIVE_DTYPE_STREAMS,
-		.cdw12 = 0,
-		.data_len = sizeof(*parms),
-		.dspec = 0,
-	};
-
-	return nvme_directive_recv(l, &args);
+	return nvme_directive_recv(l, nsid,
+				   NVME_DIRECTIVE_RECEIVE_STREAMS_DOPER_PARAM,
+				   NVME_DIRECTIVE_DTYPE_STREAMS,
+				   0, 0, parms, sizeof(*parms), NULL);
 }
 
 /**
@@ -3977,28 +3988,19 @@ static inline int nvme_directive_recv_stream_parameters(nvme_link_t l, __u32 nsi
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
 static inline int nvme_directive_recv_stream_status(nvme_link_t l, __u32 nsid,
-			unsigned int nr_entries,
-			struct nvme_streams_directive_status *id)
+						    unsigned int nr_entries,
+						    struct nvme_streams_directive_status *id)
 {
 	if (nr_entries > NVME_STREAM_ID_MAX) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	struct nvme_directive_recv_args args = {
-		.result = NULL,
-		.data = id,
-		.args_size = sizeof(args),
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.nsid = nsid,
-		.doper = NVME_DIRECTIVE_RECEIVE_STREAMS_DOPER_STATUS,
-		.dtype = NVME_DIRECTIVE_DTYPE_STREAMS,
-		.cdw12 = 0,
-		.data_len = (__u32)(sizeof(*id) + nr_entries * sizeof(__le16)),
-		.dspec = 0,
-	};
-
-	return nvme_directive_recv(l, &args);
+	return nvme_directive_recv(l, nsid,
+				   NVME_DIRECTIVE_RECEIVE_STREAMS_DOPER_STATUS,
+				   NVME_DIRECTIVE_DTYPE_STREAMS, 0, 0, id,
+				   (__u32)(sizeof(*id) + nr_entries * sizeof(__le16)),
+				   NULL);
 }
 
 /**
@@ -4012,22 +4014,13 @@ static inline int nvme_directive_recv_stream_status(nvme_link_t l, __u32 nsid,
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
 static inline int nvme_directive_recv_stream_allocate(nvme_link_t l, __u32 nsid,
-			__u16 nsr, __u32 *result)
+						      __u16 nsr,
+						      __u32 *result)
 {
-	struct nvme_directive_recv_args args = {
-		.result = result,
-		.data = NULL,
-		.args_size = sizeof(args),
-		.timeout = NVME_DEFAULT_IOCTL_TIMEOUT,
-		.nsid = nsid,
-		.doper = NVME_DIRECTIVE_RECEIVE_STREAMS_DOPER_RESOURCE,
-		.dtype = NVME_DIRECTIVE_DTYPE_STREAMS,
-		.cdw12 = nsr,
-		.data_len = 0,
-		.dspec = 0,
-	};
-
-	return nvme_directive_recv(l, &args);
+	return nvme_directive_recv(l, nsid,
+				   NVME_DIRECTIVE_RECEIVE_STREAMS_DOPER_RESOURCE,
+				   NVME_DIRECTIVE_DTYPE_STREAMS,
+				   0, nsr, NULL, 0, result);
 }
 
 /**
