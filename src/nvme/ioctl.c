@@ -1123,23 +1123,6 @@ int nvme_sanitize_nvm(nvme_link_t l, struct nvme_sanitize_nvm_args *args)
 	return nvme_submit_admin_passthru(l, &cmd, args->result);
 }
 
-int nvme_dev_self_test(nvme_link_t l, struct nvme_dev_self_test_args *args)
-{
-	__u32 cdw10 = NVME_SET(args->stc, DEVICE_SELF_TEST_CDW10_STC);
-
-	struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_admin_dev_self_test,
-		.nsid		= args->nsid,
-		.cdw10		= cdw10,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_submit_io_passthru64(nvme_link_t l, struct nvme_passthru_cmd64 *cmd,
 			      __u64 *result)
 {

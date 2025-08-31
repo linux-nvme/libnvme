@@ -730,26 +730,20 @@ static void test_sanitize_nvm(void)
 
 static void test_dev_self_test(void)
 {
+	enum nvme_dst_stc stc = NVME_DST_STC_ABORT;
 	__u32 expected_result = 0x45, result = 0;
-
-	struct nvme_dev_self_test_args args = {
-		.result = &result,
-		.args_size = sizeof(args),
-		.nsid = TEST_NSID,
-		.stc = NVME_DST_STC_ABORT,
-	};
+	__u32 nsid = TEST_NSID;
+	int err;
 
 	struct mock_cmd mock_admin_cmd = {
 		.opcode = nvme_admin_dev_self_test,
-		.nsid = args.nsid,
-		.cdw10 = args.stc,
+		.nsid = nsid,
+		.cdw10 = stc,
 		.result = expected_result,
 	};
 
-	int err;
-
 	set_mock_admin_cmds(&mock_admin_cmd, 1);
-	err = nvme_dev_self_test(test_link, &args);
+	err = nvme_dev_self_test(test_link, nsid, stc, &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == expected_result, "wrong result");

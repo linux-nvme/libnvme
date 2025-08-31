@@ -175,20 +175,4 @@ struct nvme_sanitize_nvm_args {
 	bool nodas;
 	bool emvs;
 };
-
-/**
- * struct nvme_dev_self_test_args - Arguments for the NVMe Device Self Test command
- * @result:	The command completion result from CQE dword0
- * @args_size:	Size of &struct nvme_dev_self_test_args
- * @nsid:	Namespace ID to test
- * @stc:	Self test code, see &enum nvme_dst_stc
- * @timeout:	Timeout in ms
- */
-struct nvme_dev_self_test_args {
-	__u32 *result;
-	int args_size;
-	__u32 timeout;
-	__u32 nsid;
-	enum nvme_dst_stc stc;
-};
 #endif /* _LIBNVME_API_TYPES_H */

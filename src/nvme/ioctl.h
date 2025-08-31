@@ -4092,7 +4092,9 @@ int nvme_sanitize_nvm(nvme_link_t l, struct nvme_sanitize_nvm_args *args);
 /**
  * nvme_dev_self_test() - Start or abort a self test
  * @l:		Link handle
- * @args:	&struct nvme_dev_self_test argument structure
+ * @nsid:	Namespace ID to test
+ * @stc:	Self test code, see &enum nvme_dst_stc
+ * @result:	The command completion result from CQE dword0
  *
  * The Device Self-test command starts a device self-test operation or abort a
  * device self-test operation. A device self-test operation is a diagnostic
@@ -4108,7 +4110,20 @@ int nvme_sanitize_nvm(nvme_link_t l, struct nvme_sanitize_nvm_args *args);
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-int nvme_dev_self_test(nvme_link_t l, struct nvme_dev_self_test_args *args);
+static inline int nvme_dev_self_test(nvme_link_t l, __u32 nsid,
+				     enum nvme_dst_stc stc,
+				     __u32 *result)
+{
+	__u32 cdw10 = NVME_SET(stc, DEVICE_SELF_TEST_CDW10_STC);
+
+	struct nvme_passthru_cmd cmd = {
+		.opcode = nvme_admin_dev_self_test,
+		.nsid = nsid,
+		.cdw10 = cdw10,
+	};
+
+	return nvme_submit_admin_passthru(l, &cmd, result);
+}
 
 /**
  * nvme_virtual_mgmt() - Virtualization resource management
