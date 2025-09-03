@@ -328,7 +328,18 @@ static int nvme_uring_cmd_wait_complete(struct io_uring *ring, int n)
 
 	return ret;
 }
-#endif
+
+static bool nvme_uring_is_usable(nvme_link_t l)
+{
+	struct stat st;
+
+	if (io_uring_kernel_support != IO_URING_AVAILABLE || l->type != NVME_LINK_TYPE_DIRECT ||
+	    fstat(l->fd, &st) || !S_ISCHR(st.st_mode))
+		return false;
+
+	return true;
+}
+#endif /* CONFIG_LIBURING */
 
 int nvme_get_log_partial(nvme_link_t l, struct nvme_passthru_cmd *cmd,
 			 __u64 lpo, void *log, __u32 len,
@@ -345,26 +356,21 @@ int nvme_get_log_partial(nvme_link_t l, struct nvme_passthru_cmd *cmd,
 	__u32 cdw10 = cmd->cdw10 & (NVME_VAL(LOG_CDW10_LID) |
 				    NVME_VAL(LOG_CDW10_LSP));
 	__u32 cdw11 = cmd->cdw11 & NVME_VAL(LOG_CDW11_LSI);
+#ifdef CONFIG_LIBURING
+	bool use_uring = nvme_uring_is_usable(l);
+	struct io_uring ring;
+	int n = 0;
+
+	if (use_uring) {
+		ret = nvme_uring_cmd_setup(&ring);
+		if (ret)
+			return ret;
+	}
+#endif /* CONFIG_LIBURING */
 
 	if (force_4k)
 		xfer_len = NVME_LOG_PAGE_PDU_SIZE;
 
-#ifdef CONFIG_LIBURING
-	int n = 0;
-	struct io_uring ring;
-	struct stat st;
-	bool use_uring = false;
-
-	if (io_uring_kernel_support == IO_URING_AVAILABLE && l->type == NVME_LINK_TYPE_DIRECT) {
-		if (fstat(l->fd, &st) == 0 && S_ISCHR(st.st_mode)) {
-			use_uring = true;
-
-			ret = nvme_uring_cmd_setup(&ring);
-			if (ret)
-				return ret;
-		}
-	}
-#endif
 	/*
 	 * 4k is the smallest possible transfer unit, so restricting to 4k
 	 * avoids having to check the MDTS value of the controller.
@@ -398,10 +404,11 @@ int nvme_get_log_partial(nvme_link_t l, struct nvme_passthru_cmd *cmd,
 		cmd->cdw13 = lpo >> 32;
 		cmd->data_len = xfer;
 		cmd->addr = (__u64)(uintptr_t)ptr;
+
 #ifdef CONFIG_LIBURING
-		if (io_uring_kernel_support == IO_URING_AVAILABLE && use_uring) {
+		if (use_uring) {
 			if (n >= NVME_URING_ENTRIES) {
-				ret = nvme_uring_cmd_wait_complete(&ring, n);
+				nvme_uring_cmd_wait_complete(&ring, n);
 				n = 0;
 			}
 			n += 1;
@@ -409,9 +416,15 @@ int nvme_get_log_partial(nvme_link_t l, struct nvme_passthru_cmd *cmd,
 
 			if (ret)
 				nvme_uring_cmd_exit(&ring);
-		} else
-#endif
+		} else {
+			ret = nvme_submit_admin_passthru(l, cmd, result);
+			if (ret)
+				return ret;
+		}
+#else /* CONFIG_LIBURING */
 		ret = nvme_submit_admin_passthru(l, cmd, result);
+#endif /* CONFIG_LIBURING */
+
 		if (ret)
 			return ret;
 
@@ -420,13 +433,14 @@ int nvme_get_log_partial(nvme_link_t l, struct nvme_passthru_cmd *cmd,
 	} while (offset < data_len);
 
 #ifdef CONFIG_LIBURING
-	if (io_uring_kernel_support == IO_URING_AVAILABLE && use_uring) {
-		ret = nvme_uring_cmd_wait_complete(&ring, n);
+	if (use_uring) {
+		nvme_uring_cmd_wait_complete(&ring, n);
 		nvme_uring_cmd_exit(&ring);
 		if (ret)
 			return ret;
 	}
-#endif
+#endif /* CONFIG_LIBURING */
+
 	return 0;
 }
 
