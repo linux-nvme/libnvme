@@ -245,6 +245,9 @@ static void nvme_filter_ctrl(nvme_root_t r, nvme_ctrl_t c,
 	if (f(NULL, c, NULL, f_args))
 		return;
 
+	if (!nvme_ctrl_get_name(c))
+		return;
+
 	nvme_msg(r, LOG_DEBUG, "filter out controller %s\n",
 		 nvme_ctrl_get_name(c));
 	nvme_free_ctrl(c);
@@ -1815,6 +1818,8 @@ nvme_ctrl_t __nvme_lookup_ctrl(nvme_subsystem_t s, const char *transport,
 
 	c = p ? nvme_subsystem_next_ctrl(s, p) : nvme_subsystem_first_ctrl(s);
 	for (; c != NULL; c = nvme_subsystem_next_ctrl(s, c)) {
+		if (!nvme_ctrl_get_name(c))
+			continue;
 		if (ctrl_match(c, &candidate)) {
 			matching_c = c;
 			break;
