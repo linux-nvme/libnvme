@@ -1311,7 +1311,7 @@ nvme_path_t nvme_ctrl_next_path(nvme_ctrl_t c, nvme_path_t p)
 
 #define FREE_CTRL_ATTR(a) \
 	do { free(a); (a) = NULL; } while (0)
-void nvme_deconfigure_ctrl(nvme_ctrl_t c)
+static void __nvme_deconfigure_ctrl(nvme_ctrl_t c)
 {
 	nvme_ctrl_release_fd(c);
 	FREE_CTRL_ATTR(c->name);
@@ -1323,16 +1323,21 @@ void nvme_deconfigure_ctrl(nvme_ctrl_t c)
 	FREE_CTRL_ATTR(c->queue_count);
 	FREE_CTRL_ATTR(c->serial);
 	FREE_CTRL_ATTR(c->sqsize);
-	FREE_CTRL_ATTR(c->dhchap_key);
-	FREE_CTRL_ATTR(c->dhchap_ctrl_key);
-	FREE_CTRL_ATTR(c->keyring);
-	FREE_CTRL_ATTR(c->tls_key_identity);
-	FREE_CTRL_ATTR(c->tls_key);
 	FREE_CTRL_ATTR(c->address);
 	FREE_CTRL_ATTR(c->dctype);
 	FREE_CTRL_ATTR(c->cntrltype);
 	FREE_CTRL_ATTR(c->cntlid);
 	FREE_CTRL_ATTR(c->phy_slot);
+}
+
+void nvme_deconfigure_ctrl(nvme_ctrl_t c)
+{
+	__nvme_deconfigure_ctrl(c);
+	FREE_CTRL_ATTR(c->dhchap_key);
+	FREE_CTRL_ATTR(c->dhchap_ctrl_key);
+	FREE_CTRL_ATTR(c->keyring);
+	FREE_CTRL_ATTR(c->tls_key_identity);
+	FREE_CTRL_ATTR(c->tls_key);
 }
 
 int nvme_disconnect_ctrl(nvme_ctrl_t c)
@@ -2049,20 +2054,7 @@ static int nvme_reconfigure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 	 * It's necesssary to release any resources first because a ctrl
 	 * can be reused.
 	 */
-	nvme_ctrl_release_fd(c);
-	FREE_CTRL_ATTR(c->name);
-	FREE_CTRL_ATTR(c->sysfs_dir);
-	FREE_CTRL_ATTR(c->firmware);
-	FREE_CTRL_ATTR(c->model);
-	FREE_CTRL_ATTR(c->state);
-	FREE_CTRL_ATTR(c->numa_node);
-	FREE_CTRL_ATTR(c->queue_count);
-	FREE_CTRL_ATTR(c->serial);
-	FREE_CTRL_ATTR(c->sqsize);
-	FREE_CTRL_ATTR(c->cntrltype);
-	FREE_CTRL_ATTR(c->cntlid);
-	FREE_CTRL_ATTR(c->dctype);
-	FREE_CTRL_ATTR(c->phy_slot);
+	__nvme_deconfigure_ctrl(c);
 
 	d = opendir(path);
 	if (!d) {
