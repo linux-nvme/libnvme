@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <openssl/opensslv.h>
+
 #include <ccan/array_size/array_size.h>
 
 #include <libnvme.h>
@@ -99,6 +101,45 @@ static struct test_data_identity test_data_identity[] = {
 	  "NVMe1R02 nqn.psk-test-host nqn.psk-test-subsys QhW2+Rp6RzHlNtCslyRxMnwJ11tKKhz8JCAQpQ+XUD8f9td1VeH5h53yz2wKJG1a" },
 };
 
+/*
+ * Older OpenSSL versions have a bug where
+ * EVP_PKEY_CTX_add1_hkdf_info() will always overwrite
+ * existing 'info' string. So add the resulting 'compat'
+ * identity hash vector here to make the tests succeed.
+ */
+#if ((OPENSSL_VERSION_MINOR == 0 && OPENSSL_VERSION_PATCH < 14) \
+       || (OPENSSL_VERSION_MINOR == 1 && OPENSSL_VERSION_PATCH < 4) \
+       || (OPENSSL_VERSION_MINOR == 2 && OPENSSL_VERSION_PATCH < 2) \
+       || (OPENSSL_VERSION_MINOR == 3 && OPENSSL_VERSION_PATCH < 2))
+static struct test_data_identity test_data_identity_compat[] = {
+	{ { 0x55, 0x12, 0xDB, 0xB6,
+	    0x73, 0x7D, 0x01, 0x06,
+	    0xF6, 0x59, 0x75, 0xB7,
+	    0x73, 0xDF, 0xB0, 0x11,
+	    0xFF, 0xC3, 0x44, 0xBC,
+	    0xF4, 0x42, 0xE2, 0xDD,
+	    0x6D, 0x8B, 0xC4, 0x87,
+	    0x0B, 0x5D, 0x5B, 0x03},
+	  32, 1, NVME_HMAC_ALG_SHA2_256,
+	  "nqn.psk-test-host", "nqn.psk-test-subsys",
+	  "NVMe1R01 nqn.psk-test-host nqn.psk-test-subsys mJUDthe4jhFVFSnaBaydV/EHJK6OvIuw8xap5IkTnG0=" },
+	{ { 0x55, 0x12, 0xDB, 0xB6,
+	    0x73, 0x7D, 0x01, 0x06,
+	    0xF6, 0x59, 0x75, 0xB7,
+	    0x73, 0xDF, 0xB0, 0x11,
+	    0xFF, 0xC3, 0x44, 0xBC,
+	    0xF4, 0x42, 0xE2, 0xDD,
+	    0x6D, 0x8B, 0xC4, 0x87,
+	    0x0B, 0x5D, 0x5B, 0x03,
+	    0xFF, 0xC3, 0x44, 0xBC,
+	    0xF4, 0x42, 0xE2, 0xDD,
+	    0x6D, 0x8B, 0xC4, 0x87,
+	    0x0B, 0x5D, 0x5B, 0x03},
+	  48, 1, NVME_HMAC_ALG_SHA2_384,
+	  "nqn.psk-test-host", "nqn.psk-test-subsys",
+	  "NVMe1R02 nqn.psk-test-host nqn.psk-test-subsys J6B5sIVRCNLtZutDfmNnfPeqOFbnewwc8KEkhcOcO0dAWfdJYe/DrMyIC7znu00M" },
+};
+#else
 static struct test_data_identity test_data_identity_compat[] = {
 	{ { 0x55, 0x12, 0xDB, 0xB6,
 	    0x73, 0x7D, 0x01, 0x06,
@@ -127,6 +168,7 @@ static struct test_data_identity test_data_identity_compat[] = {
 	  "nqn.psk-test-host", "nqn.psk-test-subsys",
 	  "NVMe1R02 nqn.psk-test-host nqn.psk-test-subsys RsKmYJ3nAn1ApjjMloJFbAkLPivONDAX/xW327YBUsn2eGShXSjCZvBaOxscLqmz" },
 };
+#endif
 
 static void check_str(const char *exp, const char *res)
 {
