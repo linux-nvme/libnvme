@@ -99,6 +99,41 @@ static struct test_data_identity test_data_identity[] = {
 	  "NVMe1R02 nqn.psk-test-host nqn.psk-test-subsys QhW2+Rp6RzHlNtCslyRxMnwJ11tKKhz8JCAQpQ+XUD8f9td1VeH5h53yz2wKJG1a" },
 };
 
+/*
+ * Older OpenSSL versions have a bug where
+ * EVP_PKEY_CTX_add1_hkdf_info() will always overwrite
+ * existing 'info' string. So add the resulting 'compat'
+ * identity hash vector here to make the tests succeed.
+ */
+static struct test_data_identity test_data_identity_compat_openssl_bug[] = {
+	{ { 0x55, 0x12, 0xDB, 0xB6,
+	    0x73, 0x7D, 0x01, 0x06,
+	    0xF6, 0x59, 0x75, 0xB7,
+	    0x73, 0xDF, 0xB0, 0x11,
+	    0xFF, 0xC3, 0x44, 0xBC,
+	    0xF4, 0x42, 0xE2, 0xDD,
+	    0x6D, 0x8B, 0xC4, 0x87,
+	    0x0B, 0x5D, 0x5B, 0x03},
+	  32, 1, NVME_HMAC_ALG_SHA2_256,
+	  "nqn.psk-test-host", "nqn.psk-test-subsys",
+	  "NVMe1R01 nqn.psk-test-host nqn.psk-test-subsys mJUDthe4jhFVFSnaBaydV/EHJK6OvIuw8xap5IkTnG0=" },
+	{ { 0x55, 0x12, 0xDB, 0xB6,
+	    0x73, 0x7D, 0x01, 0x06,
+	    0xF6, 0x59, 0x75, 0xB7,
+	    0x73, 0xDF, 0xB0, 0x11,
+	    0xFF, 0xC3, 0x44, 0xBC,
+	    0xF4, 0x42, 0xE2, 0xDD,
+	    0x6D, 0x8B, 0xC4, 0x87,
+	    0x0B, 0x5D, 0x5B, 0x03,
+	    0xFF, 0xC3, 0x44, 0xBC,
+	    0xF4, 0x42, 0xE2, 0xDD,
+	    0x6D, 0x8B, 0xC4, 0x87,
+	    0x0B, 0x5D, 0x5B, 0x03},
+	  48, 1, NVME_HMAC_ALG_SHA2_384,
+	  "nqn.psk-test-host", "nqn.psk-test-subsys",
+	  "NVMe1R02 nqn.psk-test-host nqn.psk-test-subsys J6B5sIVRCNLtZutDfmNnfPeqOFbnewwc8KEkhcOcO0dAWfdJYe/DrMyIC7znu00M" },
+};
+
 static struct test_data_identity test_data_identity_compat[] = {
 	{ { 0x55, 0x12, 0xDB, 0xB6,
 	    0x73, 0x7D, 0x01, 0x06,
@@ -302,16 +337,27 @@ static void identity_test(struct test_data_identity *test)
 	free(id);
 }
 
-static void identity_test_compat(struct test_data_identity *test)
+static void identity_test_compat(int i, bool openssl_bug)
 {
+	struct test_data_identity *test;
 	char *id;
 
+	if (openssl_bug) {
+		if (i >= ARRAY_SIZE(test_data_identity_compat_openssl_bug)) {
+			printf("ERROR: test_data_identity_compat mismatch\n");
+			test_rc = 1;
+			return;
+		}
+		test = &test_data_identity_compat_openssl_bug[i];
+	} else
+		test = &test_data_identity_compat[i];
 	if (test->version != 1 ||
 	    !(test->hmac == NVME_HMAC_ALG_SHA2_256 ||
 	      test->hmac == NVME_HMAC_ALG_SHA2_384))
 		return;
 
-	printf("test nvme_generate_tls_key_identity_compat host %s subsys %s hmac %d %s\n",
+	printf("test nvme_generate_tls_key_identity_%s host %s subsys %s hmac %d %s\n",
+	       openssl_bug ? "openssl_bug" : "compat",
 	       test->hostnqn, test->subsysnqn, test->hmac, test->identity);
 
 	id = nvme_generate_tls_key_identity_compat(test->hostnqn,
@@ -326,6 +372,8 @@ static void identity_test_compat(struct test_data_identity *test)
 		printf("ERROR: nvme_generate_tls_key_identity_compat() failed with %d\n", errno);
 		return;
 	}
+	if (strcmp(test->identity, id))
+		identity_test_compat(i, true);
 	check_str(test->identity, id);
 	free(id);
 }
@@ -348,7 +396,7 @@ int main(void)
 		identity_test(&test_data_identity[i]);
 
 	for (int i = 0; i < ARRAY_SIZE(test_data_identity_compat); i++)
-		identity_test_compat(&test_data_identity_compat[i]);
+		identity_test_compat(i, false);
 
 	return test_rc ? EXIT_FAILURE : EXIT_SUCCESS;
 }
