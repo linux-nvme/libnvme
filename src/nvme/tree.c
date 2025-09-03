@@ -1323,7 +1323,6 @@ static void __nvme_deconfigure_ctrl(nvme_ctrl_t c)
 	FREE_CTRL_ATTR(c->queue_count);
 	FREE_CTRL_ATTR(c->serial);
 	FREE_CTRL_ATTR(c->sqsize);
-	FREE_CTRL_ATTR(c->address);
 	FREE_CTRL_ATTR(c->dctype);
 	FREE_CTRL_ATTR(c->cntrltype);
 	FREE_CTRL_ATTR(c->cntlid);
@@ -1333,6 +1332,7 @@ static void __nvme_deconfigure_ctrl(nvme_ctrl_t c)
 void nvme_deconfigure_ctrl(nvme_ctrl_t c)
 {
 	__nvme_deconfigure_ctrl(c);
+	FREE_CTRL_ATTR(c->address);
 	FREE_CTRL_ATTR(c->dhchap_key);
 	FREE_CTRL_ATTR(c->dhchap_ctrl_key);
 	FREE_CTRL_ATTR(c->keyring);
@@ -2102,15 +2102,16 @@ int nvme_init_ctrl(nvme_host_t h, nvme_ctrl_t c, int instance)
 		return ret;
 	}
 
-	ret = nvme_reconfigure_ctrl(h->r, c, path, name);
-	if (ret < 0)
-		return ret;
-
+	FREE_CTRL_ATTR(c->address);
 	c->address = nvme_get_attr(path, "address");
 	if (!c->address && strcmp(c->transport, "loop")) {
 		errno = ENVME_CONNECT_INVAL_TR;
 		return -1;
 	}
+
+	ret = nvme_reconfigure_ctrl(h->r, c, path, name);
+	if (ret < 0)
+		return ret;
 
 	subsys_name = nvme_ctrl_lookup_subsystem_name(h->r, name);
 	if (!subsys_name) {
@@ -2221,8 +2222,6 @@ skip_address:
 		errno = ENODEV;
 		return NULL;
 	}
-	FREE_CTRL_ATTR(c->address);
-	c->address = xstrdup(addr);
 	if (s->subsystype && !strcmp(s->subsystype, "discovery"))
 		c->discovery_ctrl = true;
 	ret = nvme_reconfigure_ctrl(r, c, path, name);
