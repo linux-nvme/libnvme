@@ -30,10 +30,6 @@
 	#include "nvme/types.h"
 	#include "nvme/nbft.h"
 
-	static int host_iter_err = 0;
-	static int subsys_iter_err = 0;
-	static int ctrl_iter_err = 0;
-	static int ns_iter_err = 0;
 	static int connect_err = 0;
 	static int discover_err = 0;
 
@@ -56,65 +52,6 @@
 %}
 PyObject *hostnqn_from_file();
 PyObject *hostid_from_file();
-
-%inline %{
-	struct host_iter {
-		struct nvme_root *root;
-		struct nvme_host *pos;
-	};
-
-	struct subsystem_iter {
-		struct nvme_host *host;
-		struct nvme_subsystem *pos;
-	};
-
-	struct ctrl_iter {
-		struct nvme_subsystem *subsystem;
-		struct nvme_ctrl *pos;
-	};
-
-	struct ns_iter {
-		struct nvme_subsystem *subsystem;
-		struct nvme_ctrl *ctrl;
-		struct nvme_ns *pos;
-	};
-%}
-
-%exception host_iter::__next__ {
-	host_iter_err = 0;
-	$action  /* $action sets host_iter_err to non-zero value on failure */
-	if (host_iter_err) {
-		PyErr_SetString(PyExc_StopIteration, "End of list");
-		return NULL;
-	}
-}
-
-%exception subsystem_iter::__next__ {
-	subsys_iter_err = 0;
-	$action  /* $action sets subsys_iter_err to non-zero value on failure */
-	if (subsys_iter_err) {
-		PyErr_SetString(PyExc_StopIteration, "End of list");
-		return NULL;
-	}
-}
-
-%exception ctrl_iter::__next__ {
-	ctrl_iter_err = 0;
-	$action  /* $action sets ctrl_iter_err to non-zero value on failure */
-	if (ctrl_iter_err) {
-		PyErr_SetString(PyExc_StopIteration, "End of list");
-		return NULL;
-	}
-}
-
-%exception ns_iter::__next__ {
-	ns_iter_err = 0;
-	$action  /* $action sets ns_iter_err to non-zero value on failure */
-	if (ns_iter_err) {
-		PyErr_SetString(PyExc_StopIteration, "End of list");
-		return NULL;
-	}
-}
 
 %exception nvme_ctrl::connect {
 	connect_err = 0;
@@ -395,6 +332,17 @@ PyObject *hostid_from_file();
 #include "fabrics.h"
 #define STR_OR_NONE(str) (!(str) ? "None" : str)
 
+struct nvme_host * nvme_first_host(struct nvme_root * r);
+struct nvme_host * nvme_next_host(struct nvme_root * r, struct nvme_host * h);
+struct nvme_subsystem * nvme_first_subsystem(struct nvme_host * h);
+struct nvme_subsystem * nvme_next_subsystem(struct nvme_host * h, struct nvme_subsystem * s);
+struct nvme_ctrl * nvme_subsystem_first_ctrl(struct nvme_subsystem * s);
+struct nvme_ctrl * nvme_subsystem_next_ctrl(struct nvme_subsystem * s, struct nvme_ctrl * c);
+struct nvme_ns * nvme_subsystem_first_ns(struct nvme_subsystem * s);
+struct nvme_ns * nvme_subsystem_next_ns(struct nvme_subsystem * s, struct nvme_ns * n);
+struct nvme_ns * nvme_ctrl_first_ns(struct nvme_ctrl * c);
+struct nvme_ns * nvme_ctrl_next_ns(struct nvme_ctrl * c, struct nvme_ns * n);
+
 struct nvme_root {
 	%immutable config_file;
 	%immutable application;
@@ -544,9 +492,14 @@ struct nvme_ns {
 		else if (!strcmp(level, "emerg")) log_level = LOG_EMERG;
 		nvme_init_logging($self, log_level, false, false);
 	}
-	struct nvme_host *hosts() {
-		return nvme_first_host($self);
-	}
+	%pythoncode %{
+	def hosts(self):
+	    """Iterator over all host objects"""
+	    h = nvme_first_host(self)
+	    while h:
+	        yield h
+	        h = nvme_next_host(self, h)
+	%}
 	void refresh_topology() {
 		nvme_refresh_topology($self);
 	}
@@ -558,21 +511,6 @@ struct nvme_ns {
 	}
 }
 
-%extend host_iter {
-	struct host_iter *__iter__() {
-		return $self;
-	}
-	struct nvme_host *__next__() {
-		struct nvme_host *this = $self->pos;
-
-		if (!this) {
-			host_iter_err = 1;
-			return NULL;
-		}
-		$self->pos = nvme_next_host($self->root, this);
-		return this;
-	}
-}
 
 %define SET_SYMNAME_DOCSTRING
 "@brief Set or Clear Host's Symbolic Name
@@ -613,16 +551,14 @@ struct nvme_ns {
 	PyObject* __str__() {
 		return PyUnicode_FromFormat("nvme.host(%s,%s)", STR_OR_NONE($self->hostnqn), STR_OR_NONE($self->hostid));
 	}
-	struct host_iter __iter__() {
-		struct host_iter ret = {
-			.root = nvme_host_get_root($self),
-			.pos = $self
-		};
-		return ret;
-	}
-	struct nvme_subsystem* subsystems() {
-		return nvme_first_subsystem($self);
-	}
+	%pythoncode %{
+	def subsystems(self):
+	    """Iterator over all subsystem objects"""
+	    s = nvme_first_subsystem(self)
+	    while s:
+	        yield s
+	        s = nvme_next_subsystem(self, s)
+	%}
 }
 
 %{
@@ -633,41 +569,6 @@ struct nvme_ns {
 		nvme_host_set_dhchap_key(h, key);
 	}
 %};
-
-%extend subsystem_iter {
-	struct subsystem_iter *__iter__() {
-		return $self;
-	}
-	struct nvme_subsystem *__next__() {
-		struct nvme_subsystem *this = $self->pos;
-
-		if (!this) {
-			subsys_iter_err = 1;
-			return NULL;
-		}
-		$self->pos = nvme_next_subsystem($self->host, this);
-		return this;
-	}
-}
-
-%extend ns_iter {
-	struct ns_iter *__iter__() {
-		return $self;
-	}
-	struct nvme_ns *__next__() {
-		struct nvme_ns *this = $self->pos;
-
-		if (!this) {
-			ns_iter_err = 1;
-			return NULL;
-		}
-		if ($self->ctrl)
-			$self->pos = nvme_ctrl_next_ns($self->ctrl, this);
-		else
-			$self->pos = nvme_subsystem_next_ns($self->subsystem, this);
-		return this;
-	}
-}
 
 %pythonappend nvme_subsystem::nvme_subsystem(struct nvme_host *host,
 					     const char *subsysnqn,
@@ -685,19 +586,22 @@ struct nvme_ns {
 	PyObject *__str__() {
 		return PyUnicode_FromFormat("nvme.subsystem(%s,%s)", STR_OR_NONE($self->name), STR_OR_NONE($self->subsysnqn));
 	}
-	struct subsystem_iter __iter__() {
-		struct subsystem_iter ret = {
-			.host = nvme_subsystem_get_host($self),
-			.pos = $self
-		};
-		return ret;
-	}
-	struct nvme_ctrl *controllers() {
-		return nvme_subsystem_first_ctrl($self);
-	}
-	struct nvme_ns *namespaces() {
-		return nvme_subsystem_first_ns($self);
-	}
+	%pythoncode %{
+	def controllers(self):
+	    """Iterator over all controller objects"""
+	    c = nvme_subsystem_first_ctrl(self)
+	    while c:
+	        yield c
+	        c = nvme_subsystem_next_ctrl(self, c)
+	%}
+	%pythoncode %{
+	def namespaces(self):
+	    """Iterator over all namespace objects"""
+	    ns = nvme_subsystem_first_ns(self)
+	    while ns:
+	        yield ns
+	        ns = nvme_subsystem_next_ns(self, ns)
+	%}
 	%immutable name;
 	const char *name;
 	%immutable host;
@@ -724,22 +628,6 @@ struct nvme_ns {
 		nvme_subsystem_set_application(s, a);
 	}
 %};
-
-%extend ctrl_iter {
-	struct ctrl_iter *__iter__() {
-		return $self;
-	}
-	struct nvme_ctrl *__next__() {
-		struct nvme_ctrl *this = $self->pos;
-
-		if (!this) {
-			ctrl_iter_err = 1;
-			return NULL;
-		}
-		$self->pos = nvme_subsystem_next_ctrl($self->subsystem, this);
-		return this;
-	}
-}
 
 %pythonappend nvme_ctrl::connect(struct nvme_host *h,
 				 struct nvme_fabrics_config *cfg) {
@@ -891,16 +779,15 @@ struct nvme_ns {
 		       PyUnicode_FromFormat("nvme_ctrl(transport=%s,%s)", STR_OR_NONE($self->transport), STR_OR_NONE($self->address)) :
 		       PyUnicode_FromFormat("nvme_ctrl(transport=%s)", STR_OR_NONE($self->transport));
 	}
-	struct ctrl_iter __iter__() {
-		struct ctrl_iter ret = {
-			.subsystem = nvme_ctrl_get_subsystem($self),
-			.pos = $self
-		};
-		return ret;
-	}
-	struct nvme_ns* namespaces() {
-		return nvme_ctrl_first_ns($self);
-	}
+
+	%pythoncode %{
+	def namespaces(self):
+	    """Iterator over all namespace objects"""
+	    ns = nvme_ctrl_first_ns(self)
+	    while ns:
+	        yield ns
+	        ns = nvme_ctrl_next_ns(self, ns)
+	%}
 }
 
 %{
@@ -1051,12 +938,6 @@ struct nvme_ns {
 	}
 	PyObject *__str__() {
 		return PyUnicode_FromFormat("nvme.ns(%u)", $self->nsid);
-	}
-	struct ns_iter __iter__() {
-		struct ns_iter ret = { .ctrl = nvme_ns_get_ctrl($self),
-			.subsystem = nvme_ns_get_subsystem($self),
-			.pos = $self };
-		return ret;
 	}
 	%immutable name;
 	const char *name;
