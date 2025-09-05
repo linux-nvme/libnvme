@@ -1017,24 +1017,6 @@ int nvme_get_features_iocs_profile(nvme_link_t l, enum nvme_get_features_sel sel
 	return __nvme_get_features(l, NVME_FEAT_FID_IOCS_PROFILE, sel, result);
 }
 
-int nvme_capacity_mgmt(nvme_link_t l, struct nvme_capacity_mgmt_args *args)
-{
-	__u32 cdw10 = args->op | args->element_id << 16;
-
-        struct nvme_passthru_cmd cmd = {
-		.opcode		= nvme_admin_capacity_mgmt,
-		.cdw10		= cdw10,
-		.cdw11		= args->cdw11,
-		.cdw12		= args->cdw12,
-		.timeout_ms	= args->timeout,
-	};
-
-	if (args->args_size < sizeof(*args))
-		return -EINVAL;
-
-	return nvme_submit_admin_passthru(l, &cmd, args->result);
-}
-
 int nvme_submit_io_passthru64(nvme_link_t l, struct nvme_passthru_cmd64 *cmd,
 			      __u64 *result)
 {
