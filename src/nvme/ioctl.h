@@ -4026,31 +4026,22 @@ static inline int nvme_set_var_size_tags(__u8 pif, __u8 sts, __u64 reftag, __u64
  * @opcode:	Opcode to execute
  * @nsid:	Namespace ID
  * @slba:	Starting logical block
- * @storage_tag: This filed specifies Variable Sized Expected Logical Block
- *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
- * @nlb:	Number of logical blocks to send (0's based value)
- * @control:	Command control flags, see &enum nvme_io_control_flags.
- * @apptag:	This field specifies the Application Tag Mask expected value.
- *		Used only if the namespace is formatted to use end-to-end
- *		protection information.
- * @appmask:	This field specifies the Application Tag expected value. Used
- *		only if the namespace is formatted to use end-to-end protection
- *		information.
- * @reftag:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). Used only if the namespace is formatted
- *		to use end-to-end protection information.
- * @dspec:	Directive specific value
- * @dsm:	Data set management attributes, see &enum nvme_io_dsm_flags
- * @reftag_u64:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). It is the 8 byte version required for
- *		enhanced protection information.  Used only if the namespace is
- *		formatted to use end-to-end protection information.
+ * @cdw12:	Command Dword 12
+ * @cdw13:	Command Dword 13
+ * @elbas:	Extended LBA Formats Supported
+ * 		(see Controller Attributes (CTRATT))
  * @sts:	Storage tag size in bits, set by namespace Extended LBA Format
  * @pif:	Protection information format, determines how variable sized
  *		storage_tag and reftag are put into dwords 2, 3, and 14. Set by
  *		namespace Extended LBA Format.
+ * @storage_tag: This filed specifies Variable Sized Expected Logical Block
+ *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
+ * @reftag:	This field specifies the variable sized Expected Initial
+ *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
+ *		Reference Tag (ILBRT). Used only if the namespace is formatted
+ *		to use end-to-end protection information.
+ * @lbat:	Logical block application tag
+ * @lbatm:	Logical block application tag mask
  * @data:	Pointer to user address of the data buffer
  * @data_len:	Length of user buffer, @data, in bytes
  * @metadata:	Pointer to user address of the metadata buffer
@@ -4060,16 +4051,17 @@ static inline int nvme_set_var_size_tags(__u8 pif, __u8 sts, __u64 reftag, __u64
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_io(nvme_link_t l, __u8 opcode, __u32 nsid, __u64 slba, __u64 storage_tag,
-			  __u32 reftag, __u16 nlb, __u16 control, __u16 apptag, __u16 appmask,
-			  __u16 dspec, __u8 dsm, __u64 reftag_u64, __u8 sts, __u8 pif, void *data,
-			  __u32 data_len, void *metadata, __u32 metadata_len, __u32 *result)
+static inline int nvme_io(nvme_link_t l, __u8 opcode, __u32 nsid, __u64 slba,
+			  __u32 cdw12, __u32 cdw13,
+			  bool elbas, __u8 sts, __u8 pif, __u64 storage_tag, __u64 reftag,
+			  __u16 lbat, __u16 lbatm,
+			  void *data, __u32 data_len,
+			  void *metadata, __u32 metadata_len,
+			  __u32 *result)
 {
 	__u32 cdw10 = slba & 0xffffffff;
 	__u32 cdw11 = slba >> 32;
-	__u32 cdw12 = nlb | (control << 16);
-	__u32 cdw13 = dsm | (dspec << 16);
-	__u32 cdw15 = apptag | (appmask << 16);
+	__u32 cdw15 = lbat | (lbatm << 16);
 
 	struct nvme_passthru_cmd cmd = {
 		.opcode		= opcode,
@@ -4085,8 +4077,9 @@ static inline int nvme_io(nvme_link_t l, __u8 opcode, __u32 nsid, __u64 slba, __
 		.cdw15		= cdw15,
 	};
 
-	if (nvme_set_var_size_tags(pif, sts, reftag_u64, storage_tag, &cmd.cdw2, &cmd.cdw3,
-				   &cmd.cdw14))
+	if (elbas &&
+	    nvme_set_var_size_tags(pif, sts, reftag, storage_tag,
+				   &cmd.cdw2, &cmd.cdw3, &cmd.cdw14))
 		return -EINVAL;
 
 
@@ -4098,31 +4091,26 @@ static inline int nvme_io(nvme_link_t l, __u8 opcode, __u32 nsid, __u64 slba, __
  * @l:		Link handle
  * @nsid:	Namespace ID
  * @slba:	Starting logical block
- * @storage_tag: This filed specifies Variable Sized Expected Logical Block
- *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
  * @nlb:	Number of logical blocks to send (0's based value)
  * @control:	Command control flags, see &enum nvme_io_control_flags.
- * @apptag:	This field specifies the Application Tag Mask expected value.
- *		Used only if the namespace is formatted to use end-to-end
- *		protection information.
- * @appmask:	This field specifies the Application Tag expected value. Used
- *		only if the namespace is formatted to use end-to-end protection
- *		information.
- * @reftag:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). Used only if the namespace is formatted
- *		to use end-to-end protection information.
- * @dspec:	Directive specific value
- * @dsm:	Data set management attributes, see &enum nvme_io_dsm_flags
- * @reftag_u64:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). It is the 8 byte version required for
- *		enhanced protection information.  Used only if the namespace is
- *		formatted to use end-to-end protection information.
+ * @dsm:	Data set management attributes (CETYPE is zero),
+ * 		see &enum nvme_io_dsm_flags
+ * @cev:	Command Extension Value (CETYPE is non-zero)
+ * @elbas:	Extended LBA Formats Supported
+ * 		(see Controller Attributes (CTRATT))
  * @sts:	Storage tag size in bits, set by namespace Extended LBA Format
  * @pif:	Protection information format, determines how variable sized
  *		storage_tag and reftag are put into dwords 2, 3, and 14. Set by
  *		namespace Extended LBA Format.
+ * @storage_tag: This filed specifies Variable Sized Expected Logical Block
+ *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
+ * @reftag:	This field specifies the variable sized Expected Initial
+ *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
+ *		Reference Tag (ILBRT). It is the 8 byte version required for
+ *		enhanced protection information.  Used only if the namespace is
+ *		formatted to use end-to-end protection information.
+ * @elbat:	Expected Logical Block Application Tag
+ * @elbatm:	Expected Logical Block Application Tag Mask
  * @data:	Pointer to user address of the data buffer
  * @data_len:	Length of user buffer, @data, in bytes
  * @metadata:	Pointer to user address of the metadata buffer
@@ -4132,14 +4120,24 @@ static inline int nvme_io(nvme_link_t l, __u8 opcode, __u32 nsid, __u64 slba, __
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_read(nvme_link_t l, __u32 nsid, __u64 slba, __u64 storage_tag, __u32 reftag,
-			    __u16 nlb, __u16 control, __u16 apptag, __u16 appmask, __u16 dspec,
-			    __u8 dsm, __u64 reftag_u64, __u8 sts, __u8 pif, void *data,
-			    __u32 data_len, void *metadata, __u32 metadata_len, __u32 *result)
+static inline int nvme_read(nvme_link_t l, __u32 nsid, __u64 slba,
+			    __u16 nlb, __u16 control, __u8 dsm, __u16 cev,
+			    bool elbas, __u8 sts, __u8 pif, __u64 storage_tag, __u64 reftag,
+			    __u16 elbat, __u16 elbatm,
+			    void *data, __u32 data_len,
+			    void *metadata, __u32 metadata_len,
+			    __u32 *result)
 {
-	return nvme_io(l, nvme_cmd_read, nsid, slba, storage_tag, reftag, nlb, control, apptag,
-		       appmask, dspec, dsm, reftag_u64, sts, pif, data, data_len, metadata,
-		       metadata_len, result);
+	__u32 cdw12 = control << 16 | nlb;
+	__u32 cdw13 = dsm | cev;
+
+	return nvme_io(l, nvme_cmd_read, nsid, slba,
+		       cdw12, cdw13,
+		       elbas, sts, pif, storage_tag, reftag,
+		       elbat, elbatm,
+		       data, data_len,
+		       metadata, metadata_len,
+		       result);
 }
 
 /**
@@ -4147,48 +4145,55 @@ static inline int nvme_read(nvme_link_t l, __u32 nsid, __u64 slba, __u64 storage
  * @l:		Link handle
  * @nsid:	Namespace ID
  * @slba:	Starting logical block
- * @storage_tag: This filed specifies Variable Sized Expected Logical Block
- *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
  * @nlb:	Number of logical blocks to send (0's based value)
  * @control:	Command control flags, see &enum nvme_io_control_flags.
- * @apptag:	This field specifies the Application Tag Mask expected value.
- *		Used only if the namespace is formatted to use end-to-end
- *		protection information.
- * @appmask:	This field specifies the Application Tag expected value. Used
- *		only if the namespace is formatted to use end-to-end protection
- *		information.
- * @reftag:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). Used only if the namespace is formatted
- *		to use end-to-end protection information.
  * @dspec:	Directive specific value
- * @dsm:	Data set management attributes, see &enum nvme_io_dsm_flags
- * @reftag_u64:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). It is the 8 byte version required for
- *		enhanced protection information.  Used only if the namespace is
- *		formatted to use end-to-end protection information.
+ * @dsm:	Data set management attributes (CETYPE is zero),
+ * 		see &enum nvme_io_dsm_flags
+ * @cev:	Command Extension Value (CETYPE is non-zero)
+ * @elbas:	Extended LBA Formats Supported
+ * 		(see Controller Attributes (CTRATT))
  * @sts:	Storage tag size in bits, set by namespace Extended LBA Format
  * @pif:	Protection information format, determines how variable sized
  *		storage_tag and reftag are put into dwords 2, 3, and 14. Set by
  *		namespace Extended LBA Format.
+ * @storage_tag: This filed specifies Variable Sized Expected Logical Block
+ *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
+ * @reftag:	This field specifies the variable sized Expected Initial
+ *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
+ *		Reference Tag (ILBRT). It is the 8 byte version required for
+ *		enhanced protection information.  Used only if the namespace is
+ *		formatted to use end-to-end protection information.
+ * @lbat:	Logical Block Application Tag
+ * @lbatm:	Logical Block Application Tag Mask
  * @data:	Pointer to user address of the data buffer
  * @data_len:	Length of user buffer, @data, in bytes
  * @metadata:	Pointer to user address of the metadata buffer
  * @metadata_len:Length of user buffer, @metadata, in bytes
  * @result:	The command completion result from CQE dword0
- *
+*
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_write(nvme_link_t l, __u32 nsid, __u64 slba, __u64 storage_tag, __u32 reftag,
-			     __u16 nlb, __u16 control, __u16 apptag, __u16 appmask, __u16 dspec,
-			     __u8 dsm, __u64 reftag_u64, __u8 sts, __u8 pif, void *data,
-			     __u32 data_len, void *metadata, __u32 metadata_len, __u32 *result)
+static inline int nvme_write(nvme_link_t l, __u32 nsid, __u64 slba,
+			     __u16 nlb, __u16 control,
+			     __u16 dspec, __u8 dsm, __u8 cev,
+			    bool elbas, __u8 sts, __u8 pif, __u64 storage_tag, __u64 reftag,
+			    __u16 lbat, __u16 lbatm,
+			    void *data, __u32 data_len,
+			    void *metadata, __u32 metadata_len,
+			    __u32 *result)
 {
-	return nvme_io(l, nvme_cmd_write, nsid, slba, storage_tag, reftag, nlb, control, apptag,
-		       appmask, dspec, dsm, reftag_u64, sts, pif, data, data_len, metadata,
-		       metadata_len, result);
+	__u32 cdw12 = control << 16 | nlb;
+	__u32 cdw13 = dspec << 16 | dsm | cev;
+
+	return nvme_io(l, nvme_cmd_write, nsid, slba,
+		       cdw12, cdw13,
+		       elbas, sts, pif, storage_tag, reftag,
+		       lbat, lbatm,
+		       data, data_len,
+		       metadata, metadata_len,
+		       result);
 }
 
 /**
@@ -4196,31 +4201,24 @@ static inline int nvme_write(nvme_link_t l, __u32 nsid, __u64 slba, __u64 storag
  * @l:		Link handle
  * @nsid:	Namespace ID
  * @slba:	Starting logical block
- * @storage_tag: This filed specifies Variable Sized Expected Logical Block
- *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
  * @nlb:	Number of logical blocks to send (0's based value)
  * @control:	Command control flags, see &enum nvme_io_control_flags.
- * @apptag:	This field specifies the Application Tag Mask expected value.
- *		Used only if the namespace is formatted to use end-to-end
- *		protection information.
- * @appmask:	This field specifies the Application Tag expected value. Used
- *		only if the namespace is formatted to use end-to-end protection
- *		information.
- * @reftag:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). Used only if the namespace is formatted
- *		to use end-to-end protection information.
- * @dspec:	Directive specific value
- * @dsm:	Data set management attributes, see &enum nvme_io_dsm_flags
- * @reftag_u64:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). It is the 8 byte version required for
- *		enhanced protection information.  Used only if the namespace is
- *		formatted to use end-to-end protection information.
+ * @cev:	Command Extension Value (CETYPE is non-zero)
+ * @elbas:	Extended LBA Formats Supported
+ * 		(see Controller Attributes (CTRATT))
  * @sts:	Storage tag size in bits, set by namespace Extended LBA Format
  * @pif:	Protection information format, determines how variable sized
  *		storage_tag and reftag are put into dwords 2, 3, and 14. Set by
  *		namespace Extended LBA Format.
+ * @storage_tag: This filed specifies Variable Sized Expected Logical Block
+ *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
+ * @reftag:	This field specifies the variable sized Expected Initial
+ *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
+ *		Reference Tag (ILBRT). It is the 8 byte version required for
+ *		enhanced protection information.  Used only if the namespace is
+ *		formatted to use end-to-end protection information.
+ * @elbat:	Expected Logical Block Application Tag
+ * @elbatm:	Expected Logical Block Application Tag Mask
  * @data:	Pointer to user address of the data buffer
  * @data_len:	Length of user buffer, @data, in bytes
  * @metadata:	Pointer to user address of the metadata buffer
@@ -4230,15 +4228,25 @@ static inline int nvme_write(nvme_link_t l, __u32 nsid, __u64 slba, __u64 storag
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_compare(nvme_link_t l, __u32 nsid, __u64 slba, __u64 storage_tag,
-			       __u32 reftag, __u16 nlb, __u16 control, __u16 apptag, __u16 appmask,
-			       __u16 dspec, __u8 dsm, __u64 reftag_u64, __u8 sts, __u8 pif,
-			       void *data, __u32 data_len, void *metadata, __u32 metadata_len,
+static inline int nvme_compare(nvme_link_t l, __u32 nsid, __u64 slba,
+			       __u16 nlb, __u16 control,
+			       __u8 cev,
+			       bool elbas, __u8 sts, __u8 pif, __u64 storage_tag, __u64 reftag,
+			       __u16 elbat, __u16 elbatm,
+			       void *data, __u32 data_len,
+			       void *metadata, __u32 metadata_len,
 			       __u32 *result)
 {
-	return nvme_io(l, nvme_cmd_compare, nsid, slba, storage_tag, reftag, nlb, control, apptag,
-		       appmask, dspec, dsm, reftag_u64, sts, pif, data, data_len, metadata,
-		       metadata_len, result);
+	__u32 cdw12 = control << 16 | nlb;
+	__u32 cdw13 = cev;
+
+	return nvme_io(l, nvme_cmd_compare, nsid, slba,
+		       cdw12, cdw13,
+		       elbas, sts, pif, storage_tag, reftag,
+		       elbat, elbatm,
+		       data, data_len,
+		       metadata, metadata_len,
+		       result);
 }
 
 /**
@@ -4246,35 +4254,27 @@ static inline int nvme_compare(nvme_link_t l, __u32 nsid, __u64 slba, __u64 stor
  * @l:		Link handle
  * @nsid:	Namespace ID
  * @slba:	Starting logical block
- * @storage_tag: This filed specifies Variable Sized Expected Logical Block
- *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
  * @nlb:	Number of logical blocks to send (0's based value)
  * @control:	Command control flags, see &enum nvme_io_control_flags.
- * @apptag:	This field specifies the Application Tag Mask expected value.
- *		Used only if the namespace is formatted to use end-to-end
- *		protection information.
- * @appmask:	This field specifies the Application Tag expected value. Used
- *		only if the namespace is formatted to use end-to-end protection
- *		information.
- * @reftag:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). Used only if the namespace is formatted
- *		to use end-to-end protection information.
  * @dspec:	Directive specific value
- * @dsm:	Data set management attributes, see &enum nvme_io_dsm_flags
- * @reftag_u64:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). It is the 8 byte version required for
- *		enhanced protection information.  Used only if the namespace is
- *		formatted to use end-to-end protection information.
+ * @dsm:	Data set management attributes (CETYPE is zero),
+ * 		see &enum nvme_io_dsm_flags
+ * @cev:	Command Extension Value (CETYPE is non-zero)
+ * @elbas:	Extended LBA Formats Supported
+ * 		(see Controller Attributes (CTRATT))
  * @sts:	Storage tag size in bits, set by namespace Extended LBA Format
  * @pif:	Protection information format, determines how variable sized
  *		storage_tag and reftag are put into dwords 2, 3, and 14. Set by
  *		namespace Extended LBA Format.
- * @data:	Pointer to user address of the data buffer
- * @data_len:	Length of user buffer, @data, in bytes
- * @metadata:	Pointer to user address of the metadata buffer
- * @metadata_len:Length of user buffer, @metadata, in bytes
+ * @storage_tag: This filed specifies Variable Sized Expected Logical Block
+ *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
+ * @reftag:	This field specifies the variable sized Expected Initial
+ *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
+ *		Reference Tag (ILBRT). It is the 8 byte version required for
+ *		enhanced protection information.  Used only if the namespace is
+ *		formatted to use end-to-end protection information.
+ * @lbat:	Logical Block Application Tag
+ * @lbatm:	Logical Block Application Tag Mask
  * @result:	The command completion result from CQE dword0
  *
  * The Write Zeroes command sets a range of logical blocks to zero.  After
@@ -4285,15 +4285,23 @@ static inline int nvme_compare(nvme_link_t l, __u32 nsid, __u64 slba, __u64 stor
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_write_zeros(nvme_link_t l, __u32 nsid, __u64 slba, __u64 storage_tag,
-				   __u32 reftag, __u16 nlb, __u16 control, __u16 apptag,
-				   __u16 appmask, __u16 dspec, __u8 dsm, __u64 reftag_u64, __u8 sts,
-				   __u8 pif, void *data, __u32 data_len, void *metadata,
-				   __u32 metadata_len, __u32 *result)
+static inline int nvme_write_zeros(nvme_link_t l, __u32 nsid, __u64 slba,
+				   __u16 nlb, __u16 control,
+				   __u16 dspec, __u8 dsm, __u8 cev,
+				   bool elbas, __u8 sts, __u8 pif, __u64 storage_tag, __u64 reftag,
+				   __u16 lbat, __u16 lbatm,
+				   __u32 *result)
 {
-	return nvme_io(l, nvme_cmd_write_zeroes, nsid, slba, storage_tag, reftag, nlb, control,
-		       apptag, appmask, dspec, dsm, reftag_u64, sts, pif, data, data_len, metadata,
-		       metadata_len, result);
+	__u32 cdw12 = control << 16 | nlb;
+	__u32 cdw13 = dspec << 16 | dsm | cev;
+
+	return nvme_io(l, nvme_cmd_write_zeroes, nsid, slba,
+		       cdw12, cdw13,
+		       elbas, sts, pif, storage_tag, reftag,
+		       lbat, lbatm,
+		       NULL, 0,
+		       NULL, 0,
+		       result);
 }
 
 /**
@@ -4301,35 +4309,9 @@ static inline int nvme_write_zeros(nvme_link_t l, __u32 nsid, __u64 slba, __u64 
  * @l:		Link handle
  * @nsid:	Namespace ID
  * @slba:	Starting logical block
- * @storage_tag: This filed specifies Variable Sized Expected Logical Block
- *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
  * @nlb:	Number of logical blocks to send (0's based value)
  * @control:	Command control flags, see &enum nvme_io_control_flags.
- * @apptag:	This field specifies the Application Tag Mask expected value.
- *		Used only if the namespace is formatted to use end-to-end
- *		protection information.
- * @appmask:	This field specifies the Application Tag expected value. Used
- *		only if the namespace is formatted to use end-to-end protection
- *		information.
- * @reftag:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). Used only if the namespace is formatted
- *		to use end-to-end protection information.
  * @dspec:	Directive specific value
- * @dsm:	Data set management attributes, see &enum nvme_io_dsm_flags
- * @reftag_u64:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). It is the 8 byte version required for
- *		enhanced protection information.  Used only if the namespace is
- *		formatted to use end-to-end protection information.
- * @sts:	Storage tag size in bits, set by namespace Extended LBA Format
- * @pif:	Protection information format, determines how variable sized
- *		storage_tag and reftag are put into dwords 2, 3, and 14. Set by
- *		namespace Extended LBA Format.
- * @data:	Pointer to user address of the data buffer
- * @data_len:	Length of user buffer, @data, in bytes
- * @metadata:	Pointer to user address of the metadata buffer
- * @metadata_len:Length of user buffer, @metadata, in bytes
  * @result:	The command completion result from CQE dword0
  *
  * The Write Uncorrectable command marks a range of logical blocks as invalid.
@@ -4340,15 +4322,21 @@ static inline int nvme_write_zeros(nvme_link_t l, __u32 nsid, __u64 slba, __u64 
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_write_uncorrectable(nvme_link_t l, __u32 nsid, __u64 slba, __u64 storage_tag,
-					   __u32 reftag, __u16 nlb, __u16 control, __u16 apptag,
-					   __u16 appmask, __u16 dspec, __u8 dsm, __u64 reftag_u64,
-					   __u8 sts, __u8 pif, void *data, __u32 data_len,
-					   void *metadata, __u32 metadata_len, __u32 *result)
+static inline int nvme_write_uncorrectable(nvme_link_t l, __u32 nsid, __u64 slba,
+					   __u16 nlb, __u16 control,
+					   __u16 dspec,
+					   __u32 *result)
 {
-	return nvme_io(l, nvme_cmd_write_uncor, nsid, slba, storage_tag, reftag, nlb, control,
-		       apptag, appmask, dspec, dsm, reftag_u64, sts, pif, data, data_len, metadata,
-		       metadata_len, result);
+	__u32 cdw12 = control << 16 | nlb;
+	__u32 cdw13 = dspec << 16;
+
+	return nvme_io(l, nvme_cmd_write_uncor, nsid, slba,
+		       cdw12, cdw13,
+		       false, 0, 0, 0, 0,
+		       0, 0,
+		       NULL, 0,
+		       NULL, 0,
+		       NULL);
 }
 
 /**
@@ -4356,35 +4344,24 @@ static inline int nvme_write_uncorrectable(nvme_link_t l, __u32 nsid, __u64 slba
  * @l:		Link handle
  * @nsid:	Namespace ID
  * @slba:	Starting logical block
- * @storage_tag: This filed specifies Variable Sized Expected Logical Block
- *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
  * @nlb:	Number of logical blocks to send (0's based value)
  * @control:	Command control flags, see &enum nvme_io_control_flags.
- * @apptag:	This field specifies the Application Tag Mask expected value.
- *		Used only if the namespace is formatted to use end-to-end
- *		protection information.
- * @appmask:	This field specifies the Application Tag expected value. Used
- *		only if the namespace is formatted to use end-to-end protection
- *		information.
- * @reftag:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). Used only if the namespace is formatted
- *		to use end-to-end protection information.
- * @dspec:	Directive specific value
- * @dsm:	Data set management attributes, see &enum nvme_io_dsm_flags
- * @reftag_u64:	This field specifies the variable sized Expected Initial
- *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
- *		Reference Tag (ILBRT). It is the 8 byte version required for
- *		enhanced protection information.  Used only if the namespace is
- *		formatted to use end-to-end protection information.
+ * @cev:	Command Extension Value (CETYPE is non-zero)
+ * @elbas:	Extended LBA Formats Supported
+ * 		(see Controller Attributes (CTRATT))
  * @sts:	Storage tag size in bits, set by namespace Extended LBA Format
  * @pif:	Protection information format, determines how variable sized
  *		storage_tag and reftag are put into dwords 2, 3, and 14. Set by
  *		namespace Extended LBA Format.
- * @data:	Pointer to user address of the data buffer
- * @data_len:	Length of user buffer, @data, in bytes
- * @metadata:	Pointer to user address of the metadata buffer
- * @metadata_len:Length of user buffer, @metadata, in bytes
+ * @storage_tag: This filed specifies Variable Sized Expected Logical Block
+ *		Storage Tag (ELBST) or Logical Block Storage Tag (LBST)
+ * @reftag:	This field specifies the variable sized Expected Initial
+ *		Logical Block Reference Tag (EILBRT) or Initial Logical Block
+ *		Reference Tag (ILBRT). It is the 8 byte version required for
+ *		enhanced protection information.  Used only if the namespace is
+ *		formatted to use end-to-end protection information.
+ * @elbat:	Expected Logical Block Application Tag
+ * @elbatm:	Expected Logical Block Application Tag Mask
  * @result:	The command completion result from CQE dword0
  *
  * The Verify command verifies integrity of stored information by reading data
@@ -4394,15 +4371,23 @@ static inline int nvme_write_uncorrectable(nvme_link_t l, __u32 nsid, __u64 slba
  * Return: 0 on success, the nvme command status if a response was
  * received (see &enum nvme_status_field) or a negative error otherwise.
  */
-static inline int nvme_verify(nvme_link_t l, __u32 nsid, __u64 slba, __u64 storage_tag,
-			      __u32 reftag, __u16 nlb, __u16 control, __u16 apptag, __u16 appmask,
-			      __u16 dspec, __u8 dsm, __u64 reftag_u64, __u8 sts, __u8 pif,
-			      void *data, __u32 data_len, void *metadata, __u32 metadata_len,
+static inline int nvme_verify(nvme_link_t l, __u32 nsid, __u64 slba,
+			      __u16 nlb, __u16 control,
+			      __u8 cev,
+			      bool elbas, __u8 sts, __u8 pif, __u64 storage_tag, __u64 reftag,
+			      __u16 elbat, __u16 elbatm,
 			      __u32 *result)
 {
-	return nvme_io(l, nvme_cmd_verify, nsid, slba, storage_tag, reftag, nlb, control, apptag,
-		       appmask, dspec, dsm, reftag_u64, sts, pif, data, data_len, metadata,
-		       metadata_len, result);
+	__u32 cdw12 = control << 16 | nlb;
+	__u32 cdw13 = cev;
+
+	return nvme_io(l, nvme_cmd_verify, nsid, slba,
+		       cdw12, cdw13,
+		       elbas, sts, pif, storage_tag, reftag,
+		       elbat, elbatm,
+		       NULL, 0,
+		       NULL, 0,
+		       result);
 }
 
 /**
@@ -4425,7 +4410,7 @@ static inline int nvme_verify(nvme_link_t l, __u32 nsid, __u64 slba, __u64 stora
  */
 static inline int nvme_dsm(nvme_link_t l, __u32 nsid, __u16 nr_ranges,
 			   __u32 attrs, struct nvme_dsm_range *dsm,
-			    __u32 *result)
+			   __u32 *result)
 {
 	__u32 cdw10 = NVME_SET(nr_ranges - 1, DSM_CDW10_NR);
 	__u32 cdw11 = attrs;

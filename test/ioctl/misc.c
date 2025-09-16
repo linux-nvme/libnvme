@@ -835,7 +835,6 @@ static void test_read(void)
 	__u16 nlb = 0x3;
 	__u16 control = NVME_IO_FUA;
 	__u8 dsm = NVME_IO_DSM_LATENCY_LOW;
-	__u16 dspec = 0x0;
 	__u16 apptag = 0x12;
 	__u16 appmask = 0x34;
 
@@ -845,7 +844,7 @@ static void test_read(void)
 		.cdw10 = slba & 0xffffffff,
 		.cdw11 = slba >> 32,
 		.cdw12 = nlb | (control << 16),
-		.cdw13 = dsm | (dspec << 16),
+		.cdw13 = dsm,
 		.cdw15 = apptag | (appmask << 16),
 		.data_len = sizeof(expected_data),
 		.out_data = &expected_data,
@@ -855,8 +854,13 @@ static void test_read(void)
 
 	arbitrary(&expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_read(test_link, TEST_NSID, slba, 0xef, 0xab, nlb, control, apptag, appmask,
-			dspec, dsm, 0, 0, 0, &data, sizeof(data), NULL, 0, &result);
+	err = nvme_read(test_link, TEST_NSID, slba,
+			nlb, control, dsm, 0,
+			false, 0, 0, 0, 0,
+			apptag, appmask,
+			&data, sizeof(data),
+			NULL, 0,
+			&result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -891,8 +895,13 @@ static void test_write(void)
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_write(test_link, TEST_NSID, slba, 0xab, 0xef, nlb, control, apptag, appmask,
-			 dspec, dsm, 0, 0, 0, &expected_data, sizeof(expected_data), NULL, 0,
+	err = nvme_write(test_link, TEST_NSID, slba,
+			 nlb, control,
+			 dspec, dsm, 0,
+			 false, 0, 0, 0, 0,
+			 apptag, appmask,
+			 &expected_data, sizeof(expected_data),
+			 NULL, 0,
 			 &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
@@ -906,8 +915,7 @@ static void test_compare(void)
 	__u64 slba = 0xabcde;
 	__u16 nlb = 0x0;
 	__u16 control = NVME_IO_LR;
-	__u8 dsm = NVME_IO_DSM_COMPRESSED;
-	__u16 dspec = 0xa;
+	__u16 cev = 0;
 	__u16 apptag = 0x59;
 	__u16 appmask = 0x94;
 
@@ -917,7 +925,7 @@ static void test_compare(void)
 		.cdw10 = slba & 0xffffffff,
 		.cdw11 = slba >> 32,
 		.cdw12 = nlb | (control << 16),
-		.cdw13 = dsm | (dspec << 16),
+		.cdw13 = cev,
 		.cdw15 = apptag | (appmask << 16),
 		.data_len = sizeof(data),
 		.in_data = &data,
@@ -928,8 +936,13 @@ static void test_compare(void)
 	arbitrary(&expected_data, sizeof(expected_data));
 	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_compare(test_link, TEST_NSID, slba, 0xab, 0xff, nlb, control, apptag, appmask,
-			   dspec, dsm, 0, 0, 0, &expected_data, sizeof(expected_data), NULL, 0,
+	err = nvme_compare(test_link, TEST_NSID, slba,
+			   nlb, control,
+			   0,
+			   false, 0, 0, 0, 0,
+			   apptag, appmask,
+			   &expected_data, sizeof(expected_data),
+			   NULL, 0,
 			   &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
@@ -938,12 +951,12 @@ static void test_compare(void)
 
 static void test_write_zeros(void)
 {
-	__u8 expected_data[512], data[512] = {};
 	__u32 result = 0;
 	__u64 slba = 0x0;
 	__u16 nlb = 0xffff;
 	__u16 control = NVME_IO_LR;
 	__u8 dsm = NVME_IO_DSM_FREQ_ONCE;
+	__u16 cev = 0;
 	__u16 dspec = 0xbb;
 	__u16 apptag = 0xfa;
 	__u16 appmask = 0x72;
@@ -956,18 +969,17 @@ static void test_write_zeros(void)
 		.cdw12 = nlb | (control << 16),
 		.cdw13 = dsm | (dspec << 16),
 		.cdw15 = apptag | (appmask << 16),
-		.data_len = sizeof(data),
-		.in_data = &data,
 	};
 
 	int err;
 
-	arbitrary(&expected_data, sizeof(expected_data));
-	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_write_zeros(test_link, TEST_NSID, slba, 0xab, 0xff, nlb, control, apptag,
-			       appmask, dspec, dsm, 0, 0, 0, &expected_data, sizeof(expected_data),
-			       NULL, 0, &result);
+	err = nvme_write_zeros(test_link, TEST_NSID, slba,
+			       nlb, control,
+			       dspec, dsm, cev,
+			       false, 0, 0, 0, 0,
+			       apptag, appmask,
+			       &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -975,7 +987,6 @@ static void test_write_zeros(void)
 
 static void test_write_uncorrectable(void)
 {
-	__u8 expected_data[512], data[512] = {};
 	__u32 result = 0;
 	__u64 slba = 0x0;
 	__u16 nlb = 0x0;
@@ -993,18 +1004,15 @@ static void test_write_uncorrectable(void)
 		.cdw12 = nlb | (control << 16),
 		.cdw13 = dsm | (dspec << 16),
 		.cdw15 = apptag | (appmask << 16),
-		.data_len = sizeof(data),
-		.in_data = &data,
 	};
 
 	int err;
 
-	arbitrary(&expected_data, sizeof(expected_data));
-	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_write_uncorrectable(test_link, TEST_NSID, slba, 0x0, 0x0, nlb, control, apptag,
-				       appmask, dspec, dsm, 0, 0, 0, &expected_data,
-				       sizeof(expected_data), NULL, 0, &result);
+	err = nvme_write_uncorrectable(test_link, TEST_NSID, slba,
+				       nlb, control,
+				       0,
+				       NULL);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
@@ -1012,13 +1020,11 @@ static void test_write_uncorrectable(void)
 
 static void test_verify(void)
 {
-	__u8 expected_data[512], data[512] = {};
 	__u32 result = 0;
 	__u64 slba = 0xffffffffffffffff;
 	__u16 nlb = 0xffff;
 	__u16 control = 0xffff;
-	__u8 dsm = 0xff;
-	__u16 dspec = 0xffff;
+	__u16 cev = 0;
 	__u16 apptag = 0xffff;
 	__u16 appmask = 0xffff;
 
@@ -1028,20 +1034,19 @@ static void test_verify(void)
 		.cdw10 = slba & 0xffffffff,
 		.cdw11 = slba >> 32,
 		.cdw12 = nlb | (control << 16),
-		.cdw13 = dsm | (dspec << 16),
+		.cdw13 = cev,
 		.cdw15 = apptag | (appmask << 16),
-		.data_len = sizeof(data),
-		.in_data = &data,
 	};
 
 	int err;
 
-	arbitrary(&expected_data, sizeof(expected_data));
-	memcpy(&data, &expected_data, sizeof(expected_data));
 	set_mock_io_cmds(&mock_io_cmd, 1);
-	err = nvme_verify(test_link, TEST_NSID, slba, 0xffffffffffffffff, 0xffffffff, nlb, control,
-			  apptag, appmask, dspec, dsm, 0, 0, 0, &expected_data,
-			  sizeof(expected_data), NULL, 0, &result);
+	err = nvme_verify(test_link, TEST_NSID, slba,
+			  nlb, control,
+			  cev,
+			  false, 0, 0, 0, 0,
+			  apptag, appmask,
+			  &result);
 	end_mock_cmds();
 	check(err == 0, "returned error %d", err);
 	check(result == 0, "returned result %u", result);
