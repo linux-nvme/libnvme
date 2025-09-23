@@ -1417,7 +1417,8 @@ struct nvme_ctrl *nvme_create_ctrl(nvme_root_t r,
 		return NULL;
 	}
 	if (strncmp(transport, "loop", 4) &&
-	    strncmp(transport, "pcie", 4) && !traddr) {
+	    strncmp(transport, "pcie", 4) &&
+	    strncmp(transport, "apple-nvme", 10) && !traddr) {
 		nvme_msg(r, LOG_ERR, "No transport address for '%s'\n",
 			 transport);
 	       errno = EINVAL;
