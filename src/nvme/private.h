@@ -75,7 +75,22 @@ struct nvme_ctrl {
 	struct list_head paths;
 	struct list_head namespaces;
 	struct nvme_subsystem *s;
+	struct nvme_fabrics_config cfg;
 
+	/* Immutable attributes */
+	char *transport;
+	char *subsysnqn;
+	char *traddr;
+	char *trsvcid;
+
+	/* persistent across reconfiguration */
+	char *dhchap_key;
+	char *dhchap_ctrl_key;
+	char *keyring;
+	char *tls_key_identity;
+	char *tls_key;
+
+	/* reset during reconfiguration */
 	int fd;
 	char *name;
 	char *sysfs_dir;
@@ -87,15 +102,6 @@ struct nvme_ctrl {
 	char *queue_count;
 	char *serial;
 	char *sqsize;
-	char *transport;
-	char *subsysnqn;
-	char *traddr;
-	char *trsvcid;
-	char *dhchap_key;
-	char *dhchap_ctrl_key;
-	char *keyring;
-	char *tls_key_identity;
-	char *tls_key;
 	char *cntrltype;
 	char *cntlid;
 	char *dctype;
@@ -104,7 +110,6 @@ struct nvme_ctrl {
 	bool unique_discovery_ctrl;
 	bool discovered;
 	bool persistent;
-	struct nvme_fabrics_config cfg;
 };
 
 struct nvme_subsystem {
