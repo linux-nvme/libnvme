@@ -245,6 +245,9 @@ static void nvme_filter_ctrl(nvme_root_t r, nvme_ctrl_t c,
 	if (f(NULL, c, NULL, f_args))
 		return;
 
+	if (!nvme_ctrl_get_name(c))
+		return;
+
 	nvme_msg(r, LOG_DEBUG, "filter out controller %s\n",
 		 nvme_ctrl_get_name(c));
 	nvme_free_ctrl(c);
@@ -1311,7 +1314,7 @@ nvme_path_t nvme_ctrl_next_path(nvme_ctrl_t c, nvme_path_t p)
 
 #define FREE_CTRL_ATTR(a) \
 	do { free(a); (a) = NULL; } while (0)
-void nvme_deconfigure_ctrl(nvme_ctrl_t c)
+static void __nvme_deconfigure_ctrl(nvme_ctrl_t c)
 {
 	nvme_ctrl_release_fd(c);
 	FREE_CTRL_ATTR(c->name);
@@ -1323,16 +1326,21 @@ void nvme_deconfigure_ctrl(nvme_ctrl_t c)
 	FREE_CTRL_ATTR(c->queue_count);
 	FREE_CTRL_ATTR(c->serial);
 	FREE_CTRL_ATTR(c->sqsize);
+	FREE_CTRL_ATTR(c->dctype);
+	FREE_CTRL_ATTR(c->cntrltype);
+	FREE_CTRL_ATTR(c->cntlid);
+	FREE_CTRL_ATTR(c->phy_slot);
+}
+
+void nvme_deconfigure_ctrl(nvme_ctrl_t c)
+{
+	__nvme_deconfigure_ctrl(c);
+	FREE_CTRL_ATTR(c->address);
 	FREE_CTRL_ATTR(c->dhchap_key);
 	FREE_CTRL_ATTR(c->dhchap_ctrl_key);
 	FREE_CTRL_ATTR(c->keyring);
 	FREE_CTRL_ATTR(c->tls_key_identity);
 	FREE_CTRL_ATTR(c->tls_key);
-	FREE_CTRL_ATTR(c->address);
-	FREE_CTRL_ATTR(c->dctype);
-	FREE_CTRL_ATTR(c->cntrltype);
-	FREE_CTRL_ATTR(c->cntlid);
-	FREE_CTRL_ATTR(c->phy_slot);
 }
 
 int nvme_disconnect_ctrl(nvme_ctrl_t c)
@@ -1811,6 +1819,8 @@ nvme_ctrl_t __nvme_lookup_ctrl(nvme_subsystem_t s, const char *transport,
 
 	c = p ? nvme_subsystem_next_ctrl(s, p) : nvme_subsystem_first_ctrl(s);
 	for (; c != NULL; c = nvme_subsystem_next_ctrl(s, c)) {
+		if (!nvme_ctrl_get_name(c))
+			continue;
 		if (ctrl_match(c, &candidate)) {
 			matching_c = c;
 			break;
@@ -2050,20 +2060,7 @@ static int nvme_reconfigure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 	 * It's necesssary to release any resources first because a ctrl
 	 * can be reused.
 	 */
-	nvme_ctrl_release_fd(c);
-	FREE_CTRL_ATTR(c->name);
-	FREE_CTRL_ATTR(c->sysfs_dir);
-	FREE_CTRL_ATTR(c->firmware);
-	FREE_CTRL_ATTR(c->model);
-	FREE_CTRL_ATTR(c->state);
-	FREE_CTRL_ATTR(c->numa_node);
-	FREE_CTRL_ATTR(c->queue_count);
-	FREE_CTRL_ATTR(c->serial);
-	FREE_CTRL_ATTR(c->sqsize);
-	FREE_CTRL_ATTR(c->cntrltype);
-	FREE_CTRL_ATTR(c->cntlid);
-	FREE_CTRL_ATTR(c->dctype);
-	FREE_CTRL_ATTR(c->phy_slot);
+	__nvme_deconfigure_ctrl(c);
 
 	d = opendir(path);
 	if (!d) {
@@ -2111,15 +2108,16 @@ int nvme_init_ctrl(nvme_host_t h, nvme_ctrl_t c, int instance)
 		return ret;
 	}
 
-	ret = nvme_reconfigure_ctrl(h->r, c, path, name);
-	if (ret < 0)
-		return ret;
-
+	FREE_CTRL_ATTR(c->address);
 	c->address = nvme_get_attr(path, "address");
 	if (!c->address && strcmp(c->transport, "loop")) {
 		errno = ENVME_CONNECT_INVAL_TR;
 		return -1;
 	}
+
+	ret = nvme_reconfigure_ctrl(h->r, c, path, name);
+	if (ret < 0)
+		return ret;
 
 	subsys_name = nvme_ctrl_lookup_subsystem_name(h->r, name);
 	if (!subsys_name) {
@@ -2232,8 +2230,6 @@ skip_address:
 		errno = ENODEV;
 		return NULL;
 	}
-	FREE_CTRL_ATTR(c->address);
-	c->address = xstrdup(addr);
 	if (s->subsystype && !strcmp(s->subsystype, "discovery"))
 		c->discovery_ctrl = true;
 	ret = nvme_reconfigure_ctrl(r, c, path, name);
