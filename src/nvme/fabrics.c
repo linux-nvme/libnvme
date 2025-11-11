@@ -1150,6 +1150,13 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		.uuidx = NVME_UUID_NONE,
 	};
 
+	if (!name) {
+		nvme_msg(r, LOG_ERR,
+			 "controller not connected\n");
+		errno = ENOTCONN;
+		return NULL;
+	}
+
 	log = __nvme_alloc(sizeof(*log));
 	if (!log) {
 		nvme_msg(r, LOG_ERR,
