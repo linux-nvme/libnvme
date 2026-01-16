@@ -632,6 +632,11 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 		return -ENVME_CONNECT_INVAL;
 	}
 
+	if (cfg->concat && !hostkey) {
+		nvme_msg(h->r, LOG_ERR, "required argument [--dhchap-secret | -S] not specified with --concat\n");
+		return -ENVME_CONNECT_INVAL;
+	}
+
 	if (cfg->tls) {
 		ret = __nvme_import_keys_from_config(h, c, &keyring_id, &key_id);
 		if (ret) {
