@@ -74,6 +74,7 @@ struct nvme_identify_args {
  * @ot:		Offset Type; if set @lpo specifies the index into the list
  *		of data structures, otherwise @lpo specifies the byte offset
  *		into the log page.
+ * @ish:	Ignore Shutdown (for NVMe-MI command)
  */
 struct nvme_get_log_args {
 	__u64 lpo;
@@ -91,6 +92,7 @@ struct nvme_get_log_args {
 	__u8 uuidx;
 	bool rae;
 	bool ot;
+	bool ish;
 };
 
 /**
@@ -171,6 +173,7 @@ struct nvme_get_features_args {
  * @lbaf:	Logical block address format least significant 4 bits
  * @rsvd1:	Reserved
  * @lbafu:	Logical block address format most significant 2 bits
+ * @ish:	Ignore Shutdown (for NVMe-MI command)
  */
 struct nvme_format_nvm_args {
 	__u32 *result;
@@ -185,6 +188,7 @@ struct nvme_format_nvm_args {
 	__u8 lbaf;
 	__u8 rsvd1[7];
 	__u8 lbafu;
+	bool ish;
 };
 
 /**
@@ -200,6 +204,7 @@ struct nvme_format_nvm_args {
  * @rsvd1:	Reserved
  * @rsvd2:	Reserved
  * @data:	Host Software Specified Fields
+ * @ish:	Ignore Shutdown (for NVMe-MI command)
  */
 struct nvme_ns_mgmt_args {
 	__u32 *result;
@@ -213,6 +218,7 @@ struct nvme_ns_mgmt_args {
 	__u8 rsvd1[3];
 	void *rsvd2;
 	struct nvme_ns_mgmt_host_sw_specified *data;
+	bool ish;
 };
 
 /**
@@ -224,6 +230,7 @@ struct nvme_ns_mgmt_args {
  * @timeout:	Timeout in ms
  * @nsid:	Namespace ID to execute attach selection
  * @sel:	Attachment selection, see &enum nvme_ns_attach_sel
+ * @ish:	Ignore Shutdown (for NVMe-MI command)
  */
 struct nvme_ns_attach_args {
 	__u32 *result;
@@ -233,6 +240,7 @@ struct nvme_ns_attach_args {
 	__u32 timeout;
 	__u32 nsid;
 	enum nvme_ns_attach_sel sel;
+	bool ish;
 };
 
 /**
@@ -244,6 +252,7 @@ struct nvme_ns_attach_args {
  * @offset:	Offset in the firmware data
  * @data:	Userspace address of the firmware data
  * @data_len:	Length of data in this command in bytes
+ * @ish:	Ignore Shutdown (for NVMe-MI command)
  */
 struct nvme_fw_download_args {
 	__u32 *result;
@@ -253,6 +262,7 @@ struct nvme_fw_download_args {
 	__u32 timeout;
 	__u32 offset;
 	__u32 data_len;
+	bool ish;
 };
 
 /**
@@ -264,6 +274,7 @@ struct nvme_fw_download_args {
  * @result:	The command completion result from CQE dword0
  * @slot:	Firmware slot to commit the downloaded image
  * @bpid:	Set to true to select the boot partition id
+ * @ish:	Ignore Shutdown (for NVMe-MI command)
  */
 struct nvme_fw_commit_args {
 	__u32 *result;
@@ -273,6 +284,7 @@ struct nvme_fw_commit_args {
 	enum nvme_fw_commit_ca action;
 	__u8 slot;
 	bool bpid;
+	bool ish;
 };
 
 /**
@@ -289,6 +301,7 @@ struct nvme_fw_commit_args {
  * @spsp0:	Security Protocol Specific field
  * @spsp1:	Security Protocol Specific field
  * @secp:	Security Protocol
+ * @ish:	Ignore Shutdown (for NVMe-MI command)
  */
 struct nvme_security_send_args {
 	__u32 *result;
@@ -303,6 +316,7 @@ struct nvme_security_send_args {
 	__u8 spsp0;
 	__u8 spsp1;
 	__u8 secp;
+	bool ish;
 };
 
 /**
@@ -319,6 +333,7 @@ struct nvme_security_send_args {
  * @spsp0:	Security Protocol Specific field
  * @spsp1:	Security Protocol Specific field
  * @secp:	Security Protocol
+ * @ish:	Ignore Shutdown (for NVMe-MI command)
  */
 struct nvme_security_receive_args {
 	__u32 *result;
@@ -333,6 +348,7 @@ struct nvme_security_receive_args {
 	__u8 spsp0;
 	__u8 spsp1;
 	__u8 secp;
+	bool ish;
 };
 
 /**
@@ -513,6 +529,7 @@ struct nvme_get_property_args {
  * @oipbp:	Set to overwrite invert pattern between passes
  * @nodas:	Set to not deallocate blocks after sanitizing
  * @emvs:	Set to enter media verification state
+ * @ish:	Ignore Shutdown (for NVMe-MI command)
  */
 struct nvme_sanitize_nvm_args {
 	__u32 *result;
@@ -526,6 +543,7 @@ struct nvme_sanitize_nvm_args {
 	bool oipbp;
 	bool nodas;
 	bool emvs;
+	bool ish;
 };
 
 /**

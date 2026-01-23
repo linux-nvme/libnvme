@@ -285,6 +285,8 @@ int nvme_identify(struct nvme_identify_args *args)
 
 int nvme_get_log(struct nvme_get_log_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_get_log_args, ot, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_get_log_args, ish, __u64);
 	__u32 numd = (args->len >> 2) - 1;
 	__u16 numdu = numd >> 16, numdl = numd & 0xffff;
 
@@ -313,7 +315,7 @@ int nvme_get_log(struct nvme_get_log_args *args)
 		.timeout_ms	= args->timeout,
 	};
 
-	if (args->args_size < sizeof(struct nvme_get_log_args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -373,6 +375,8 @@ static void nvme_uring_cmd_exit(struct io_uring *ring)
 
 static int nvme_uring_cmd_admin_passthru_async(struct io_uring *ring, struct nvme_get_log_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_get_log_args, ot, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_get_log_args, ish, __u64);
 	struct io_uring_sqe *sqe;
 	struct nvme_uring_cmd *cmd;
 	int ret;
@@ -392,7 +396,7 @@ static int nvme_uring_cmd_admin_passthru_async(struct io_uring *ring, struct nvm
 			NVME_SET(!!args->ot, LOG_CDW14_OT) |
 			NVME_SET(args->csi, LOG_CDW14_CSI);
 
-	if (args->args_size < sizeof(struct nvme_get_log_args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1501,9 +1505,10 @@ int nvme_format_nvm(struct nvme_format_nvm_args *args)
 {
 	const size_t size_v1 = sizeof_args(struct nvme_format_nvm_args, lbaf, __u64);
 	const size_t size_v2 = sizeof_args(struct nvme_format_nvm_args, lbafu, __u64);
+	const size_t size_v3 = sizeof_args(struct nvme_format_nvm_args, ish, __u64);
 	__u32 cdw10;
 
-	if (args->args_size < size_v1 || args->args_size > size_v2) {
+	if (args->args_size < size_v1 || args->args_size > size_v3) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1533,10 +1538,11 @@ int nvme_ns_mgmt(struct nvme_ns_mgmt_args *args)
 {
 	const size_t size_v1 = sizeof_args(struct nvme_ns_mgmt_args, csi, __u64);
 	const size_t size_v2 = sizeof_args(struct nvme_ns_mgmt_args, data, __u64);
+	const size_t size_v3 = sizeof_args(struct nvme_ns_mgmt_args, ish, __u64);
 	__u32 cdw10    = NVME_SET(args->sel, NAMESPACE_MGMT_CDW10_SEL);
 	__u32 cdw11    = NVME_SET(args->csi, NAMESPACE_MGMT_CDW11_CSI);
 
-	if (args->args_size < size_v1 || args->args_size > size_v2) {
+	if (args->args_size < size_v1 || args->args_size > size_v3) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1566,6 +1572,8 @@ int nvme_ns_mgmt(struct nvme_ns_mgmt_args *args)
 
 int nvme_ns_attach(struct nvme_ns_attach_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_ns_attach_args, sel, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_ns_attach_args, ish, __u64);
 	__u32 cdw10 = NVME_SET(args->sel, NAMESPACE_ATTACH_CDW10_SEL);
 
 	struct nvme_passthru_cmd cmd = {
@@ -1577,7 +1585,7 @@ int nvme_ns_attach(struct nvme_ns_attach_args *args)
 		.timeout_ms	= args->timeout,
 	};
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1586,6 +1594,8 @@ int nvme_ns_attach(struct nvme_ns_attach_args *args)
 
 int nvme_fw_download(struct nvme_fw_download_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_fw_download_args, data_len, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_fw_download_args, ish, __u64);
 	__u32 cdw10 = (args->data_len >> 2) - 1;
 	__u32 cdw11 = args->offset >> 2;
 
@@ -1598,7 +1608,7 @@ int nvme_fw_download(struct nvme_fw_download_args *args)
 		.timeout_ms	= args->timeout,
 	};
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1607,6 +1617,8 @@ int nvme_fw_download(struct nvme_fw_download_args *args)
 
 int nvme_fw_commit(struct nvme_fw_commit_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_fw_commit_args, bpid, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_fw_commit_args, ish, __u64);
 	__u32 cdw10 = NVME_SET(args->slot, FW_COMMIT_CDW10_FS) |
 			NVME_SET(args->action, FW_COMMIT_CDW10_CA) |
 			NVME_SET(args->bpid, FW_COMMIT_CDW10_BPID);
@@ -1617,7 +1629,7 @@ int nvme_fw_commit(struct nvme_fw_commit_args *args)
 		.timeout_ms	= args->timeout,
 	};
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1626,6 +1638,8 @@ int nvme_fw_commit(struct nvme_fw_commit_args *args)
 
 int nvme_security_send(struct nvme_security_send_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_security_send_args, secp, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_security_send_args, ish, __u64);
 	__u32 cdw10 = NVME_SET(args->secp, SECURITY_SECP) |
 			NVME_SET(args->spsp0, SECURITY_SPSP0)  |
 			NVME_SET(args->spsp1, SECURITY_SPSP1) |
@@ -1642,7 +1656,7 @@ int nvme_security_send(struct nvme_security_send_args *args)
 		.timeout_ms	= args->timeout,
 	};
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1651,6 +1665,8 @@ int nvme_security_send(struct nvme_security_send_args *args)
 
 int nvme_security_receive(struct nvme_security_receive_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_security_receive_args, secp, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_security_receive_args, ish, __u64);
 	__u32 cdw10 = NVME_SET(args->secp, SECURITY_SECP) |
 			NVME_SET(args->spsp0, SECURITY_SPSP0)  |
 			NVME_SET(args->spsp1, SECURITY_SPSP1) |
@@ -1667,7 +1683,7 @@ int nvme_security_receive(struct nvme_security_receive_args *args)
 		.timeout_ms	= args->timeout,
 	};
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1858,9 +1874,10 @@ int nvme_sanitize_nvm(struct nvme_sanitize_nvm_args *args)
 {
 	const size_t size_v1 = sizeof_args(struct nvme_sanitize_nvm_args, nodas, __u64);
 	const size_t size_v2 = sizeof_args(struct nvme_sanitize_nvm_args, emvs, __u64);
+	const size_t size_v3 = sizeof_args(struct nvme_sanitize_nvm_args, ish, __u64);
 	__u32 cdw10, cdw11;
 
-	if (args->args_size < size_v1 || args->args_size > size_v2) {
+	if (args->args_size < size_v1 || args->args_size > size_v3) {
 		errno = EINVAL;
 		return -1;
 	}

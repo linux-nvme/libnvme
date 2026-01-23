@@ -852,7 +852,7 @@ int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
 				 __u32 data_len, void *data, __u32 metadata_len,
 				 void *metadata, __u32 timeout_ms, __u32 *result)
 {
-	/* Input parameters flags, rsvd, metadata, metadata_len are not used */
+	/* Input parameters rsvd, metadata, metadata_len are not used */
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
 	struct nvme_mi_resp resp;
@@ -895,10 +895,11 @@ int nvme_mi_admin_admin_passthru(nvme_mi_ctrl_t ctrl, __u8 opcode, __u8 flags,
 	req_hdr.cdw14 = cpu_to_le32(cdw14);
 	req_hdr.cdw15 = cpu_to_le32(cdw15);
 	req_hdr.doff = 0;
+	req_hdr.flags = flags;
 	if (data_len != 0) {
 		req_hdr.dlen = cpu_to_le32(data_len);
 		/* Bit 0 set to 1 means DLEN contains a value */
-		req_hdr.flags = 0x1;
+		req_hdr.flags |= 0x1;
 	}
 
 	if (has_write_data) {
@@ -1030,6 +1031,8 @@ static int __nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl,
 				   const struct nvme_get_log_args *args,
 				   off_t offset, size_t *lenp, bool final)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_get_log_args, ot, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_get_log_args, ish, __u64);
 	__u64 log_page_offset = args->lpo + offset;
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
@@ -1038,6 +1041,11 @@ static int __nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl,
 	size_t len;
 	__u32 ndw;
 	int rc;
+
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	/* MI spec requires that the data length field is less than or equal
 	 * to 4096 */
@@ -1069,8 +1077,10 @@ static int __nvme_mi_admin_get_log(nvme_mi_ctrl_t ctrl,
 				    (args->ot ? 1 : 0) << 23 |
 				    args->uuidx);
 	req_hdr.flags = 0x1;
-	req_hdr.dlen = cpu_to_le32(len & 0xffffffff);
+	if (args->args_size == size_v2)
+		req_hdr.flags |= (((args->ish) ? 1 : 0) << 0x2);
 
+	req_hdr.dlen = cpu_to_le32(len & 0xffffffff);
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 	resp.data = args->log + offset;
 	resp.data_len = len;
@@ -1268,14 +1278,15 @@ int nvme_mi_admin_get_ana_log_atomic(nvme_mi_ctrl_t ctrl, bool rgo, bool rae,
 int nvme_mi_admin_security_send(nvme_mi_ctrl_t ctrl,
 				struct nvme_security_send_args *args)
 {
-
+	const size_t size_v1 = sizeof_args(struct nvme_security_send_args, secp, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_security_send_args, ish, __u64);
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
 	struct nvme_mi_resp resp;
 	struct nvme_mi_req req;
 	int rc;
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1296,6 +1307,8 @@ int nvme_mi_admin_security_send(nvme_mi_ctrl_t ctrl,
 	req_hdr.cdw11 = cpu_to_le32(args->data_len & 0xffffffff);
 
 	req_hdr.flags = 0x1;
+	if (args->args_size == size_v2)
+		req_hdr.flags |= (((args->ish) ? 1 : 0) << 0x2);
 	req_hdr.dlen = cpu_to_le32(args->data_len & 0xffffffff);
 	req.data = args->data;
 	req.data_len = args->data_len;
@@ -1312,14 +1325,15 @@ int nvme_mi_admin_security_send(nvme_mi_ctrl_t ctrl,
 int nvme_mi_admin_security_recv(nvme_mi_ctrl_t ctrl,
 				struct nvme_security_receive_args *args)
 {
-
+	const size_t size_v1 = sizeof_args(struct nvme_security_receive_args, secp, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_security_receive_args, ish, __u64);
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
 	struct nvme_mi_resp resp;
 	struct nvme_mi_req req;
 	int rc;
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1340,6 +1354,8 @@ int nvme_mi_admin_security_recv(nvme_mi_ctrl_t ctrl,
 	req_hdr.cdw11 = cpu_to_le32(args->data_len & 0xffffffff);
 
 	req_hdr.flags = 0x1;
+	if (args->args_size == size_v2)
+		req_hdr.flags |= (((args->ish) ? 1 : 0) << 0x2);
 	req_hdr.dlen = cpu_to_le32(args->data_len & 0xffffffff);
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
@@ -1505,6 +1521,7 @@ int nvme_mi_admin_ns_mgmt(nvme_mi_ctrl_t ctrl,
 {
 	const size_t size_v1 = sizeof_args(struct nvme_ns_mgmt_args, csi, __u64);
 	const size_t size_v2 = sizeof_args(struct nvme_ns_mgmt_args, data, __u64);
+	const size_t size_v3 = sizeof_args(struct nvme_ns_mgmt_args, ish, __u64);
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
 	struct nvme_mi_resp resp;
@@ -1512,7 +1529,7 @@ int nvme_mi_admin_ns_mgmt(nvme_mi_ctrl_t ctrl,
 	int rc;
 	size_t data_len;
 
-	if (args->args_size < size_v1 || args->args_size > size_v2) {
+	if (args->args_size < size_v1 || args->args_size > size_v3) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1543,6 +1560,9 @@ int nvme_mi_admin_ns_mgmt(nvme_mi_ctrl_t ctrl,
 		req_hdr.flags = 0x1;
 	}
 
+	if (args->args_size == size_v3)
+		req_hdr.flags |= (((args->ish) ? 1 : 0) << 0x2);
+
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
 	rc = nvme_mi_submit(ctrl->ep, &req, &resp);
@@ -1555,13 +1575,15 @@ int nvme_mi_admin_ns_mgmt(nvme_mi_ctrl_t ctrl,
 int nvme_mi_admin_ns_attach(nvme_mi_ctrl_t ctrl,
 			    struct nvme_ns_attach_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_ns_attach_args, sel, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_ns_attach_args, ish, __u64);
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
 	struct nvme_mi_resp resp;
 	struct nvme_mi_req req;
 	int rc;
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1575,6 +1597,8 @@ int nvme_mi_admin_ns_attach(nvme_mi_ctrl_t ctrl,
 	req.data_len = sizeof(*args->ctrlist);
 	req_hdr.dlen = cpu_to_le32(sizeof(*args->ctrlist));
 	req_hdr.flags = 0x1;
+	if (args->args_size == size_v2)
+		req_hdr.flags |= (((args->ish) ? 1 : 0) << 0x2);
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
@@ -1588,13 +1612,15 @@ int nvme_mi_admin_ns_attach(nvme_mi_ctrl_t ctrl,
 int nvme_mi_admin_fw_download(nvme_mi_ctrl_t ctrl,
 			      struct nvme_fw_download_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_fw_download_args, data_len, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_fw_download_args, ish, __u64);
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
 	struct nvme_mi_resp resp;
 	struct nvme_mi_req req;
 	int rc;
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1618,6 +1644,8 @@ int nvme_mi_admin_fw_download(nvme_mi_ctrl_t ctrl,
 	req.data_len = args->data_len;
 	req_hdr.dlen = cpu_to_le32(args->data_len);
 	req_hdr.flags = 0x1;
+	if (args->args_size == size_v2)
+		req_hdr.flags |= (((args->ish) ? 1 : 0) << 0x2);
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
@@ -1631,13 +1659,15 @@ int nvme_mi_admin_fw_download(nvme_mi_ctrl_t ctrl,
 int nvme_mi_admin_fw_commit(nvme_mi_ctrl_t ctrl,
 			    struct nvme_fw_commit_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_fw_commit_args, bpid, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_fw_commit_args, ish, __u64);
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
 	struct nvme_mi_resp resp;
 	struct nvme_mi_req req;
 	int rc;
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1648,6 +1678,8 @@ int nvme_mi_admin_fw_commit(nvme_mi_ctrl_t ctrl,
 	req_hdr.cdw10 = cpu_to_le32(((__u32)(args->bpid & 0x1) << 31) |
 				    ((args->action & 0x7) << 3) |
 				    ((args->slot & 0x7) << 0));
+	if (args->args_size == size_v2)
+		req_hdr.flags = (((args->ish) ? 1 : 0) << 0x2);
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
@@ -1661,13 +1693,15 @@ int nvme_mi_admin_fw_commit(nvme_mi_ctrl_t ctrl,
 int nvme_mi_admin_format_nvm(nvme_mi_ctrl_t ctrl,
 			     struct nvme_format_nvm_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_format_nvm_args, lbafu, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_format_nvm_args, ish, __u64);
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
 	struct nvme_mi_resp resp;
 	struct nvme_mi_req req;
 	int rc;
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1682,6 +1716,8 @@ int nvme_mi_admin_format_nvm(nvme_mi_ctrl_t ctrl,
 				    | ((args->pi & 0x7) << 5)
 				    | ((args->mset & 0x1) << 4)
 				    | ((args->lbaf & 0xf) << 0));
+	if (args->args_size == size_v2)
+		req_hdr.flags = (((args->ish) ? 1 : 0) << 0x2);
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
@@ -1695,13 +1731,15 @@ int nvme_mi_admin_format_nvm(nvme_mi_ctrl_t ctrl,
 int nvme_mi_admin_sanitize_nvm(nvme_mi_ctrl_t ctrl,
 			       struct nvme_sanitize_nvm_args *args)
 {
+	const size_t size_v1 = sizeof_args(struct nvme_sanitize_nvm_args, emvs, __u64);
+	const size_t size_v2 = sizeof_args(struct nvme_sanitize_nvm_args, ish, __u64);
 	struct nvme_mi_admin_resp_hdr resp_hdr;
 	struct nvme_mi_admin_req_hdr req_hdr;
 	struct nvme_mi_resp resp;
 	struct nvme_mi_req req;
 	int rc;
 
-	if (args->args_size < sizeof(*args)) {
+	if (args->args_size < size_v1 || args->args_size > size_v2) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1715,6 +1753,8 @@ int nvme_mi_admin_sanitize_nvm(nvme_mi_ctrl_t ctrl,
 				    | ((args->ause ? 1 : 0) << 3)
 				    | ((args->sanact & 0x7) << 0));
 	req_hdr.cdw11 = cpu_to_le32(args->ovrpat);
+	if (args->args_size == size_v2)
+		req_hdr.flags = (((args->ish) ? 1 : 0) << 0x2);
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 
