@@ -883,7 +883,7 @@ static int nvme_scan_subsystem(struct nvme_root *r, const char *name)
 				continue;
 			if (strcmp(_s->name, name))
 				continue;
-			if (!nvme_subsystem_scan_namespaces(r, _s)) {
+			if (nvme_subsystem_scan_namespaces(r, _s)) {
 				errno = EINVAL;
 				return -1;
 			}
@@ -904,7 +904,7 @@ static int nvme_scan_subsystem(struct nvme_root *r, const char *name)
 			errno = ENOMEM;
 			return -1;
 		}
-		if (!nvme_subsystem_scan_namespaces(r, s)) {
+		if (nvme_subsystem_scan_namespaces(r, s)) {
 			errno = EINVAL;
 			return -1;
 		}
