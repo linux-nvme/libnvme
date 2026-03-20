@@ -2013,10 +2013,9 @@ static void nvme_read_sysfs_tls(nvme_root_t r, nvme_ctrl_t c)
 
 	key = nvme_get_ctrl_attr(c, "tls_key");
 	if (!key) {
-		/* tls_key is only present if --tls has been used. */
+		/* tls_key is only present if --tls or --concat has been used */
 		return;
 	}
-	c->cfg.tls = true;
 
 	keyring = nvme_get_ctrl_attr(c, "tls_keyring");
 	nvme_ctrl_set_keyring(c, keyring);
