@@ -1980,6 +1980,20 @@ static char *nvme_ctrl_lookup_phy_slot(nvme_root_t r, const char *address)
 	return NULL;
 }
 
+static void nvme_read_sysfs_tls_mode(nvme_root_t r, nvme_ctrl_t c)
+{
+	_cleanup_free_ char *mode = NULL;
+
+	mode = nvme_get_ctrl_attr(c, "tls_mode");
+	if (!mode)
+		return;
+
+	if (!strcmp(mode, "tls"))
+		c->cfg.tls = true;
+	else if (!strcmp(mode, "concat"))
+		c->cfg.concat = true;
+}
+
 static void nvme_read_sysfs_dhchap(nvme_root_t r, nvme_ctrl_t c)
 {
 	char *host_key, *ctrl_key;
@@ -2088,6 +2102,7 @@ static int nvme_reconfigure_ctrl(nvme_root_t r, nvme_ctrl_t c, const char *path,
 	c->phy_slot = nvme_ctrl_lookup_phy_slot(r, c->address);
 	nvme_read_sysfs_dhchap(r, c);
 	nvme_read_sysfs_tls(r, c);
+	nvme_read_sysfs_tls_mode(r, c);
 
 	errno = 0; /* cleanup after nvme_get_ctrl_attr() */
 	return 0;
