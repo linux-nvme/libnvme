@@ -1280,7 +1280,8 @@ out_free_log:
 	return NULL;
 }
 
-static void sanitize_discovery_log_entry(struct nvmf_disc_log_entry *e)
+static void sanitize_discovery_log_entry(nvme_root_t r,
+		struct nvmf_disc_log_entry *e)
 {
 	strchomp(e->trsvcid, sizeof(e->trsvcid));
 	strchomp(e->traddr, sizeof(e->traddr));
@@ -1292,8 +1293,11 @@ static void sanitize_discovery_log_entry(struct nvmf_disc_log_entry *e)
 	if (e->trtype == NVMF_TRTYPE_FC) {
 		char *comma = strchr(e->traddr, ',');
 
-		if (comma)
+		if (comma) {
+			nvme_msg(r, LOG_WARNING,
+				"invalid traddr separator ',' instead ':', fixing it");
 			*comma = ':';
+		}
 	}
 }
 
@@ -1314,13 +1318,17 @@ int nvmf_get_discovery_log(nvme_ctrl_t c, struct nvmf_discovery_log **logp,
 struct nvmf_discovery_log *nvmf_get_discovery_wargs(struct nvme_get_discovery_args *args)
 {
 	struct nvmf_discovery_log *log;
+	nvme_ctrl_t c;
+	nvme_root_t r;
 
 	log = nvme_discovery_log(args);
 	if (!log)
 		return NULL;
 
+	c = args->c;
+	r = c->s && c->s->h ? c->s->h->r : NULL;
 	for (int i = 0; i < le64_to_cpu(log->numrec); i++)
-		sanitize_discovery_log_entry(&log->entries[i]);
+		sanitize_discovery_log_entry(r, &log->entries[i]);
 
 	return log;
 }
