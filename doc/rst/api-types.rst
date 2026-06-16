@@ -1,6 +1,6 @@
 
 
-.. c:type:: struct nvme_identify_args
+.. c:struct:: nvme_identify_args
 
    Arguments for the NVMe Identify command
 
@@ -61,7 +61,7 @@
 
 
 
-.. c:type:: struct nvme_get_log_args
+.. c:struct:: nvme_get_log_args
 
    Arguments for the NVMe Admin Get Log command
 
@@ -141,7 +141,7 @@
 
 
 
-.. c:type:: struct nvme_set_features_args
+.. c:struct:: nvme_set_features_args
 
    Arguments for the NVMe Admin Set Feature command
 
@@ -214,7 +214,7 @@
 
 
 
-.. c:type:: struct nvme_get_features_args
+.. c:struct:: nvme_get_features_args
 
    Arguments for the NVMe Admin Get Feature command
 
@@ -276,7 +276,7 @@
 
 
 
-.. c:type:: struct nvme_format_nvm_args
+.. c:struct:: nvme_format_nvm_args
 
    Arguments for the Format Nvme Namespace command
 
@@ -342,7 +342,7 @@
 
 
 
-.. c:type:: struct nvme_ns_mgmt_args
+.. c:struct:: nvme_ns_mgmt_args
 
    Arguments for NVMe Namespace Management command
 
@@ -403,7 +403,7 @@
 
 
 
-.. c:type:: struct nvme_ns_attach_args
+.. c:struct:: nvme_ns_attach_args
 
    Arguments for Nvme Namespace Management command
 
@@ -448,7 +448,7 @@
 
 
 
-.. c:type:: struct nvme_fw_download_args
+.. c:struct:: nvme_fw_download_args
 
    Arguments for the NVMe Firmware Download command
 
@@ -493,7 +493,7 @@
 
 
 
-.. c:type:: struct nvme_fw_commit_args
+.. c:struct:: nvme_fw_commit_args
 
    Arguments for the NVMe Firmware Commit command
 
@@ -538,7 +538,7 @@
 
 
 
-.. c:type:: struct nvme_security_send_args
+.. c:struct:: nvme_security_send_args
 
    Arguments for the NVMe Security Send command
 
@@ -603,7 +603,7 @@
 
 
 
-.. c:type:: struct nvme_security_receive_args
+.. c:struct:: nvme_security_receive_args
 
    Arguments for the NVMe Security Receive command
 
@@ -668,7 +668,7 @@
 
 
 
-.. c:type:: struct nvme_get_lba_status_args
+.. c:struct:: nvme_get_lba_status_args
 
    Arguments for the NVMe Get LBA Status command
 
@@ -726,7 +726,7 @@
 
 
 
-.. c:type:: struct nvme_directive_send_args
+.. c:struct:: nvme_directive_send_args
 
    Arguments for the NVMe Directive Send command
 
@@ -787,7 +787,7 @@
 
 
 
-.. c:type:: struct nvme_directive_recv_args
+.. c:struct:: nvme_directive_recv_args
 
    Arguments for the NVMe Directive Receive command
 
@@ -848,7 +848,7 @@
 
 
 
-.. c:type:: struct nvme_capacity_mgmt_args
+.. c:struct:: nvme_capacity_mgmt_args
 
    Arguments for the NVMe Capacity Management command
 
@@ -899,7 +899,7 @@
 
 
 
-.. c:type:: struct nvme_lockdown_args
+.. c:struct:: nvme_lockdown_args
 
    Arguments for the NVME Lockdown command
 
@@ -952,7 +952,7 @@
 
 
 
-.. c:type:: struct nvme_set_property_args
+.. c:struct:: nvme_set_property_args
 
    Arguments for NVMe Set Property command
 
@@ -993,7 +993,7 @@
 
 
 
-.. c:type:: struct nvme_get_property_args
+.. c:struct:: nvme_get_property_args
 
    Arguments for NVMe Get Property command
 
@@ -1030,7 +1030,7 @@
 
 
 
-.. c:type:: struct nvme_sanitize_nvm_args
+.. c:struct:: nvme_sanitize_nvm_args
 
    Arguments for the NVMe Sanitize NVM command
 
@@ -1091,7 +1091,7 @@
 
 
 
-.. c:type:: struct nvme_dev_self_test_args
+.. c:struct:: nvme_dev_self_test_args
 
    Arguments for the NVMe Device Self Test command
 
@@ -1132,7 +1132,7 @@
 
 
 
-.. c:type:: struct nvme_virtual_mgmt_args
+.. c:struct:: nvme_virtual_mgmt_args
 
    Arguments for the NVMe Virtualization resource management command
 
@@ -1181,7 +1181,7 @@
 
 
 
-.. c:type:: struct nvme_io_args
+.. c:struct:: nvme_io_args
 
    Arguments for NVMe I/O commands
 
@@ -1300,7 +1300,7 @@
 
 
 
-.. c:type:: struct nvme_dsm_args
+.. c:struct:: nvme_dsm_args
 
    Arguments for the NVMe Dataset Management command
 
@@ -1349,7 +1349,7 @@
 
 
 
-.. c:type:: struct nvme_copy_args
+.. c:struct:: nvme_copy_args
 
    Arguments for the NVMe Copy command
 
@@ -1443,7 +1443,7 @@
 
 
 
-.. c:type:: struct nvme_resv_acquire_args
+.. c:struct:: nvme_resv_acquire_args
 
    Arguments for the NVMe Reservation Acquire Command
 
@@ -1501,7 +1501,7 @@
 
 
 
-.. c:type:: struct nvme_resv_register_args
+.. c:struct:: nvme_resv_register_args
 
    Arguments for the NVMe Reservation Register command
 
@@ -1559,7 +1559,7 @@
 
 
 
-.. c:type:: struct nvme_resv_release_args
+.. c:struct:: nvme_resv_release_args
 
    Arguments for the NVMe Reservation Release Command
 
@@ -1612,7 +1612,7 @@
 
 
 
-.. c:type:: struct nvme_resv_report_args
+.. c:struct:: nvme_resv_report_args
 
    Arguments for the NVMe Reservation Report command
 
@@ -1662,7 +1662,7 @@
 
 
 
-.. c:type:: struct nvme_io_mgmt_recv_args
+.. c:struct:: nvme_io_mgmt_recv_args
 
    Arguments for the NVMe I/O Management Receive command
 
@@ -1711,7 +1711,7 @@
 
 
 
-.. c:type:: struct nvme_io_mgmt_send_args
+.. c:struct:: nvme_io_mgmt_send_args
 
    Arguments for the NVMe I/O Management Send command
 
@@ -1760,7 +1760,7 @@
 
 
 
-.. c:type:: struct nvme_zns_mgmt_send_args
+.. c:struct:: nvme_zns_mgmt_send_args
 
    Arguments for the NVMe ZNS Management Send command
 
@@ -1821,7 +1821,7 @@
 
 
 
-.. c:type:: struct nvme_zns_mgmt_recv_args
+.. c:struct:: nvme_zns_mgmt_recv_args
 
    Arguments for the NVMe ZNS Management Receive command
 
@@ -1882,7 +1882,7 @@
 
 
 
-.. c:type:: struct nvme_zns_append_args
+.. c:struct:: nvme_zns_append_args
 
    Arguments for the NVMe ZNS Append command
 
@@ -1967,7 +1967,7 @@
 
 
 
-.. c:type:: struct nvme_dim_args
+.. c:struct:: nvme_dim_args
 
    Arguments for the Discovery Information Management (DIM) command
 
@@ -2012,7 +2012,7 @@
 
 
 
-.. c:type:: struct nvme_lm_cdq_args
+.. c:struct:: nvme_lm_cdq_args
 
    Arguments for Controller Data Queue (CDQ) command
 
@@ -2079,7 +2079,7 @@
 
 
 
-.. c:type:: struct nvme_lm_track_send_args
+.. c:struct:: nvme_lm_track_send_args
 
    Arguments for the Track Send command
 
@@ -2124,7 +2124,7 @@
 
 
 
-.. c:type:: struct nvme_lm_migration_send_args
+.. c:struct:: nvme_lm_migration_send_args
 
    Arguments for the Migration Send command
 
@@ -2216,7 +2216,7 @@
 
 
 
-.. c:type:: struct nvme_lm_migration_recv_args
+.. c:struct:: nvme_lm_migration_recv_args
 
    Arguments for the Migration Receive command
 

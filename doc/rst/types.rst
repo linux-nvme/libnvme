@@ -5,7 +5,9 @@
 
 NVMe standard definitions
 
-.. c:function:: NVME_GET (value, name)
+.. c:macro:: NVME_GET
+
+``NVME_GET (value, name)``
 
    extract field from complex value
 
@@ -28,7 +30,9 @@ sub-field.
 The 'name' field from 'value'
 
 
-.. c:function:: NVME_SET (value, name)
+.. c:macro:: NVME_SET
+
+``NVME_SET (value, name)``
 
    set field into complex value
 
@@ -45,7 +49,9 @@ The 'name' field from 'value'
 The 'name' field from 'value'
 
 
-.. c:function:: NVME_CHECK (value, name, check)
+.. c:macro:: NVME_CHECK
+
+``NVME_CHECK (value, name, check)``
 
    check value to compare field value
 
@@ -65,7 +71,9 @@ The 'name' field from 'value'
 The result of compare the value and the sub-field value
 
 
-.. c:function:: NVME_VAL (name)
+.. c:macro:: NVME_VAL
+
+``NVME_VAL (name)``
 
    get mask value shifted
 
@@ -81,7 +89,7 @@ The mask value shifted
 
 
 
-.. c:type:: enum nvme_constants
+.. c:enum:: nvme_constants
 
    A place to stash various constant nvme values
 
@@ -199,7 +207,7 @@ The mask value shifted
 
 
 
-.. c:type:: enum nvme_csi
+.. c:enum:: nvme_csi
 
    Defined command set indicators
 
@@ -223,7 +231,7 @@ The mask value shifted
 
 
 
-.. c:type:: enum nvme_register_offsets
+.. c:enum:: nvme_register_offsets
 
    controller registers for all transports. This is the layout of BAR0/1 for PCIe, and properties for fabrics.
 
@@ -337,7 +345,7 @@ true if given offset is 64bit register, otherwise it returns false.
 
 
 
-.. c:type:: enum nvme_cap
+.. c:enum:: nvme_cap
 
    This field indicates the controller capabilities register
 
@@ -469,7 +477,7 @@ true if given offset is 64bit register, otherwise it returns false.
 
 
 
-.. c:type:: enum nvme_vs
+.. c:enum:: nvme_vs
 
    This field indicates the version
 
@@ -496,7 +504,7 @@ true if given offset is 64bit register, otherwise it returns false.
 
 
 
-.. c:type:: enum nvme_cc
+.. c:enum:: nvme_cc
 
    This field indicates the controller configuration
 
@@ -586,7 +594,7 @@ true if given offset is 64bit register, otherwise it returns false.
 
 
 
-.. c:type:: enum nvme_csts
+.. c:enum:: nvme_csts
 
    This field indicates the controller status register
 
@@ -643,7 +651,7 @@ true if given offset is 64bit register, otherwise it returns false.
 
 
 
-.. c:type:: enum nvme_aqa
+.. c:enum:: nvme_aqa
 
    This field indicates the admin queue attributes
 
@@ -664,7 +672,7 @@ true if given offset is 64bit register, otherwise it returns false.
 
 
 
-.. c:type:: enum nvme_asq
+.. c:enum:: nvme_asq
 
    This field indicates the admin submission queue base address
 
@@ -676,7 +684,7 @@ true if given offset is 64bit register, otherwise it returns false.
 
 
 
-.. c:type:: enum nvme_acq
+.. c:enum:: nvme_acq
 
    This field indicates the admin completion queue base address
 
@@ -688,7 +696,7 @@ true if given offset is 64bit register, otherwise it returns false.
 
 
 
-.. c:type:: enum nvme_cmbloc
+.. c:enum:: nvme_cmbloc
 
    This field indicates the controller memory buffer location
 
@@ -745,7 +753,7 @@ true if given offset is 64bit register, otherwise it returns false.
 
 
 
-.. c:type:: enum nvme_cmbsz
+.. c:enum:: nvme_cmbsz
 
    This field indicates the controller memory buffer size
 
@@ -831,7 +839,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_bpinfo
+.. c:enum:: nvme_bpinfo
 
    This field indicates the boot partition information
 
@@ -870,7 +878,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_bprsel
+.. c:enum:: nvme_bprsel
 
    This field indicates the boot partition read select
 
@@ -897,7 +905,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_bpmbl
+.. c:enum:: nvme_bpmbl
 
    This field indicates the boot partition memory buffer location
 
@@ -909,7 +917,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_cmbmsc
+.. c:enum:: nvme_cmbmsc
 
    This field indicates the controller memory buffer memory space control
 
@@ -933,7 +941,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_cmbsts
+.. c:enum:: nvme_cmbsts
 
    This field indicates the controller memory buffer status
 
@@ -948,7 +956,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_unit
+.. c:enum:: nvme_unit
 
    Defined buffer size and write throughput granularity units
 
@@ -969,7 +977,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_cmbebs
+.. c:enum:: nvme_cmbebs
 
    This field indicates the controller memory buffer elasticity buffer size
 
@@ -1008,7 +1016,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_cmbswtp
+.. c:enum:: nvme_cmbswtp
 
    This field indicates the controller memory buffer sustained write throughput
 
@@ -1041,7 +1049,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_crto
+.. c:enum:: nvme_crto
 
    This field indicates the controller ready timeouts
 
@@ -1062,7 +1070,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_pmrcap
+.. c:enum:: nvme_pmrcap
 
    This field indicates the persistent memory region capabilities
 
@@ -1125,7 +1133,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_pmrctl
+.. c:enum:: nvme_pmrctl
 
    This field indicates the persistent memory region control
 
@@ -1140,7 +1148,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_pmrsts
+.. c:enum:: nvme_pmrsts
 
    This field indicates the persistent memory region status
 
@@ -1173,7 +1181,7 @@ size of controller memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_pmrebs
+.. c:enum:: nvme_pmrebs
 
    This field indicates the persistent memory region elasticity buffer size
 
@@ -1226,7 +1234,7 @@ size of controller persistent memory buffer in bytes
 
 
 
-.. c:type:: enum nvme_pmrswtp
+.. c:enum:: nvme_pmrswtp
 
    This field indicates the persistent memory region sustained write throughput
 
@@ -1273,7 +1281,7 @@ throughput of controller persistent memory buffer in bytes/second
 
 
 
-.. c:type:: enum nvme_pmrmsc
+.. c:enum:: nvme_pmrmsc
 
    This field indicates the persistent memory region memory space control
 
@@ -1291,7 +1299,7 @@ throughput of controller persistent memory buffer in bytes/second
 
 
 
-.. c:type:: enum nvme_flbas
+.. c:enum:: nvme_flbas
 
    This field indicates the formatted LBA size
 
@@ -1318,7 +1326,7 @@ throughput of controller persistent memory buffer in bytes/second
 
 
 
-.. c:type:: enum nvme_psd_flags
+.. c:enum:: nvme_psd_flags
 
    Possible flag values in nvme power state descriptor
 
@@ -1341,7 +1349,7 @@ throughput of controller persistent memory buffer in bytes/second
 
 
 
-.. c:type:: enum nvme_psd_ps
+.. c:enum:: nvme_psd_ps
 
    Known values for :c:type:`struct nvme_psd <nvme_psd>` ``ips`` and ``aps``. Use with nvme_psd_power_scale() to extract the power scale field to match this enum.
 
@@ -1373,7 +1381,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_psd_workload
+.. c:enum:: nvme_psd_workload
 
    Specifies a workload hint in the Power Management Feature (see :c:type:`struct nvme_psd <nvme_psd>`.apw) to inform the NVM subsystem or indicate the conditions for the active power level.
 
@@ -1402,7 +1410,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_psd
+.. c:struct:: nvme_id_psd
 
    Power Management data structure
 
@@ -1524,7 +1532,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_ctrl
+.. c:struct:: nvme_id_ctrl
 
    Identify Controller data structure
 
@@ -2177,7 +2185,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_cmic
+.. c:enum:: nvme_cmic
 
    This field indicates the controller multi-path I/O and NS sharing capabilities
 
@@ -2216,7 +2224,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_cmic
+.. c:enum:: nvme_id_ctrl_cmic
 
    Controller Multipath IO and Namespace Sharing Capabilities of the controller and NVM subsystem.
 
@@ -2250,7 +2258,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_oaes
+.. c:enum:: nvme_id_ctrl_oaes
 
    Optional Asynchronous Events Supported
 
@@ -2376,7 +2384,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_ctratt
+.. c:enum:: nvme_id_ctrl_ctratt
 
    Controller attributes
 
@@ -2447,7 +2455,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_bpcap
+.. c:enum:: nvme_id_ctrl_bpcap
 
    Boot Partition Capabilities
 
@@ -2488,7 +2496,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_plsi
+.. c:enum:: nvme_id_ctrl_plsi
 
    Power Loss Signaling Information
 
@@ -2513,7 +2521,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_crcap
+.. c:enum:: nvme_id_ctrl_crcap
 
    Power Loss Signaling Information
 
@@ -2538,7 +2546,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_cntrltype
+.. c:enum:: nvme_id_ctrl_cntrltype
 
    Controller types
 
@@ -2556,7 +2564,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_dctype
+.. c:enum:: nvme_id_ctrl_dctype
 
    Discovery Controller types
 
@@ -2574,7 +2582,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_nvmsr
+.. c:enum:: nvme_id_ctrl_nvmsr
 
    This field reports information associated with the NVM Subsystem, see :c:type:`struct nvme_id_ctrl <nvme_id_ctrl>`.nvmsr.
 
@@ -2593,7 +2601,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_vwci
+.. c:enum:: nvme_id_ctrl_vwci
 
    This field indicates information about remaining number of times that VPD contents are able to be updated using the VPD Write command, see :c:type:`struct nvme_id_ctrl <nvme_id_ctrl>`.vwci.
 
@@ -2618,7 +2626,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_mec
+.. c:enum:: nvme_id_ctrl_mec
 
    Flags indicating the capabilities of the Management Endpoint in the Controller, :c:type:`struct nvme_id_ctrl <nvme_id_ctrl>`.mec.
 
@@ -2635,7 +2643,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_oacs
+.. c:enum:: nvme_id_ctrl_oacs
 
    Flags indicating the optional Admin commands and features supported by the controller, see :c:type:`struct nvme_id_ctrl <nvme_id_ctrl>`.oacs.
 
@@ -2765,7 +2773,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_frmw
+.. c:enum:: nvme_id_ctrl_frmw
 
    Flags and values indicates capabilities regarding firmware updates from :c:type:`struct nvme_id_ctrl <nvme_id_ctrl>`.frmw.
 
@@ -2790,7 +2798,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_lpa
+.. c:enum:: nvme_id_ctrl_lpa
 
    Flags indicating optional attributes for log pages that are accessed via the Get Log Page command.
 
@@ -2837,7 +2845,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_avscc
+.. c:enum:: nvme_id_ctrl_avscc
 
    Flags indicating the configuration settings for Admin Vendor Specific command handling.
 
@@ -2851,7 +2859,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_apsta
+.. c:enum:: nvme_id_ctrl_apsta
 
    Flags indicating the attributes of the autonomous power state transition feature.
 
@@ -2864,7 +2872,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_rpmbs
+.. c:enum:: nvme_id_ctrl_rpmbs
 
    This field indicates if the controller supports one or more Replay Protected Memory Blocks, from :c:type:`struct nvme_id_ctrl <nvme_id_ctrl>`.rpmbs.
 
@@ -2885,7 +2893,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_dsto
+.. c:enum:: nvme_id_ctrl_dsto
 
    Flags indicating the optional Device Self-test command or operation behaviors supported by the controller or NVM subsystem.
 
@@ -2918,7 +2926,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_hctm
+.. c:enum:: nvme_id_ctrl_hctm
 
    Flags indicate the attributes of the host controlled thermal management feature
 
@@ -2933,7 +2941,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_sanicap
+.. c:enum:: nvme_id_ctrl_sanicap
 
    Indicates attributes for sanitize operations.
 
@@ -2965,7 +2973,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_anacap
+.. c:enum:: nvme_id_ctrl_anacap
 
    This field indicates the capabilities associated with Asymmetric Namespace Access Reporting.
 
@@ -3006,7 +3014,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_kpioc
+.. c:enum:: nvme_id_ctrl_kpioc
 
    Key Per I/O Capabilities
 
@@ -3031,7 +3039,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_sqes
+.. c:enum:: nvme_id_ctrl_sqes
 
    Defines the required and maximum Submission Queue entry size when using the NVM Command Set.
 
@@ -3048,7 +3056,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_cqes
+.. c:enum:: nvme_id_ctrl_cqes
 
    Defines the required and maximum Completion Queue entry size when using the NVM Command Set.
 
@@ -3065,7 +3073,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_oncs
+.. c:enum:: nvme_id_ctrl_oncs
 
    This field indicates the optional NVM commands and features supported by the controller.
 
@@ -3138,7 +3146,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_fuses
+.. c:enum:: nvme_id_ctrl_fuses
 
    This field indicates the fused operations that the controller supports.
 
@@ -3151,7 +3159,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_fna
+.. c:enum:: nvme_id_ctrl_fna
 
    This field indicates attributes for the Format NVM command.
 
@@ -3214,7 +3222,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_vwc
+.. c:enum:: nvme_id_ctrl_vwc
 
    Volatile write cache
 
@@ -3233,7 +3241,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_nvscc
+.. c:enum:: nvme_id_ctrl_nvscc
 
    This field indicates the configuration settings for NVM Vendor Specific command handling.
 
@@ -3246,7 +3254,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_nwpc
+.. c:enum:: nvme_id_ctrl_nwpc
 
    This field indicates the optional namespace write protection capabilities supported by the controller.
 
@@ -3275,7 +3283,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_sgls
+.. c:enum:: nvme_id_ctrl_sgls
 
    This field indicates if SGLs are supported for the NVM Command Set and the particular SGL types supported.
 
@@ -3300,7 +3308,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_trattr
+.. c:enum:: nvme_id_ctrl_trattr
 
    Tracking Attributes
 
@@ -3333,7 +3341,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_fcatt
+.. c:enum:: nvme_id_ctrl_fcatt
 
    This field indicates attributes of the controller that are specific to NVMe over Fabrics.
 
@@ -3347,7 +3355,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_ofcs
+.. c:enum:: nvme_id_ctrl_ofcs
 
    Indicate whether the controller supports optional fabric commands.
 
@@ -3361,7 +3369,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_lbaf
+.. c:struct:: nvme_lbaf
 
    LBA Format Data Structure
 
@@ -3392,7 +3400,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_lbaf_rp
+.. c:enum:: nvme_lbaf_rp
 
    This field indicates the relative performance of the LBA format indicated relative to other LBA formats supported by the controller.
 
@@ -3417,7 +3425,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_ns
+.. c:struct:: nvme_id_ns
 
    Identify Namespace data structure
 
@@ -3666,7 +3674,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_nsfeat
+.. c:enum:: nvme_id_nsfeat
 
    This field defines features of the namespace.
 
@@ -3704,7 +3712,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ns_flbas
+.. c:enum:: nvme_id_ns_flbas
 
    This field indicates the LBA data size & metadata size combination that the namespace has been formatted with
 
@@ -3733,7 +3741,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_nvm_id_ns_elbaf
+.. c:enum:: nvme_nvm_id_ns_elbaf
 
    This field indicates the extended LBA format
 
@@ -3754,7 +3762,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_nvm_id_ns_pif
+.. c:enum:: nvme_nvm_id_ns_pif
 
    This field indicates the type of the Protection Information Format
 
@@ -3778,7 +3786,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ns_mc
+.. c:enum:: nvme_id_ns_mc
 
    This field indicates the capabilities for metadata.
 
@@ -3796,7 +3804,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ns_dpc
+.. c:enum:: nvme_id_ns_dpc
 
    This field indicates the capabilities for the end-to-end data protection feature.
 
@@ -3827,7 +3835,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ns_dps
+.. c:enum:: nvme_id_ns_dps
 
    This field indicates the Type settings for the end-to-end data protection feature.
 
@@ -3856,7 +3864,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ns_nmic
+.. c:enum:: nvme_id_ns_nmic
 
    This field specifies multi-path I/O and namespace sharing capabilities of the namespace.
 
@@ -3869,7 +3877,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ns_rescap
+.. c:enum:: nvme_id_ns_rescap
 
    This field indicates the reservation capabilities of the namespace.
 
@@ -3910,7 +3918,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_nd_ns_fpi
+.. c:enum:: nvme_nd_ns_fpi
 
    If a format operation is in progress, this field indicates the percentage of the namespace that remains to be formatted.
 
@@ -3926,7 +3934,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ns_dlfeat
+.. c:enum:: nvme_id_ns_dlfeat
 
    This field indicates information about features that affect deallocating logical blocks for this namespace.
 
@@ -3961,7 +3969,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ns_attr
+.. c:enum:: nvme_id_ns_attr
 
    Specifies attributes of the namespace.
 
@@ -3975,7 +3983,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_ns_id_desc
+.. c:struct:: nvme_ns_id_desc
 
    Namespace identifier type descriptor
 
@@ -4011,7 +4019,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_ns_id_desc_nidt
+.. c:enum:: nvme_ns_id_desc_nidt
 
    Known namespace identifier types
 
@@ -4035,7 +4043,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_nvmset_attr
+.. c:struct:: nvme_nvmset_attr
 
    NVM Set Attributes Entry
 
@@ -4087,7 +4095,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_nvmset_list
+.. c:struct:: nvme_id_nvmset_list
 
    NVM set list
 
@@ -4116,7 +4124,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_independent_id_ns
+.. c:struct:: nvme_id_independent_id_ns
 
    Identify - I/O Command Set Independent Identify Namespace Data Structure
 
@@ -4194,7 +4202,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_ns_granularity_desc
+.. c:struct:: nvme_id_ns_granularity_desc
 
    Namespace Granularity Descriptor
 
@@ -4219,7 +4227,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_ns_granularity_list
+.. c:struct:: nvme_id_ns_granularity_list
 
    Namespace Granularity List
 
@@ -4256,7 +4264,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_uuid_list_entry
+.. c:struct:: nvme_id_uuid_list_entry
 
    UUID List Entry
 
@@ -4285,7 +4293,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_uuid
+.. c:enum:: nvme_id_uuid
 
    Identifier Association
 
@@ -4302,7 +4310,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_uuid_list
+.. c:struct:: nvme_id_uuid_list
 
    UUID list
 
@@ -4327,7 +4335,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_ctrl_list
+.. c:struct:: nvme_ctrl_list
 
    Controller List
 
@@ -4352,7 +4360,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_ns_list
+.. c:struct:: nvme_ns_list
 
    Namespace List
 
@@ -4373,7 +4381,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_ctrl_nvm_lbamqf
+.. c:enum:: nvme_id_ctrl_nvm_lbamqf
 
    LBA Migration Queue Format
 
@@ -4388,7 +4396,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_ctrl_nvm
+.. c:struct:: nvme_id_ctrl_nvm
 
    I/O Command Set Specific Identify Controller data structure
 
@@ -4453,7 +4461,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_nvm_id_ns
+.. c:struct:: nvme_nvm_id_ns
 
    NVME Command Set I/O Command Set Specific Identify Namespace Data Structure
 
@@ -4522,7 +4530,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_zns_lbafe
+.. c:struct:: nvme_zns_lbafe
 
    LBA Format Extension Data Structure
 
@@ -4551,7 +4559,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_zns_id_ns
+.. c:struct:: nvme_zns_id_ns
 
    Zoned Namespace Command Set Specific Identify Namespace Data Structure
 
@@ -4644,7 +4652,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_zns_id_ctrl
+.. c:struct:: nvme_zns_id_ctrl
 
    I/O Command Set Specific Identify Controller Data Structure for the Zoned Namespace Command Set
 
@@ -4669,7 +4677,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_primary_ctrl_cap
+.. c:struct:: nvme_primary_ctrl_cap
 
    Identify - Controller Capabilities Structure
 
@@ -4758,7 +4766,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_secondary_ctrl
+.. c:struct:: nvme_secondary_ctrl
 
    Secondary Controller Entry
 
@@ -4807,7 +4815,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_secondary_ctrl_list
+.. c:struct:: nvme_secondary_ctrl_list
 
    Secondary Controller List
 
@@ -4836,7 +4844,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_iocs
+.. c:struct:: nvme_id_iocs
 
    NVMe Identify IO Command Set data structure
 
@@ -4857,7 +4865,7 @@ power scale value
 
 
 
-.. c:type:: enum nvme_id_iocs_iocsc
+.. c:enum:: nvme_id_iocs_iocsc
 
    This field indicates the Identify I/O Command Set Data Structure
 
@@ -4900,7 +4908,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_domain_attr
+.. c:struct:: nvme_id_domain_attr
 
    Domain Attributes Entry
 
@@ -4941,7 +4949,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_domain_list
+.. c:struct:: nvme_id_domain_list
 
    Domain List
 
@@ -4970,7 +4978,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_id_endurance_group_list
+.. c:struct:: nvme_id_endurance_group_list
 
    Endurance Group List
 
@@ -4995,7 +5003,7 @@ power scale value
 
 
 
-.. c:type:: struct nvme_supported_log_pages
+.. c:struct:: nvme_supported_log_pages
 
    Supported Log Pages - Log
 
@@ -5020,7 +5028,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: struct nvme_error_log_page
+.. c:struct:: nvme_error_log_page
 
    Error Information Log Entry (Log Identifier 01h)
 
@@ -5147,7 +5155,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_err_status_field
+.. c:enum:: nvme_err_status_field
 
    This field indicates the error information log entry status field
 
@@ -5168,7 +5176,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: struct nvme_smart_log
+.. c:struct:: nvme_smart_log
 
    SMART / Health Information Log (Log Identifier 02h)
 
@@ -5409,7 +5417,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_smart_crit
+.. c:enum:: nvme_smart_crit
 
    Critical Warning
 
@@ -5508,7 +5516,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_smart_egcw
+.. c:enum:: nvme_smart_egcw
 
    Endurance Group Critical Warning Summary
 
@@ -5533,7 +5541,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: struct nvme_firmware_slot
+.. c:struct:: nvme_firmware_slot
 
    Firmware Slot Information Log
 
@@ -5566,7 +5574,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: struct nvme_cmd_effects_log
+.. c:struct:: nvme_cmd_effects_log
 
    Commands Supported and Effects Log
 
@@ -5595,7 +5603,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_cmd_effects
+.. c:enum:: nvme_cmd_effects
 
    Commands Supported and Effects
 
@@ -5628,7 +5636,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: struct nvme_st_result
+.. c:struct:: nvme_st_result
 
    Self-test Result
 
@@ -5711,7 +5719,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_status_result
+.. c:enum:: nvme_status_result
 
    Result of the device self-test operation
 
@@ -5765,7 +5773,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_st_code
+.. c:enum:: nvme_st_code
 
    Self-test Code value
 
@@ -5796,7 +5804,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_st_curr_op
+.. c:enum:: nvme_st_curr_op
 
    Current Device Self-Test Operation
 
@@ -5828,7 +5836,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_st_valid_diag_info
+.. c:enum:: nvme_st_valid_diag_info
 
    Valid Diagnostic Information
 
@@ -5853,7 +5861,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: struct nvme_self_test_log
+.. c:struct:: nvme_self_test_log
 
    Device Self-test (Log Identifier 06h)
 
@@ -5902,7 +5910,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_cmd_get_log_telemetry_host_lsp
+.. c:enum:: nvme_cmd_get_log_telemetry_host_lsp
 
    Telemetry Host-Initiated log specific field
 
@@ -5917,7 +5925,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: enum nvme_telemetry_da
+.. c:enum:: nvme_telemetry_da
 
    Telemetry Log Data Area
 
@@ -5941,7 +5949,7 @@ Supported Log Pages (Log Identifier 00h)
 
 
 
-.. c:type:: struct nvme_telemetry_log
+.. c:struct:: nvme_telemetry_log
 
    Retrieve internal data specific to the manufacturer.
 
@@ -6050,7 +6058,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_endurance_group_log
+.. c:struct:: nvme_endurance_group_log
 
    Endurance Group Information Log
 
@@ -6143,7 +6151,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_eg_critical_warning_flags
+.. c:enum:: nvme_eg_critical_warning_flags
 
    Endurance Group Information Log - Critical Warning
 
@@ -6163,7 +6171,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_aggregate_endurance_group_event
+.. c:struct:: nvme_aggregate_endurance_group_event
 
    Endurance Group Event Aggregate
 
@@ -6188,7 +6196,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_nvmset_predictable_lat_log
+.. c:struct:: nvme_nvmset_predictable_lat_log
 
    Predictable Latency Mode - Deterministic Threshold Configuration Data
 
@@ -6261,7 +6269,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_nvmeset_pl_status
+.. c:enum:: nvme_nvmeset_pl_status
 
    Predictable Latency Per NVM Set Log - Status
 
@@ -6279,7 +6287,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_nvmset_pl_events
+.. c:enum:: nvme_nvmset_pl_events
 
    Predictable Latency Per NVM Set Log - Event Type
 
@@ -6307,7 +6315,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_aggregate_predictable_lat_event
+.. c:struct:: nvme_aggregate_predictable_lat_event
 
    Predictable Latency Event Aggregate Log Page
 
@@ -6332,7 +6340,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_ana_group_desc
+.. c:struct:: nvme_ana_group_desc
 
    ANA Group Descriptor
 
@@ -6373,7 +6381,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_ana_state
+.. c:enum:: nvme_ana_state
 
    ANA Group Descriptor - Asymmetric Namespace Access State
 
@@ -6397,7 +6405,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_ana_log
+.. c:struct:: nvme_ana_log
 
    Asymmetric Namespace Access Log
 
@@ -6430,7 +6438,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_persistent_event_log
+.. c:struct:: nvme_persistent_event_log
 
    Persistent Event Log
 
@@ -6523,7 +6531,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_pel_rci
+.. c:enum:: nvme_pel_rci
 
    This field indicates the persistent event log reporting context
 
@@ -6564,7 +6572,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_pel_rci_rcpit
+.. c:enum:: nvme_pel_rci_rcpit
 
    Persistent Event Log Reporting Context - Port Identifier Type
 
@@ -6582,7 +6590,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_persistent_event_entry
+.. c:struct:: nvme_persistent_event_entry
 
    Persistent Event
 
@@ -6639,7 +6647,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_persistent_event_types
+.. c:enum:: nvme_persistent_event_types
 
    Persistent event log events
 
@@ -6696,7 +6704,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_pel_ehai
+.. c:enum:: nvme_pel_ehai
 
    This field indicates the persistent event header additional information
 
@@ -6721,7 +6729,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_pel_ehai_pit
+.. c:enum:: nvme_pel_ehai_pit
 
    Persistent Event Header Additional Information - Port Identifier Type
 
@@ -6742,7 +6750,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fw_commit_event
+.. c:struct:: nvme_fw_commit_event
 
    Firmware Commit Event Data
 
@@ -6787,7 +6795,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_timestamp
+.. c:struct:: nvme_timestamp
 
    Timestamp - Data Structure for Get Features
 
@@ -6816,7 +6824,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_time_stamp_change_event
+.. c:struct:: nvme_time_stamp_change_event
 
    Timestamp Change Event
 
@@ -6841,7 +6849,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_power_on_reset_info_list
+.. c:struct:: nvme_power_on_reset_info_list
 
    Controller Reset Information
 
@@ -6886,7 +6894,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_nss_hw_err_event
+.. c:struct:: nvme_nss_hw_err_event
 
    NVM Subsystem Hardware Error Event
 
@@ -6915,7 +6923,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_change_ns_event
+.. c:struct:: nvme_change_ns_event
 
    Change Namespace Event Data
 
@@ -6984,7 +6992,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_format_nvm_start_event
+.. c:struct:: nvme_format_nvm_start_event
 
    Format NVM Start Event Data
 
@@ -7017,7 +7025,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_format_nvm_compln_event
+.. c:struct:: nvme_format_nvm_compln_event
 
    Format NVM Completion Event Data
 
@@ -7054,7 +7062,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_sanitize_start_event
+.. c:struct:: nvme_sanitize_start_event
 
    Sanitize Start Event Data
 
@@ -7083,7 +7091,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_sanitize_compln_event
+.. c:struct:: nvme_sanitize_compln_event
 
    Sanitize Completion Event Data
 
@@ -7116,7 +7124,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_set_feature_event
+.. c:struct:: nvme_set_feature_event
 
    Set Feature Event Data
 
@@ -7141,7 +7149,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_set_feat_event_layout
+.. c:enum:: nvme_set_feat_event_layout
 
    This field indicates the set feature event layout
 
@@ -7174,7 +7182,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_thermal_exc_event
+.. c:struct:: nvme_thermal_exc_event
 
    Thermal Excursion Event Data
 
@@ -7199,7 +7207,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_lba_rd
+.. c:struct:: nvme_lba_rd
 
    LBA Range Descriptor
 
@@ -7228,7 +7236,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_lbas_ns_element
+.. c:struct:: nvme_lbas_ns_element
 
    LBA Status Log Namespace Element
 
@@ -7265,7 +7273,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_lba_status_atype
+.. c:enum:: nvme_lba_status_atype
 
    Action type the controller uses to return LBA status
 
@@ -7286,7 +7294,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_lba_status_log
+.. c:struct:: nvme_lba_status_log
 
    LBA Status Information Log
 
@@ -7327,7 +7335,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_eg_event_aggregate_log
+.. c:struct:: nvme_eg_event_aggregate_log
 
    Endurance Group Event Aggregate
 
@@ -7352,7 +7360,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_fid_supported_effects
+.. c:enum:: nvme_fid_supported_effects
 
    FID Supported and Effects Data Structure definitions
 
@@ -7406,7 +7414,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fid_supported_effects_log
+.. c:struct:: nvme_fid_supported_effects_log
 
    Feature Identifiers Supported and Effects
 
@@ -7427,7 +7435,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_mi_cmd_supported_effects
+.. c:enum:: nvme_mi_cmd_supported_effects
 
    MI Command Supported and Effects Data Structure
 
@@ -7475,7 +7483,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_mi_cmd_supported_effects_log
+.. c:struct:: nvme_mi_cmd_supported_effects_log
 
    NVMe-MI Commands Supported and Effects Log
 
@@ -7500,7 +7508,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_boot_partition
+.. c:struct:: nvme_boot_partition
 
    Boot Partition Log
 
@@ -7538,7 +7546,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_boot_partition_info
+.. c:enum:: nvme_boot_partition_info
 
    This field indicates the boot partition information
 
@@ -7563,7 +7571,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_rotational_media_info_log
+.. c:struct:: nvme_rotational_media_info_log
 
    Rotational Media Information Log
 
@@ -7616,7 +7624,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_dispersed_ns_participating_nss_log
+.. c:struct:: nvme_dispersed_ns_participating_nss_log
 
    Dispersed Namespace Participating NVM Subsystems Log
 
@@ -7649,7 +7657,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_mgmt_addr_desc
+.. c:struct:: nvme_mgmt_addr_desc
 
    Management Address Descriptor
 
@@ -7678,7 +7686,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_mgmt_addr_list_log
+.. c:struct:: nvme_mgmt_addr_list_log
 
    Management Address List Log
 
@@ -7699,7 +7707,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_eom_lane_desc
+.. c:struct:: nvme_eom_lane_desc
 
    EOM Lane Descriptor
 
@@ -7768,7 +7776,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_phy_rx_eom_log
+.. c:struct:: nvme_phy_rx_eom_log
 
    Physical Interface Receiver Eye Opening Measurement Log
 
@@ -7873,7 +7881,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_eom_optional_data_present
+.. c:enum:: nvme_eom_optional_data_present
 
    EOM Optional Data Present Fields
 
@@ -7906,7 +7914,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_eom_optional_data
+.. c:enum:: nvme_eom_optional_data
 
    EOM Optional Data Present Fields (Deprecated)
 
@@ -7921,7 +7929,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_phy_rx_eom_progress
+.. c:enum:: nvme_phy_rx_eom_progress
 
    EOM In Progress Values
 
@@ -7939,7 +7947,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_reachability_group_desc
+.. c:struct:: nvme_reachability_group_desc
 
    Reachability Group Descriptor
 
@@ -7976,7 +7984,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_reachability_groups_log
+.. c:struct:: nvme_reachability_groups_log
 
    Reachability Groups Log
 
@@ -8009,7 +8017,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_reachability_association_desc
+.. c:struct:: nvme_reachability_association_desc
 
    Reachability Association Descriptor
 
@@ -8050,7 +8058,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_reachability_associations_log
+.. c:struct:: nvme_reachability_associations_log
 
    Reachability Associations Log
 
@@ -8083,7 +8091,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_media_unit_stat_desc
+.. c:struct:: nvme_media_unit_stat_desc
 
    Media Unit Status Descriptor
 
@@ -8136,7 +8144,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_media_unit_stat_log
+.. c:struct:: nvme_media_unit_stat_log
 
    Media Unit Status
 
@@ -8173,7 +8181,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_media_unit_config_desc
+.. c:struct:: nvme_media_unit_config_desc
 
    Media Unit Configuration Descriptor
 
@@ -8202,7 +8210,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_channel_config_desc
+.. c:struct:: nvme_channel_config_desc
 
    Channel Configuration Descriptor
 
@@ -8232,7 +8240,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_end_grp_chan_desc
+.. c:struct:: nvme_end_grp_chan_desc
 
    Endurance Group Channel Configuration Descriptor
 
@@ -8258,7 +8266,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_end_grp_config_desc
+.. c:struct:: nvme_end_grp_config_desc
 
    Endurance Group Configuration Descriptor
 
@@ -8311,7 +8319,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_capacity_config_desc
+.. c:struct:: nvme_capacity_config_desc
 
    Capacity Configuration structure definitions
 
@@ -8350,7 +8358,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_supported_cap_config_list_log
+.. c:struct:: nvme_supported_cap_config_list_log
 
    Supported Capacity Configuration list log page
 
@@ -8380,7 +8388,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_lockdown_log
+.. c:struct:: nvme_lockdown_log
 
    Command and Feature Lockdown Log
 
@@ -8413,7 +8421,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_resv_notification_log
+.. c:struct:: nvme_resv_notification_log
 
    Reservation Notification Log
 
@@ -8454,7 +8462,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_resv_notify_rnlpt
+.. c:enum:: nvme_resv_notify_rnlpt
 
    Reservation Notification Log - Reservation Notification Log Page Type
 
@@ -8475,7 +8483,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_sanitize_log_page
+.. c:struct:: nvme_sanitize_log_page
 
    Sanitize Status (Log Identifier 81h)
 
@@ -8601,7 +8609,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_sanitize_sstat
+.. c:enum:: nvme_sanitize_sstat
 
    Sanitize Status (SSTAT)
 
@@ -8681,7 +8689,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_sanitize_ssi
+.. c:enum:: nvme_sanitize_ssi
 
    Sanitize State Information (SSI)
 
@@ -8746,7 +8754,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_zns_changed_zone_log
+.. c:struct:: nvme_zns_changed_zone_log
 
    ZNS Changed Zone List log
 
@@ -8775,7 +8783,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_zns_zt
+.. c:enum:: nvme_zns_zt
 
    Zone Descriptor Data Structure - Zone Type
 
@@ -8787,7 +8795,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_zns_za
+.. c:enum:: nvme_zns_za
 
    Zone Descriptor Data Structure
 
@@ -8810,7 +8818,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_zns_zs
+.. c:enum:: nvme_zns_zs
 
    Zone Descriptor Data Structure - Zone State
 
@@ -8840,7 +8848,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_zns_desc
+.. c:struct:: nvme_zns_desc
 
    Zone Descriptor Data Structure
 
@@ -8893,7 +8901,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_zone_report
+.. c:struct:: nvme_zone_report
 
    Report Zones Data Structure
 
@@ -8922,7 +8930,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_fdp_ruh_type
+.. c:enum:: nvme_fdp_ruh_type
 
    Reclaim Unit Handle Type
 
@@ -8937,7 +8945,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_ruh_desc
+.. c:struct:: nvme_fdp_ruh_desc
 
    Reclaim Unit Handle Descriptor
 
@@ -8962,7 +8970,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_fdp_config_fdpa
+.. c:enum:: nvme_fdp_config_fdpa
 
    FDP Attributes
 
@@ -8989,7 +8997,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_lockdown_log_scope
+.. c:enum:: nvme_lockdown_log_scope
 
    lockdown log page scope attributes
 
@@ -9010,7 +9018,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_lockdown_log_contents
+.. c:enum:: nvme_lockdown_log_contents
 
    lockdown log page content attributes
 
@@ -9028,7 +9036,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_lockdown_scope_contents
+.. c:enum:: nvme_lockdown_scope_contents
 
    Lockdown Log shift and mask
 
@@ -9049,7 +9057,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_config_desc
+.. c:struct:: nvme_fdp_config_desc
 
    FDP Configuration Descriptor
 
@@ -9110,7 +9118,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_config_log
+.. c:struct:: nvme_fdp_config_log
 
    FDP Configurations Log Page
 
@@ -9151,7 +9159,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_fdp_ruha
+.. c:enum:: nvme_fdp_ruha
 
    Reclaim Unit Handle Attributes
 
@@ -9172,7 +9180,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_ruhu_desc
+.. c:struct:: nvme_fdp_ruhu_desc
 
    Reclaim Unit Handle Usage Descriptor
 
@@ -9197,7 +9205,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_ruhu_log
+.. c:struct:: nvme_fdp_ruhu_log
 
    Reclaim Unit Handle Usage Log Page
 
@@ -9226,7 +9234,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_stats_log
+.. c:struct:: nvme_fdp_stats_log
 
    FDP Statistics Log Page
 
@@ -9259,7 +9267,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_fdp_event_type
+.. c:enum:: nvme_fdp_event_type
 
    FDP Event Types
 
@@ -9286,7 +9294,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_fdp_event_realloc_flags
+.. c:enum:: nvme_fdp_event_realloc_flags
 
    Media Reallocated Event Type Specific Flags
 
@@ -9298,7 +9306,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_event_realloc
+.. c:struct:: nvme_fdp_event_realloc
 
    Media Reallocated Event Type Specific Information
 
@@ -9335,7 +9343,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_fdp_event_flags
+.. c:enum:: nvme_fdp_event_flags
 
    FDP Event Flags
 
@@ -9353,7 +9361,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_event
+.. c:struct:: nvme_fdp_event
 
    FDP Event
 
@@ -9410,7 +9418,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_events_log
+.. c:struct:: nvme_fdp_events_log
 
    FDP Events Log Page
 
@@ -9439,7 +9447,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_feat_fdp_events_cdw11
+.. c:struct:: nvme_feat_fdp_events_cdw11
 
    FDP Events Feature Command Dword 11 Deprecated: doesn't support this struct. Use NVME_FEAT_FDPE_*** definitions instead.
 
@@ -9468,7 +9476,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_fdp_supported_event_attributes
+.. c:enum:: nvme_fdp_supported_event_attributes
 
    Supported FDP Event Attributes
 
@@ -9483,7 +9491,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_supported_event_desc
+.. c:struct:: nvme_fdp_supported_event_desc
 
    Supported FDP Event Descriptor
 
@@ -9508,7 +9516,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_ruh_status_desc
+.. c:struct:: nvme_fdp_ruh_status_desc
 
    Reclaim Unit Handle Status Descriptor
 
@@ -9545,7 +9553,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_fdp_ruh_status
+.. c:struct:: nvme_fdp_ruh_status
 
    Reclaim Unit Handle Status
 
@@ -9574,7 +9582,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_lba_status_desc
+.. c:struct:: nvme_lba_status_desc
 
    LBA Status Descriptor Entry
 
@@ -9611,7 +9619,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_lba_status
+.. c:struct:: nvme_lba_status
 
    LBA Status Descriptor List
 
@@ -9644,7 +9652,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_lba_status_cmpc
+.. c:enum:: nvme_lba_status_cmpc
 
    Get LBA Status Command Completion Condition
 
@@ -9666,7 +9674,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_feat_auto_pst
+.. c:struct:: nvme_feat_auto_pst
 
    Autonomous Power State Transition
 
@@ -9687,7 +9695,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_apst_entry
+.. c:enum:: nvme_apst_entry
 
    Autonomous Power State Transition
 
@@ -9708,7 +9716,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_std_perf_attr
+.. c:struct:: nvme_std_perf_attr
 
    Standard performance attribute structure
 
@@ -9737,7 +9745,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_perf_attr_id
+.. c:struct:: nvme_perf_attr_id
 
    Performance attribute identifier structure
 
@@ -9758,7 +9766,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_perf_attr_id_list
+.. c:struct:: nvme_perf_attr_id_list
 
    Performance attribute identifier list structure
 
@@ -9800,7 +9808,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_vs_perf_attr
+.. c:struct:: nvme_vs_perf_attr
 
    Vendor specific performance attribute structure
 
@@ -9833,7 +9841,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_perf_characteristics
+.. c:struct:: nvme_perf_characteristics
 
    Performance attribute structure
 
@@ -9871,7 +9879,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_metadata_element_desc
+.. c:struct:: nvme_metadata_element_desc
 
    Metadata Element Descriptor
 
@@ -9904,7 +9912,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_host_metadata
+.. c:struct:: nvme_host_metadata
 
    Host Metadata Data Structure
 
@@ -9942,7 +9950,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_ctrl_metadata_type
+.. c:enum:: nvme_ctrl_metadata_type
 
    Controller Metadata Element Types
 
@@ -10005,7 +10013,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_ns_metadata_type
+.. c:enum:: nvme_ns_metadata_type
 
    Namespace Metadata Element Types
 
@@ -10030,7 +10038,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_lba_range_type_entry
+.. c:struct:: nvme_lba_range_type_entry
 
    LBA Range Type - Data Structure Entry
 
@@ -10075,7 +10083,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_lbart
+.. c:enum:: nvme_lbart
 
    LBA Range Type - Data Structure Entry
 
@@ -10105,7 +10113,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_lba_range_type
+.. c:struct:: nvme_lba_range_type
 
    LBA Range Type
 
@@ -10126,7 +10134,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_plm_config
+.. c:struct:: nvme_plm_config
 
    Predictable Latency Mode - Deterministic Threshold Configuration Data Structure
 
@@ -10167,7 +10175,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_feat_host_behavior
+.. c:struct:: nvme_feat_host_behavior
 
    Host Behavior Support - Data Structure
 
@@ -10208,7 +10216,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_host_behavior_support
+.. c:enum:: nvme_host_behavior_support
 
    Enable Advanced Command
 
@@ -10220,7 +10228,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_dsm_range
+.. c:struct:: nvme_dsm_range
 
    Dataset Management - Range Definition
 
@@ -10249,7 +10257,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_copy_range
+.. c:struct:: nvme_copy_range
 
    Copy - Source Range Entries Descriptor Format
 
@@ -10295,7 +10303,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_copy_range_f1
+.. c:struct:: nvme_copy_range_f1
 
    Copy - Source Range Entries Descriptor Format 1h
 
@@ -10341,7 +10349,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_copy_range_sopt
+.. c:enum:: nvme_copy_range_sopt
 
    NVMe Copy Range Source Options
 
@@ -10353,7 +10361,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_copy_range_f2
+.. c:struct:: nvme_copy_range_f2
 
    Copy - Source Range Entries Descriptor Format 2h
 
@@ -10407,7 +10415,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_copy_range_f3
+.. c:struct:: nvme_copy_range_f3
 
    Copy - Source Range Entries Descriptor Format 3h
 
@@ -10465,7 +10473,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_registered_ctrl
+.. c:struct:: nvme_registered_ctrl
 
    Registered Controller Data Structure
 
@@ -10502,7 +10510,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_registered_ctrl_ext
+.. c:struct:: nvme_registered_ctrl_ext
 
    Registered Controller Extended Data Structure
 
@@ -10543,7 +10551,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_resv_status
+.. c:struct:: nvme_resv_status
 
    Reservation Status Data Structure
 
@@ -10606,7 +10614,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_streams_directive_params
+.. c:struct:: nvme_streams_directive_params
 
    Streams Directive - Return Parameters Data Structure
 
@@ -10663,7 +10671,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_streams_directive_status
+.. c:struct:: nvme_streams_directive_status
 
    Streams Directive - Get Status Data Structure
 
@@ -10688,7 +10696,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_id_directives
+.. c:struct:: nvme_id_directives
 
    Identify Directive - Return Parameters Data Structure
 
@@ -10717,7 +10725,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_directive_types
+.. c:enum:: nvme_directive_types
 
    Directives Supported or Enabled
 
@@ -10735,7 +10743,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvme_host_mem_buf_attrs
+.. c:struct:: nvme_host_mem_buf_attrs
 
    Host Memory Buffer - Attributes Data Structure
 
@@ -10772,7 +10780,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_ae_type
+.. c:enum:: nvme_ae_type
 
    Asynchronous Event Type
 
@@ -10802,7 +10810,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_ae_info_error
+.. c:enum:: nvme_ae_info_error
 
    Asynchronous Event Information - Error Status
 
@@ -10829,7 +10837,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_ae_info_smart
+.. c:enum:: nvme_ae_info_smart
 
    Asynchronous Event Information - SMART / Health Status
 
@@ -10847,7 +10855,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_ae_info_css_nvm
+.. c:enum:: nvme_ae_info_css_nvm
 
    Asynchronous Event Information - I/O Command Specific Status
 
@@ -10866,7 +10874,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_ae_info_notice
+.. c:enum:: nvme_ae_info_notice
 
    Asynchronous Event Information - Notice
 
@@ -10899,7 +10907,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvme_subsys_type
+.. c:enum:: nvme_subsys_type
 
    Type of the NVM subsystem.
 
@@ -10930,7 +10938,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_disc_eflags
+.. c:enum:: nvmf_disc_eflags
 
    Discovery Log Page entry flags.
 
@@ -10967,7 +10975,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: union nvmf_tsas
+.. c:union:: nvmf_tsas
 
    Transport Specific Address Subtype
 
@@ -11005,7 +11013,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvmf_disc_log_entry
+.. c:struct:: nvmf_disc_log_entry
 
    Discovery Log Page entry
 
@@ -11107,7 +11115,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_trtype
+.. c:enum:: nvmf_trtype
 
    Transport Type codes for Discovery Log Page entry TRTYPE field
 
@@ -11135,7 +11143,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_addr_family
+.. c:enum:: nvmf_addr_family
 
    Address Family codes for Discovery Log Page entry ADRFAM field
 
@@ -11163,7 +11171,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_treq
+.. c:enum:: nvmf_treq
 
    Transport Requirements codes for Discovery Log Page entry TREQ field
 
@@ -11184,7 +11192,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_rdma_qptype
+.. c:enum:: nvmf_rdma_qptype
 
    RDMA QP Service Type codes for Discovery Log Page entry TSAS RDMA_QPTYPE field
 
@@ -11199,7 +11207,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_rdma_prtype
+.. c:enum:: nvmf_rdma_prtype
 
    RDMA Provider Type codes for Discovery Log Page entry TSAS RDMA_PRTYPE field
 
@@ -11223,7 +11231,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_rdma_cms
+.. c:enum:: nvmf_rdma_cms
 
    RDMA Connection Management Service Type codes for Discovery Log Page entry TSAS RDMA_CMS field
 
@@ -11235,7 +11243,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_tcp_sectype
+.. c:enum:: nvmf_tcp_sectype
 
    Transport Specific Address Subtype Definition for NVMe/TCP Transport
 
@@ -11255,7 +11263,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_log_discovery_lid_support
+.. c:enum:: nvmf_log_discovery_lid_support
 
    Discovery log specific support
 
@@ -11276,7 +11284,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_log_discovery_lsp
+.. c:enum:: nvmf_log_discovery_lsp
 
    Discovery log specific field
 
@@ -11297,7 +11305,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvmf_discovery_log
+.. c:struct:: nvmf_discovery_log
 
    Discovery Log Page (Log Identifier 70h)
 
@@ -11341,7 +11349,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_dim_tas
+.. c:enum:: nvmf_dim_tas
 
    Discovery Information Management Task
 
@@ -11359,7 +11367,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_dim_entfmt
+.. c:enum:: nvmf_dim_entfmt
 
    Discovery Information Management Entry Format
 
@@ -11374,7 +11382,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_dim_etype
+.. c:enum:: nvmf_dim_etype
 
    Discovery Information Management Entity Type
 
@@ -11392,7 +11400,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: enum nvmf_exattype
+.. c:enum:: nvmf_exattype
 
    Extended Attribute Type
 
@@ -11407,7 +11415,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvmf_ext_attr
+.. c:struct:: nvmf_ext_attr
 
    Extended Attribute (EXAT)
 
@@ -11437,7 +11445,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: struct nvmf_ext_die
+.. c:struct:: nvmf_ext_die
 
    Extended Discovery Information Entry (DIE)
 
@@ -11522,7 +11530,7 @@ bytes, in size. This log captures the controller’s internal state.
 
 
 
-.. c:type:: union nvmf_die
+.. c:union:: nvmf_die
 
    Discovery Information Entry (DIE)
 
@@ -11562,7 +11570,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvmf_dim_data
+.. c:struct:: nvmf_dim_data
 
    Discovery Information Management (DIM) - Data
 
@@ -11631,7 +11639,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvmf_connect_data
+.. c:struct:: nvmf_connect_data
 
    Data payload for the 'connect' command
 
@@ -11672,7 +11680,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_host_ext_discover_log
+.. c:struct:: nvme_host_ext_discover_log
 
    Host Extended Discovery Log
 
@@ -11737,7 +11745,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_host_discover_log
+.. c:struct:: nvme_host_discover_log
 
    Host Discovery Log
 
@@ -11786,7 +11794,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_ave_tr_record
+.. c:struct:: nvme_ave_tr_record
 
    AVE Transport Record
 
@@ -11819,7 +11827,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_ave_discover_log_entry
+.. c:struct:: nvme_ave_discover_log_entry
 
    AVE Discovery Log Entry
 
@@ -11856,7 +11864,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_ave_discover_log
+.. c:struct:: nvme_ave_discover_log
 
    AVE Discovery Log
 
@@ -11901,7 +11909,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_pull_model_ddc_req_log
+.. c:struct:: nvme_pull_model_ddc_req_log
 
    Pull Model DDC Request Log
 
@@ -11934,7 +11942,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_read_nvm_ss_info
+.. c:struct:: nvme_mi_read_nvm_ss_info
 
    NVM Subsystem Information Data Structure
 
@@ -11967,7 +11975,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_port_pcie
+.. c:struct:: nvme_mi_port_pcie
 
    PCIe Port Specific Data
 
@@ -12012,7 +12020,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_port_smb
+.. c:struct:: nvme_mi_port_smb
 
    SMBus Port Specific Data
 
@@ -12053,7 +12061,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_read_port_info
+.. c:struct:: nvme_mi_read_port_info
 
    Port Information Data Structure
 
@@ -12099,7 +12107,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_read_ctrl_info
+.. c:struct:: nvme_mi_read_ctrl_info
 
    Controller Information Data Structure
 
@@ -12152,7 +12160,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_osc
+.. c:struct:: nvme_mi_osc
 
    Optionally Supported Command Data Structure
 
@@ -12177,7 +12185,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_read_sc_list
+.. c:struct:: nvme_mi_read_sc_list
 
    Management Endpoint Buffer Supported Command List Data Structure
 
@@ -12203,7 +12211,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_nvm_ss_health_status
+.. c:struct:: nvme_mi_nvm_ss_health_status
 
    Subsystem Management Data Structure
 
@@ -12244,7 +12252,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: enum nvme_mi_ccs
+.. c:enum:: nvme_mi_ccs
 
    Get State Control Primitive Success Response Fields - Control Primitive Specific Response
 
@@ -12289,7 +12297,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_ctrl_health_status
+.. c:struct:: nvme_mi_ctrl_health_status
 
    Controller Health Data Structure (CHDS)
 
@@ -12334,7 +12342,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: enum nvme_mi_csts
+.. c:enum:: nvme_mi_csts
 
    Controller Health Data Structure (CHDS) - Controller Status (CSTS)
 
@@ -12364,7 +12372,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: enum nvme_mi_cwarn
+.. c:enum:: nvme_mi_cwarn
 
    Controller Health Data Structure (CHDS) - Critical Warning (CWARN)
 
@@ -12388,7 +12396,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_vpd_mra
+.. c:struct:: nvme_mi_vpd_mra
 
    NVMe MultiRecord Area
 
@@ -12469,7 +12477,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_vpd_ppmra
+.. c:struct:: nvme_mi_vpd_ppmra
 
    NVMe PCIe Port MultiRecord Area
 
@@ -12522,7 +12530,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_vpd_telem
+.. c:struct:: nvme_mi_vpd_telem
 
    Vital Product Data Element Descriptor
 
@@ -12556,7 +12564,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: enum nvme_mi_elem
+.. c:enum:: nvme_mi_elem
 
    Element Descriptor Types
 
@@ -12586,7 +12594,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_vpd_tra
+.. c:struct:: nvme_mi_vpd_tra
 
    Vital Product Data Topology MultiRecord
 
@@ -12619,7 +12627,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_vpd_mr_common
+.. c:struct:: nvme_mi_vpd_mr_common
 
    NVMe MultiRecord Area
 
@@ -12673,7 +12681,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: struct nvme_mi_vpd_hdr
+.. c:struct:: nvme_mi_vpd_hdr
 
    Vital Product Data Common Header
 
@@ -12726,7 +12734,7 @@ entries are of a variable lengths (TEL), TEL is always a multiple of
 
 
 
-.. c:type:: enum nvme_status_field
+.. c:enum:: nvme_status_field
 
    Defines all parts of the nvme status field: status code, status code type, and additional flags.
 
@@ -13584,7 +13592,7 @@ status code
 
 
 
-.. c:type:: enum nvme_status_type
+.. c:enum:: nvme_status_type
 
    type encoding for NVMe return values, when represented as an int.
 
@@ -13666,7 +13674,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_admin_opcode
+.. c:enum:: nvme_admin_opcode
 
    Known NVMe admin opcodes
 
@@ -13822,7 +13830,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_identify_cns
+.. c:enum:: nvme_identify_cns
 
    Identify - CNS Values
 
@@ -13931,7 +13939,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_cmd_get_log_lid
+.. c:enum:: nvme_cmd_get_log_lid
 
    Get Log Page -Log Page Identifiers
 
@@ -14060,7 +14068,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_features_id
+.. c:enum:: nvme_features_id
 
    Features - Feature Identifiers
 
@@ -14201,7 +14209,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_feat
+.. c:enum:: nvme_feat
 
    Features Access Shifts/Masks values
 
@@ -14498,7 +14506,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_get_features_sel
+.. c:enum:: nvme_get_features_sel
 
    Get Features - Select
 
@@ -14519,7 +14527,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_cmd_format_mset
+.. c:enum:: nvme_cmd_format_mset
 
    Format NVM - Metadata Settings
 
@@ -14536,7 +14544,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_cmd_format_pi
+.. c:enum:: nvme_cmd_format_pi
 
    Format NVM - Protection Information
 
@@ -14557,7 +14565,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_cmd_format_pil
+.. c:enum:: nvme_cmd_format_pil
 
    Format NVM - Protection Information Location
 
@@ -14574,7 +14582,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_cmd_format_ses
+.. c:enum:: nvme_cmd_format_ses
 
    Format NVM - Secure Erase Settings
 
@@ -14601,7 +14609,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_ns_mgmt_sel
+.. c:enum:: nvme_ns_mgmt_sel
 
    Namespace Management - Select
 
@@ -14616,7 +14624,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_ns_attach_sel
+.. c:enum:: nvme_ns_attach_sel
 
    Namespace Attachment - Select
 
@@ -14631,7 +14639,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_fw_commit_ca
+.. c:enum:: nvme_fw_commit_ca
 
    Firmware Commit - Commit Action
 
@@ -14675,7 +14683,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_directive_dtype
+.. c:enum:: nvme_directive_dtype
 
    Directive Types
 
@@ -14690,7 +14698,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_directive_receive_doper
+.. c:enum:: nvme_directive_receive_doper
 
    Directive Receive Directive Operation
 
@@ -14707,7 +14715,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_directive_send_doper
+.. c:enum:: nvme_directive_send_doper
 
    Directive Send Directive Operation
 
@@ -14722,7 +14730,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_directive_send_identify_endir
+.. c:enum:: nvme_directive_send_identify_endir
 
    Enable Directive
 
@@ -14735,7 +14743,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_sanitize_sanact
+.. c:enum:: nvme_sanitize_sanact
 
    Sanitize Action
 
@@ -14759,7 +14767,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_dst_stc
+.. c:enum:: nvme_dst_stc
 
    Action taken by the Device Self-test command
 
@@ -14783,7 +14791,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_virt_mgmt_act
+.. c:enum:: nvme_virt_mgmt_act
 
    Virtualization Management - Action
 
@@ -14805,7 +14813,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_virt_mgmt_rt
+.. c:enum:: nvme_virt_mgmt_rt
 
    Virtualization Management - Resource Type
 
@@ -14820,7 +14828,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_ns_write_protect_cfg
+.. c:enum:: nvme_ns_write_protect_cfg
 
    Write Protection - Write Protection State
 
@@ -14841,7 +14849,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_log_ana_lsp
+.. c:enum:: nvme_log_ana_lsp
 
    Asymmetric Namespace Access - Return Groups Only
 
@@ -14854,7 +14862,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_log_phy_rx_eom_action
+.. c:enum:: nvme_log_phy_rx_eom_action
 
    Physical Interface Receiver Eye Opening Measurement Action
 
@@ -14872,7 +14880,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_log_phy_rx_eom_quality
+.. c:enum:: nvme_log_phy_rx_eom_quality
 
    Physical Interface Receiver Eye Opening Measurement Quality
 
@@ -14890,7 +14898,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_pevent_log_action
+.. c:enum:: nvme_pevent_log_action
 
    Persistent Event Log - Action
 
@@ -14908,7 +14916,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_feat_tmpthresh_thsel
+.. c:enum:: nvme_feat_tmpthresh_thsel
 
    Temperature Threshold - Threshold Type Select
 
@@ -14923,7 +14931,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_features_async_event_config_flags
+.. c:enum:: nvme_features_async_event_config_flags
 
    Asynchronous Event Configuration configuration flags
 
@@ -14960,7 +14968,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_feat_plm_window_select
+.. c:enum:: nvme_feat_plm_window_select
 
    Predictable Latency Per NVM Set Log
 
@@ -14975,7 +14983,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_feat_resv_notify_flags
+.. c:enum:: nvme_feat_resv_notify_flags
 
    Reservation Notification Configuration
 
@@ -14993,7 +15001,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_feat_nswpcfg_state
+.. c:enum:: nvme_feat_nswpcfg_state
 
    Write Protection - Write Protection State
 
@@ -15014,7 +15022,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_feat_perfc_attri
+.. c:enum:: nvme_feat_perfc_attri
 
    performance characteristics attribute index
 
@@ -15035,7 +15043,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_feat_perfc_r4karl
+.. c:enum:: nvme_feat_perfc_r4karl
 
    standard performance attribute random 4 kib average latency
 
@@ -15116,7 +15124,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_feat_bpwp_state
+.. c:enum:: nvme_feat_bpwp_state
 
    Boot Partition Write Protection State
 
@@ -15140,7 +15148,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_fctype
+.. c:enum:: nvme_fctype
 
    Fabrics Command Types
 
@@ -15167,7 +15175,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_data_tfr
+.. c:enum:: nvme_data_tfr
 
    Data transfer direction of the command
 
@@ -15188,7 +15196,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_io_opcode
+.. c:enum:: nvme_io_opcode
 
    Opcodes for I/O Commands
 
@@ -15257,7 +15265,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_kv_opcode
+.. c:enum:: nvme_kv_opcode
 
    Opcodes for KV Commands
 
@@ -15296,7 +15304,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_io_control_flags
+.. c:enum:: nvme_io_control_flags
 
    I/O control flags
 
@@ -15338,7 +15346,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_io_dsm_flags
+.. c:enum:: nvme_io_dsm_flags
 
    Dataset Management flags
 
@@ -15392,7 +15400,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_dsm_attributes
+.. c:enum:: nvme_dsm_attributes
 
    Dataset Management attributes
 
@@ -15410,7 +15418,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_resv_rtype
+.. c:enum:: nvme_resv_rtype
 
    Reservation Type Encoding
 
@@ -15437,7 +15445,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_resv_racqa
+.. c:enum:: nvme_resv_racqa
 
    Reservation Acquire - Reservation Acquire Action
 
@@ -15455,7 +15463,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_resv_rrega
+.. c:enum:: nvme_resv_rrega
 
    Reservation Register - Reservation Register Action
 
@@ -15473,7 +15481,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_resv_cptpl
+.. c:enum:: nvme_resv_cptpl
 
    Reservation Register - Change Persist Through Power Loss State
 
@@ -15493,7 +15501,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_resv_rrela
+.. c:enum:: nvme_resv_rrela
 
    Reservation Release - Reservation Release Action
 
@@ -15508,7 +15516,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_zns_send_action
+.. c:enum:: nvme_zns_send_action
 
    Zone Management Send - Zone Send Action
 
@@ -15538,7 +15546,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_zns_recv_action
+.. c:enum:: nvme_zns_recv_action
 
    Zone Management Receive - Zone Receive Action Specific Features
 
@@ -15553,7 +15561,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_zns_report_options
+.. c:enum:: nvme_zns_report_options
 
    Zone Management Receive - Zone Receive Action Specific Field
 
@@ -15586,7 +15594,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_io_mgmt_recv_mo
+.. c:enum:: nvme_io_mgmt_recv_mo
 
    I/O Management Receive - Management Operation
 
@@ -15598,7 +15606,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_io_mgmt_send_mo
+.. c:enum:: nvme_io_mgmt_send_mo
 
    I/O Management Send - Management Operation
 
@@ -15610,7 +15618,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: struct nvme_ns_mgmt_host_sw_specified
+.. c:struct:: nvme_ns_mgmt_host_sw_specified
 
    Namespace management Host Software Specified Fields.
 
@@ -15732,7 +15740,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_lm_cdq_fields
+.. c:enum:: nvme_lm_cdq_fields
 
    Controller Data Queue command fields
 
@@ -15797,7 +15805,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_lm_track_send_fields
+.. c:enum:: nvme_lm_track_send_fields
 
    Track Send command fields
 
@@ -15843,7 +15851,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_lm_migration_send_fields
+.. c:enum:: nvme_lm_migration_send_fields
 
    Migration Send command fields
 
@@ -15958,7 +15966,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_lm_migration_recv_fields
+.. c:enum:: nvme_lm_migration_recv_fields
 
    Migration Receive command fields
 
@@ -16019,7 +16027,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: struct nvme_lm_io_submission_queue_data
+.. c:struct:: nvme_lm_io_submission_queue_data
 
    I/O Submission Queue data structure. Fields related to the contents of Create I/O Submission Queue command that created an I/O Submission Queue.
 
@@ -16068,7 +16076,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: struct nvme_lm_io_completion_queue_data
+.. c:struct:: nvme_lm_io_completion_queue_data
 
    I/O Completion Queue data structure. Fields related to the contents of Create I/O Completion Queue command that created an I/O Completion Queue.
 
@@ -16113,7 +16121,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: struct nvme_lm_nvme_controller_state_data_header
+.. c:struct:: nvme_lm_nvme_controller_state_data_header
 
    Controller State data structure header
 
@@ -16146,7 +16154,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: struct nvme_lm_nvme_controller_state_data
+.. c:struct:: nvme_lm_nvme_controller_state_data
 
    NVMe Controller State data structure describes the state of a NVMe Controller's I/O Submission and I/O Completion queues
 
@@ -16180,7 +16188,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: struct nvme_lm_controller_state_data_header
+.. c:struct:: nvme_lm_controller_state_data_header
 
    Controller State data header structure describes the contents of the Controller State data
 
@@ -16217,7 +16225,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: struct nvme_lm_controller_state_data
+.. c:struct:: nvme_lm_controller_state_data
 
    Controller State data structure contains data on the controller's state.
 
@@ -16242,7 +16250,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_lm_queue_attributes
+.. c:enum:: nvme_lm_queue_attributes
 
    I/O Submission and I/O Completion Queue Attributes
 
@@ -16293,7 +16301,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: enum nvme_lm_ctrl_data_queue_fid
+.. c:enum:: nvme_lm_ctrl_data_queue_fid
 
    Controller Data Queue - Set Feature
 
@@ -16308,7 +16316,7 @@ true if **status** is of the specified type and value
 
 
 
-.. c:type:: struct nvme_lm_ctrl_data_queue_fid_data
+.. c:struct:: nvme_lm_ctrl_data_queue_fid_data
 
    Get Controller Data Queue feature data
 

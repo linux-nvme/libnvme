@@ -387,7 +387,7 @@ errno set otherwise.
 
 
 
-.. c:type:: enum nvme_hmac_alg
+.. c:enum:: nvme_hmac_alg
 
    HMAC algorithm
 
@@ -576,7 +576,7 @@ inaccessible.
 Key id of the new key or 0 with errno set otherwise.
 
 
-.. c:type:: nvme_scan_tls_keys_cb_t
+.. c:macro:: nvme_scan_tls_keys_cb_t
 
    **Typedef**: Callback for iterating TLS keys
 
