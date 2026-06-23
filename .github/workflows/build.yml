@@ -19,7 +19,7 @@ jobs:
     container:
       image: ghcr.io/linux-nvme/debian.python:latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: build
         run: |
           scripts/build.sh -b ${{ matrix.buildtype }} -c ${{ matrix.compiler }} -x
@@ -40,7 +40,7 @@ jobs:
           - arch: s390x
           - arch: ppc64le
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: enable foreign arch
         uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
       - name: Login to GitHub Container Registry
@@ -71,7 +71,7 @@ jobs:
     container:
       image: ghcr.io/linux-nvme/debian:latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: build
         run: |
           scripts/build.sh -b release -c gcc libdbus
@@ -90,7 +90,7 @@ jobs:
       image: ghcr.io/linux-nvme/debian:latest
     if: github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: build
         run: |
           scripts/build.sh -b release -c gcc fallback
@@ -107,7 +107,7 @@ jobs:
     container:
       image: ghcr.io/linux-nvme/debian:latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: build
         run: |
           scripts/build.sh -m muon
