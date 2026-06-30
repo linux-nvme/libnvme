@@ -753,10 +753,8 @@ void nvme_nbft_free(struct nbft_info *nbft)
 	for (disc = nbft->discovery_list; disc && *disc; disc++)
 		free(*disc);
 	free(nbft->discovery_list);
-	for (sec = nbft->security_list; sec && *sec; sec++) {
-		free((*sec)->sec_keypath);
+	for (sec = nbft->security_list; sec && *sec; sec++)
 		free(*sec);
-	}
 	free(nbft->security_list);
 	for (ns = nbft->subsystem_ns_list; ns && *ns; ns++) {
 		free((*ns)->hfis);
