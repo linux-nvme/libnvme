@@ -47,6 +47,19 @@ mapfile = 'libnvme.map'
 version_script_arg = join_paths(source_dir, mapfile)
 mi_mapfile = 'libnvme-mi.map'
 mi_version_script_arg = join_paths(source_dir, mi_mapfile)
+libnvme_sym = files(mapfile)
+libnvme_mi_sym = files(mi_mapfile)
+libnvme_sym_headers = files(
+    'nvme/fabrics.h',
+    'nvme/filters.h',
+    'nvme/ioctl.h',
+    'nvme/linux.h',
+    'nvme/log.h',
+    'nvme/nbft.h',
+    'nvme/tree.h',
+    'nvme/util.h',
+)
+libnvme_mi_sym_headers = files('nvme/mi.h')
 
 libnvme = library(
     'nvme', # produces libnvme.so

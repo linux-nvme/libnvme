@@ -124,6 +124,42 @@ psk = executable(
 
 test('psk', psk)
 
+generate_sym_test = files('../scripts/generate-sym-test.py')
+
+test_libnvme_sym_c = custom_target(
+    'test-libnvme-sym.c',
+    input: [libnvme_sym, libnvme_sym_headers],
+    output: 'test-libnvme-sym.c',
+    command: [generate_sym_test, libnvme_sym, libnvme_sym_headers],
+    capture: true,
+    depend_files: generate_sym_test,
+)
+
+test_libnvme_mi_sym_c = custom_target(
+    'test-libnvme-mi-sym.c',
+    input: [libnvme_mi_sym, libnvme_mi_sym_headers],
+    output: 'test-libnvme-mi-sym.c',
+    command: [generate_sym_test, libnvme_mi_sym, libnvme_mi_sym_headers],
+    capture: true,
+    depend_files: generate_sym_test,
+)
+
+test_libnvme_sym = executable(
+    'test-libnvme-sym',
+    test_libnvme_sym_c,
+    dependencies: libnvme_dep,
+    include_directories: [incdir, internal_incdir],
+)
+test('libnvme-sym', test_libnvme_sym)
+
+test_libnvme_mi_sym = executable(
+    'test-libnvme-mi-sym',
+    test_libnvme_mi_sym_c,
+    dependencies: libnvme_mi_dep,
+    include_directories: [incdir, internal_incdir],
+)
+test('libnvme-mi-sym', test_libnvme_mi_sym)
+
 subdir('ioctl')
 subdir('nbft')
 
