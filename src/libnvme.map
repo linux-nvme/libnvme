@@ -1,5 +1,14 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 LIBNVME_UNRELEASED {
+	global:
+		nvme_ctrl_is_discovered;
+		nvme_ctrl_set_discovered;
+		nvme_get_lba_status_log;
+		nvme_iface_matching_addr;
+		nvme_iface_primary_addr_matches;
+		nvme_ns_head_get_sysfs_dir;
+		nvme_ns_identify_descs;
+		nvme_scan_ns_head_paths;
 };
 
 LIBNVME_1_16 {
