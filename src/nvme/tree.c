@@ -2704,7 +2704,12 @@ static int nvme_strtoeuid(const char *str, void *res)
 
 static int nvme_strtouuid(const char *str, void *res)
 {
-	memcpy(res, str, NVME_UUID_LEN);
+	unsigned char uuid[NVME_UUID_LEN];
+
+	if (nvme_uuid_from_string(str, uuid))
+		return -EINVAL;
+
+	memcpy(res, uuid, NVME_UUID_LEN);
 	return 0;
 }
 
