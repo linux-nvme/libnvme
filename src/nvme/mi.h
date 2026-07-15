@@ -971,6 +971,36 @@ __u16 nvme_mi_ctrl_id(nvme_mi_ctrl_t ctrl);
  */
 char *nvme_mi_endpoint_desc(nvme_mi_ep_t ep);
 
+/**
+ * nvme_mi_submit_entry() - Weak hook called before submitting an MI request
+ * @type: message type
+ * @hdr: request message header
+ * @hdr_len: request message header length
+ * @data: request payload
+ * @data_len: request payload length
+ *
+ * This weak function may be overridden by applications for request logging.
+ *
+ * Return: user data to pass to &nvme_mi_submit_exit().
+ */
+void *nvme_mi_submit_entry(__u8 type, const struct nvme_mi_msg_hdr *hdr,
+			   size_t hdr_len, const void *data, size_t data_len);
+
+/**
+ * nvme_mi_submit_exit() - Weak hook called after receiving an MI response
+ * @type: message type
+ * @hdr: response message header
+ * @hdr_len: response message header length
+ * @data: response payload
+ * @data_len: response payload length
+ * @user_data: user data returned from &nvme_mi_submit_entry()
+ *
+ * This weak function may be overridden by applications for response logging.
+ */
+void nvme_mi_submit_exit(__u8 type, const struct nvme_mi_msg_hdr *hdr,
+			 size_t hdr_len, const void *data, size_t data_len,
+			 void *user_data);
+
 /* MI Command API: nvme_mi_mi_ prefix */
 
 /**

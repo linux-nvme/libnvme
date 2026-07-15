@@ -1,5 +1,21 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 LIBNVME_MI_UNRELEASED {
+	global:
+		nvme_mi_aem_aeei_get_aee;
+		nvme_mi_aem_aeei_get_aeeid;
+		nvme_mi_aem_aeei_set_aee;
+		nvme_mi_aem_aeei_set_aeeid;
+		nvme_mi_aem_aemti_get_aemgn;
+		nvme_mi_aem_aeolli_get_aeoltl;
+		nvme_mi_aem_aeolli_set_aeoltl;
+		nvme_mi_aem_aesi_get_aese;
+		nvme_mi_aem_aesi_get_aesid;
+		nvme_mi_aem_aesi_set_aee;
+		nvme_mi_aem_aesi_set_aesid;
+		nvme_mi_aem_open;
+		nvme_mi_ep_set_mprt_max;
+		nvme_mi_mi_config_get_async_event;
+		nvme_mi_mi_config_set_async_event;
 };
 
 LIBNVME_MI_1_15 {
