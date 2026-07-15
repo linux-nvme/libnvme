@@ -60,6 +60,15 @@ static void print_nbft(struct nbft_info *table)
 
 	for (sec = table->security_list, i = 0; sec && *sec; sec++, i++) {
 		printf("security_list[%u]->index=%d\n", i, (*sec)->index);
+		printf("security_list[%u]->flags=%"PRIu16"\n", i, (*sec)->flags);
+		printf("security_list[%u]->secret_type=%u\n", i, (*sec)->secret_type);
+		printf("security_list[%u]->sec_chan_alg_len=%"PRIu16"\n", i, (*sec)->sec_chan_alg_len);
+		printf("security_list[%u]->auth_proto_len=%"PRIu16"\n", i, (*sec)->auth_proto_len);
+		printf("security_list[%u]->cipher_suite_len=%"PRIu16"\n", i, (*sec)->cipher_suite_len);
+		printf("security_list[%u]->dh_grp_len=%"PRIu16"\n", i, (*sec)->dh_grp_len);
+		printf("security_list[%u]->sec_hash_func_len=%"PRIu16"\n", i, (*sec)->sec_hash_func_len);
+		printf("security_list[%u]->sec_keypath=%s\n", i,
+		       (*sec)->sec_keypath ? (*sec)->sec_keypath : "(null)");
 	}
 
 	for (disc = table->discovery_list, i = 0; disc && *disc; disc++, i++) {

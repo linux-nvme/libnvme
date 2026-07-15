@@ -1128,12 +1128,38 @@ struct nbft_info_discovery {
 
 /**
  * struct nbft_info_security - Security Profile Descriptor
- * @index: The number of this Security Profile Descriptor in the Security
- *	   Profile Descriptor List.
+ * @index:	       The number of this Security Profile Descriptor in the Security
+ *		       Profile Descriptor List.
+ * @flags:	       Security Profile Descriptor Flags, see
+ *		       &enum nbft_security_flags.
+ * @secret_type:       Secret Type, see &enum nbft_security_secret_type.
+ * @sec_chan_alg:      Secure Channel Algorithm list.
+ * @sec_chan_alg_len:  Secure Channel Algorithm list length.
+ * @auth_proto:        Authentication Protocols list.
+ * @auth_proto_len:    Authentication Protocols list length.
+ * @cipher_suite:      Cipher Suite list.
+ * @cipher_suite_len:  Cipher Suite list length.
+ * @dh_grp:	       DH Groups list.
+ * @dh_grp_len:	       DH Groups list length.
+ * @sec_hash_func:     Secure Hash Functions list.
+ * @sec_hash_func_len: Secure Hash Functions list length.
+ * @sec_keypath:       Secret Keypath URI.
  */
 struct nbft_info_security {
 	int index;
-	/* TODO add fields */
+	__u16 flags;
+	__u8 secret_type;
+	unsigned char *sec_chan_alg;
+	__u16 sec_chan_alg_len;
+	unsigned char *auth_proto;
+	__u16 auth_proto_len;
+	unsigned char *cipher_suite;
+	__u16 cipher_suite_len;
+	unsigned char *dh_grp;
+	__u16 dh_grp_len;
+	unsigned char *sec_hash_func;
+	__u16 sec_hash_func_len;
+	char *sec_keypath;
 };
 
 /**
