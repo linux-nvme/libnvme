@@ -107,15 +107,20 @@ int nvme_fw_download_seq(int fd, __u32 size, __u32 xfer, __u32 offset,
 		.result = NULL,
 	};
 
+	if (!xfer) {
+		errno = EINVAL;
+		return -1;
+	}
+
 	while (size > 0) {
 		args.data_len = MIN(xfer, size);
 		err = nvme_fw_download(&args);
 		if (err)
 			break;
 
-		args.data += xfer;
-		size -= xfer;
-		args.offset += xfer;
+		args.data += args.data_len;
+		size -= args.data_len;
+		args.offset += args.data_len;
 	}
 
 	return err;

@@ -4,6 +4,7 @@
 
 #include "mock.h"
 #include "util.h"
+#include <errno.h>
 #include <nvme/api-types.h>
 #include <nvme/ioctl.h>
 #include <nvme/types.h>
@@ -289,6 +290,41 @@ static void test_fw_download(void)
 	end_mock_cmds();
 	check(err == 0, "returned error %d, errno %m", err);
 	check(result == 0, "returned result %u", result);
+}
+
+static void test_fw_download_seq(void)
+{
+	__u8 data[4096 + 16];
+	int err;
+
+	/* image size is not a multiple of xfer: last chunk is partial */
+	struct mock_cmd mock_admin_cmds[] = {
+		{
+			.opcode = nvme_admin_fw_download,
+			.cdw10 = (4096 >> 2) - 1,
+			.cdw11 = 0,
+			.data_len = 4096,
+			.in_data = &data[0],
+		},
+		{
+			.opcode = nvme_admin_fw_download,
+			.cdw10 = (16 >> 2) - 1,
+			.cdw11 = 4096 >> 2,
+			.data_len = 16,
+			.in_data = &data[4096],
+		},
+	};
+
+	arbitrary(&data, sizeof(data));
+	set_mock_admin_cmds(mock_admin_cmds, 2);
+	err = nvme_fw_download_seq(TEST_FD, sizeof(data), 4096, 0, data);
+	end_mock_cmds();
+	check(err == 0, "returned error %d, errno %m", err);
+
+	/* a zero transfer size would loop forever */
+	err = nvme_fw_download_seq(TEST_FD, sizeof(data), 0, 0, data);
+	check(err == -1 && errno == EINVAL, "expected EINVAL, got %d, errno %m",
+	      err);
 }
 
 static void test_fw_commit(void)
@@ -1693,6 +1729,7 @@ int main(void)
 	RUN_TEST(ns_attach_ctrls);
 	RUN_TEST(ns_detach_ctrls);
 	RUN_TEST(fw_download);
+	RUN_TEST(fw_download_seq);
 	RUN_TEST(fw_commit);
 	RUN_TEST(security_send);
 	RUN_TEST(security_receive);
