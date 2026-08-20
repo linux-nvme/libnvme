@@ -1216,6 +1216,21 @@ static struct nvmf_discovery_log *nvme_discovery_log(
 		if (numrec == 0)
 			break;
 
+		/*
+		 * numrec comes from the (unauthenticated) discovery
+		 * controller and is used to compute the log page buffer
+		 * size. Reject counts so large that the size computation
+		 * would wrap, which would result in a buffer smaller than
+		 * the number of entries that get processed below.
+		 */
+		if (numrec > (SIZE_MAX - sizeof(*log)) / sizeof(*log->entries)) {
+			nvme_msg(r, LOG_ERR,
+				 "%s: invalid number of discovery log records %"
+				 PRIu64 "\n", name, numrec);
+			errno = EINVAL;
+			goto out_free_log;
+		}
+
 		free(log);
 		entries_size = sizeof(*log->entries) * numrec;
 		log = __nvme_alloc(sizeof(*log) + entries_size);

@@ -401,6 +401,31 @@ static void test_genctr_error(nvme_ctrl_t c)
 	check(!log, "unexpected log page returned");
 }
 
+static void test_numrec_too_large(nvme_ctrl_t c)
+{
+	/* numrec so large that the buffer size computation would wrap */
+	struct nvmf_discovery_log header = {
+		.numrec = cpu_to_le64(UINT64_MAX /
+				      sizeof(struct nvmf_disc_log_entry)),
+	};
+	struct mock_cmd mock_admin_cmds[] = {
+		{
+			.opcode = nvme_admin_get_log_page,
+			.data_len = HEADER_LEN,
+			.cdw10 = (HEADER_LEN / 4 - 1) << 16 /* NUMDL */
+			       | NVME_LOG_LID_DISCOVER, /* LID */
+			.out_data = &header,
+		},
+	};
+	struct nvmf_discovery_log *log = NULL;
+
+	set_mock_admin_cmds(mock_admin_cmds, ARRAY_SIZE(mock_admin_cmds));
+	check(nvmf_get_discovery_log(c, &log, 1) == -1, "discovery succeeded");
+	end_mock_cmds();
+	check(errno == EINVAL, "incorrect errno: %m");
+	check(!log, "unexpected log page returned");
+}
+
 static void run_test(const char *test_name, void (*test_fn)(nvme_ctrl_t))
 {
 	struct nvme_ctrl c = {.fd = TEST_FD};
@@ -426,4 +451,5 @@ int main(void)
 	RUN_TEST(header_error);
 	RUN_TEST(entries_error);
 	RUN_TEST(genctr_error);
+	RUN_TEST(numrec_too_large);
 }
