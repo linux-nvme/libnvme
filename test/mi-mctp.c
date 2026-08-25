@@ -312,6 +312,23 @@ static void test_read_mi_data(nvme_mi_ep_t ep, struct test_peer *peer)
 	assert(rc == 0);
 }
 
+static void test_mi_resp_too_large(nvme_mi_ep_t ep, struct test_peer *peer)
+{
+	struct nvme_mi_read_nvm_ss_info ss_info;
+	int rc;
+
+	/* The peer sends a datagram much larger than the expected
+	 * response: the kernel returns the full datagram length, while
+	 * only the truncated portion is actually copied to the buffer.
+	 */
+	peer->tx_rc = MAX_BUFSIZ;
+	peer->tx_buf_len = MAX_BUFSIZ - 4; /* leave room for the MIC */
+
+	rc = nvme_mi_mi_read_mi_data_subsys(ep, &ss_info);
+	assert(rc != 0);
+	assert(errno == EPROTO);
+}
+
 static void test_mi_resp_err(nvme_mi_ep_t ep, struct test_peer *peer)
 {
 	struct nvme_mi_read_nvm_ss_info ss_info;
@@ -1408,6 +1425,7 @@ struct test {
 	DEFINE_TEST(read_mi_data),
 	DEFINE_TEST(poll_err),
 	DEFINE_TEST(mi_resp_err),
+	DEFINE_TEST(mi_resp_too_large),
 	DEFINE_TEST(mi_resp_unaligned),
 	DEFINE_TEST(mi_resp_unaligned_expected),
 	DEFINE_TEST(admin_resp_err),
