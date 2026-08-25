@@ -102,7 +102,7 @@ static void check_telemetry(nvme_ctrl_t c, int ufd)
 	}
 }
 
-static void wait_events(fd_set *fds, struct events *e, int nr)
+static void wait_events(fd_set *fds, struct events *e, int nr, int maxfd)
 {
 	int ret, i;
 
@@ -110,12 +110,15 @@ static void wait_events(fd_set *fds, struct events *e, int nr)
 		check_telemetry(e[i].c, e[i].uevent_fd);
 
 	while (1) {
-		ret = select(nr, fds, NULL, NULL, NULL);
+		/* select() clears the bits of inactive fds, restore them */
+		fd_set read_fds = *fds;
+
+		ret = select(maxfd + 1, &read_fds, NULL, NULL, NULL);
 		if (ret < 0)
 			return;
 
 		for (i = 0; i < nr; i++) {
-			if (!FD_ISSET(e[i].uevent_fd, fds))
+			if (!FD_ISSET(e[i].uevent_fd, &read_fds))
 				continue;
 			check_telemetry(e[i].c, e[i].uevent_fd);
 		}
@@ -126,6 +129,7 @@ int main()
 {
 	struct events *e;
 	fd_set fds;
+	int maxfd = -1;
 	int i = 0;
 
 	nvme_subsystem_t s;
@@ -143,6 +147,10 @@ int main()
 				i++;
 
 	e = calloc(i, sizeof(struct events));
+	if (i > 0 && !e) {
+		nvme_free_tree(r);
+		return EXIT_FAILURE;
+	}
 	FD_ZERO(&fds);
 	i = 0;
 
@@ -154,6 +162,8 @@ int main()
 				if (fd < 0)
 					continue;
 				FD_SET(fd, &fds);
+				if (fd > maxfd)
+					maxfd = fd;
 				e[i].uevent_fd = fd;
 				e[i].c = c;
 				i++;
@@ -161,7 +171,8 @@ int main()
 		}
 	}
 
-	wait_events(&fds, e, i);
+	if (i > 0)
+		wait_events(&fds, e, i, maxfd);
 	nvme_free_tree(r);
 	free(e);
 
