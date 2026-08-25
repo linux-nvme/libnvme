@@ -36,6 +36,8 @@
 #include "log.h"
 #include "private.h"
 
+static void __nvme_free_subsystem(struct nvme_subsystem *s);
+
 /**
  * struct candidate_args - Used to look for a controller matching these parameters
  * @transport:		Transport type: loop, fc, rdma, tcp
@@ -225,7 +227,7 @@ static void nvme_filter_subsystem(nvme_root_t r, nvme_subsystem_t s,
 
 	nvme_msg(r, LOG_DEBUG, "filter out subsystem %s\n",
 		 nvme_subsystem_get_name(s));
-	nvme_free_subsystem(s);
+	__nvme_free_subsystem(s);
 }
 
 static void nvme_filter_ns(nvme_root_t r, nvme_ns_t n,
