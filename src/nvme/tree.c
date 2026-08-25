@@ -2696,9 +2696,30 @@ static int nvme_strtoi(const char *str, void *res)
 	return 0;
 }
 
+static int hex_digit(char c)
+{
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	if (c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+	if (c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+	return -1;
+}
+
 static int nvme_strtoeuid(const char *str, void *res)
 {
-	memcpy(res, str, 8);
+	__u8 *eui = res;
+	int hi, lo, i;
+
+	/* the sysfs eui attribute is the EUI-64 as 16 hex digits */
+	for (i = 0; i < 8; i++) {
+		hi = hex_digit(str[2 * i]);
+		lo = hex_digit(str[2 * i + 1]);
+		if (hi < 0 || lo < 0)
+			return -EINVAL;
+		eui[i] = hi << 4 | lo;
+	}
 	return 0;
 }
 
