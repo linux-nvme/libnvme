@@ -124,6 +124,14 @@ psk = executable(
 
 test('psk', psk)
 
+base64 = executable(
+    'test-base64',
+    ['base64.c', '../src/nvme/base64.c'],
+    include_directories: [incdir, internal_incdir]
+)
+
+test('base64', base64)
+
 generate_sym_test = files('../scripts/generate-sym-test.py')
 
 test_libnvme_sym_c = custom_target(
