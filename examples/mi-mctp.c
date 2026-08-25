@@ -141,7 +141,7 @@ static int show_ctrl(nvme_mi_ep_t ep, uint16_t ctrl_id)
 	printf("    PCI vendor: %04x\n", le16_to_cpu(ctrl.vid));
 	printf("    PCI device: %04x\n", le16_to_cpu(ctrl.did));
 	printf("    PCI subsys vendor: %04x\n", le16_to_cpu(ctrl.ssvid));
-	printf("    PCI subsys device: %04x\n", le16_to_cpu(ctrl.ssvid));
+	printf("    PCI subsys device: %04x\n", le16_to_cpu(ctrl.ssid));
 
 	return 0;
 }
@@ -149,7 +149,7 @@ static int show_ctrl(nvme_mi_ep_t ep, uint16_t ctrl_id)
 static int do_controllers(nvme_mi_ep_t ep)
 {
 	struct nvme_ctrl_list ctrl_list;
-	int rc, i;
+	int rc, i, num;
 
 	rc = nvme_mi_mi_read_mi_data_ctrl_list(ep, 0, &ctrl_list);
 	if (rc) {
@@ -157,8 +157,15 @@ static int do_controllers(nvme_mi_ep_t ep)
 		return rc;
 	}
 
+	num = le16_to_cpu(ctrl_list.num);
+	if (num > NVME_ID_CTRL_LIST_MAX) {
+		warnx("controller list reports %d entries, list only has %d",
+		      num, NVME_ID_CTRL_LIST_MAX);
+		num = NVME_ID_CTRL_LIST_MAX;
+	}
+
 	printf("NVMe controller list:\n");
-	for (i = 0; i < le16_to_cpu(ctrl_list.num); i++) {
+	for (i = 0; i < num; i++) {
 		uint16_t id = le16_to_cpu(ctrl_list.identifier[i]);
 		show_ctrl(ep, id);
 	}
@@ -593,6 +600,11 @@ int do_security_info(nvme_mi_ep_t ep, int argc, char **argv)
 	if (args.data_len < 6 + n_proto) {
 		warnx("Short response in security receive command (%d bytes), "
 		      "for %d protocols", args.data_len, n_proto);
+		return -1;
+	}
+	if (n_proto > (int)sizeof(proto_info.protocols)) {
+		warnx("Too many protocols in security receive response (%d)",
+		      n_proto);
 		return -1;
 	}
 
