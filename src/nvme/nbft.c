@@ -282,6 +282,7 @@ static int read_ssns(struct nbft_info *nbft,
 	}
 	ssns->num_hfis = 1;
 	for (i = 0; i < le16_to_cpu(raw_ssns->secondary_hfi_assoc_obj.length); i++) {
+		struct nbft_info_hfi *hfi;
 		bool duplicate = false;
 		int j;
 
@@ -303,13 +304,18 @@ static int read_ssns(struct nbft_info *nbft,
 			continue;
 		}
 
-		ssns->hfis[i + 1] = hfi_from_index(nbft, ss_hfi_indexes[i]);
-		if (ss_hfi_indexes[i] && !ssns->hfis[i + 1])
+		if (!ss_hfi_indexes[i])
+			/* zero marks an unused association slot */
+			continue;
+
+		hfi = hfi_from_index(nbft, ss_hfi_indexes[i]);
+		if (!hfi) {
 			nvme_msg(NULL, LOG_DEBUG,
 				 "file %s: SSNS %d HFI %d not found\n",
 				 nbft->filename, ssns->index, ss_hfi_indexes[i]);
-		else
-			ssns->num_hfis++;
+			continue;
+		}
+		ssns->hfis[ssns->num_hfis++] = hfi;
 	}
 
 	/* SSNS NQN */
@@ -330,6 +336,7 @@ static int read_ssns(struct nbft_info *nbft,
 	return 0;
 
 fail:
+	free(ssns->hfis);
 	free(ssns);
 	return ret;
 }
