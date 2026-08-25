@@ -603,8 +603,9 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	if (control->num_hfi > 0) {
 		struct nbft_hfi *raw_hfi_array;
 
-		verify(le32_to_cpu(control->hfio) + sizeof(struct nbft_hfi) *
-		       control->num_hfi <= le32_to_cpu(header->length),
+		verify((unsigned long long)le32_to_cpu(control->hfio) +
+		       sizeof(struct nbft_hfi) * control->num_hfi <=
+		       le32_to_cpu(header->length),
 		       "invalid hfi descriptor list offset");
 		raw_hfi_array = (struct nbft_hfi *)(raw_nbft + le32_to_cpu(control->hfio));
 		read_hfi_descriptors(nbft, control->num_hfi, raw_hfi_array,
@@ -617,8 +618,9 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	if (control->num_sec > 0) {
 		struct nbft_security *raw_security_array;
 
-		verify(le32_to_cpu(control->seco) + le16_to_cpu(control->secl) *
-		       control->num_sec <= le32_to_cpu(header->length),
+		verify((unsigned long long)le32_to_cpu(control->seco) +
+		       sizeof(struct nbft_security) * control->num_sec <=
+		       le32_to_cpu(header->length),
 		       "invalid security profile desciptor list offset");
 		raw_security_array = (struct nbft_security *)(raw_nbft +
 				     le32_to_cpu(control->seco));
@@ -633,8 +635,9 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	if (control->num_disc > 0) {
 		struct nbft_discovery *raw_discovery_array;
 
-		verify(le32_to_cpu(control->disco) + le16_to_cpu(control->discl) *
-		       control->num_disc <= le32_to_cpu(header->length),
+		verify((unsigned long long)le32_to_cpu(control->disco) +
+		       sizeof(struct nbft_discovery) * control->num_disc <=
+		       le32_to_cpu(header->length),
 		       "invalid discovery profile descriptor list offset");
 		raw_discovery_array = (struct nbft_discovery *)(raw_nbft +
 				      le32_to_cpu(control->disco));
@@ -648,8 +651,9 @@ static int parse_raw_nbft(struct nbft_info *nbft)
 	if (control->num_ssns > 0) {
 		struct nbft_ssns *raw_ssns_array;
 
-		verify(le32_to_cpu(control->ssnso) + le16_to_cpu(control->ssnsl) *
-		       control->num_ssns <= le32_to_cpu(header->length),
+		verify((unsigned long long)le32_to_cpu(control->ssnso) +
+		       sizeof(struct nbft_ssns) * control->num_ssns <=
+		       le32_to_cpu(header->length),
 		       "invalid subsystem namespace descriptor list offset");
 		raw_ssns_array = (struct nbft_ssns *)(raw_nbft +
 				 le32_to_cpu(control->ssnso));
