@@ -32,11 +32,11 @@
 
 static int nvme_verify_chr(int fd)
 {
-	static struct stat nvme_stat;
+	struct stat nvme_stat;
 	int err = fstat(fd, &nvme_stat);
 
 	if (err < 0)
-		return errno;
+		return -1;
 
 	if (!S_ISCHR(nvme_stat.st_mode)) {
 		errno = ENOTBLK;
