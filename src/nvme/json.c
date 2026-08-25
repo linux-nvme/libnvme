@@ -446,7 +446,7 @@ int json_update_config(nvme_root_t r, const char *config_file)
 					      JSON_C_TO_STRING_NOSLASHESCAPE);
 	if (ret < 0) {
 		nvme_msg(r, LOG_ERR, "Failed to write to %s, %s\n",
-			 config_file ? "stdout" : config_file,
+			 config_file ? config_file : "stdout",
 			 json_util_get_last_err());
 		ret = -1;
 		errno = EIO;
