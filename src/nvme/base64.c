@@ -66,19 +66,24 @@ int base64_encode(const unsigned char *src, int srclen, char *dst)
 int base64_decode(const char *src, int srclen, unsigned char *dst)
 {
 	uint32_t ac = 0;
-	int i, bits = 0;
+	int i, bits = 0, pads = 0;
 	unsigned char *bp = dst;
 
 	for (i = 0; i < srclen; i++) {
-		const char *p = strchr(base64_table, src[i]);
+		const char *p;
 
 		if (src[i] == '=') {
-			ac = (ac << 6);
-			bits += 6;
-			if (bits >= 8)
-				bits -= 8;
+			if (bits < 2 || pads >= 2)
+				/* padding only terminates a 4-char quantum */
+				return -EINVAL;
+			pads++;
+			bits -= 2;
 			continue;
 		}
+		if (pads)
+			/* no data after padding */
+			return -EINVAL;
+		p = strchr(base64_table, src[i]);
 		if (!p || !src[i])
 			return -EINVAL;
 		ac = (ac << 6) | (p - base64_table);
@@ -88,8 +93,12 @@ int base64_decode(const char *src, int srclen, unsigned char *dst)
 			*bp++ = (unsigned char)(ac >> bits);
 		}
 	}
-	if (ac && ((1 << bits) - 1))
-		return -EAGAIN;
+	if (bits)
+		/* missing padding to a multiple of four characters */
+		return -EINVAL;
+	if (ac & ((1 << (2 * pads)) - 1))
+		/* bits that the padding drops must be zero */
+		return -EINVAL;
 
 	return bp - dst;
 }
