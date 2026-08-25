@@ -12,15 +12,18 @@
 
 int json_read_config(nvme_root_t r, const char *config_file)
 {
-	return -ENOTSUP;
+	errno = ENOTSUP;
+	return -1;
 }
 
 int json_update_config(nvme_root_t r, const char *config_file)
 {
-	return -ENOTSUP;
+	errno = ENOTSUP;
+	return -1;
 }
 
 int json_dump_tree(nvme_root_t r)
 {
-	return -ENOTSUP;
+	errno = ENOTSUP;
+	return -1;
 }
