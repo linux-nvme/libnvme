@@ -116,6 +116,8 @@ int main()
 			}
 		}
 	}
+
+	nvme_free_tree(r);
 	return 0;
 }
 
