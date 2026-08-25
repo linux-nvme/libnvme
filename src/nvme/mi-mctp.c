@@ -344,6 +344,19 @@ static int nvme_mi_mctp_aem_read(struct nvme_mi_ep *ep,
 		goto out;
 	}
 
+	/*
+	 * Datagram sockets return the full datagram length even if the
+	 * message was truncated to fit our buffer. Reject such responses,
+	 * as the peers' message would not be fully present for parsing.
+	 */
+	if (len > resp_len - 1) {
+		nvme_msg(ep->root, LOG_ERR,
+			 "Invalid MCTP response: too large (%zd bytes, buffer %zd)\n",
+			 len, resp_len - 1);
+		errno = EPROTO;
+		goto out;
+	}
+
 	if (resp_msg.msg_namelen < sizeof(src_addr)) {
 		nvme_msg(ep->root, LOG_WARNING, "Unexpected src address length\n");
 		errno = EIO;
@@ -532,6 +545,19 @@ retry:
 	if (len == 0) {
 		nvme_msg(ep->root, LOG_WARNING, "No data from MCTP endpoint\n");
 		errno = EIO;
+		goto out;
+	}
+
+	/*
+	 * Datagram sockets return the full datagram length even if the
+	 * message was truncated to fit our buffer. Reject such responses,
+	 * as the peers' message would not be fully present for parsing.
+	 */
+	if (len > resp_len - 1) {
+		nvme_msg(ep->root, LOG_ERR,
+			 "Invalid MCTP response: too large (%zd bytes, buffer %zd)\n",
+			 len, resp_len - 1);
+		errno = EPROTO;
 		goto out;
 	}
 
