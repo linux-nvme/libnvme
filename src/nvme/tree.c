@@ -632,7 +632,13 @@ nvme_path_t nvme_namespace_next_path(nvme_ns_t ns, nvme_path_t p)
 
 static void __nvme_free_ns(struct nvme_ns *n)
 {
+	struct nvme_path *p, *_p;
+
 	list_del_init(&n->entry);
+	nvme_namespace_for_each_path_safe(n, p, _p) {
+		list_del_init(&p->nentry);
+		p->n = NULL;
+	}
 	nvme_ns_release_fd(n);
 	free(n->generic_name);
 	free(n->name);
