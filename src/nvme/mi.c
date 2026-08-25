@@ -486,7 +486,7 @@ int nvme_mi_async_read(nvme_mi_ep_t ep, struct nvme_mi_resp *resp)
 		return -1;
 	}
 
-	if (!(resp->hdr->nmp & ~(NVME_MI_ROR_REQ << 7))) {
+	if (resp->hdr->nmp & (NVME_MI_ROR_RSP << 7)) {
 		nvme_msg(ep->root, LOG_DEBUG,
 			 "ROR value in response indicates a response\n");
 		errno = EIO;
