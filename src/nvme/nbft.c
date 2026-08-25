@@ -84,7 +84,7 @@ static char *trtype_to_string(__u8 transport_type)
 static int __get_heap_obj(struct nbft_header *header, const char *filename,
 			  const char *descriptorname, const char *fieldname,
 			  struct nbft_heap_obj obj, bool is_string,
-			  char **output)
+			  size_t min_len, char **output)
 {
 	if (le16_to_cpu(obj.length) == 0)
 		return -ENOENT;
@@ -113,16 +113,30 @@ static int __get_heap_obj(struct nbft_header *header, const char *filename,
 				 filename, fieldname, descriptorname);
 			return -EINVAL;
 		}
+	} else if (le16_to_cpu(obj.length) < min_len) {
+		nvme_msg(NULL, LOG_DEBUG,
+			 "file %s: object '%s' in descriptor '%s' is too short (%d, expected %zu)\n",
+			 filename, fieldname, descriptorname,
+			 le16_to_cpu(obj.length), min_len);
+		return -EINVAL;
 	}
 
 	return 0;
 }
 
-#define get_heap_obj(descriptor, obj, is_string, output)	\
-	__get_heap_obj(header, nbft->filename,			\
-		       stringify(descriptor), stringify(obj),	\
-		       descriptor->obj, is_string,		\
-		       output)
+/*
+ * Heap objects with structured (non-string) content are dereferenced as a
+ * struct by the caller, so make sure the object is at least as large as the
+ * structure it is interpreted as.  String and plain byte-array objects
+ * have no minimum: the helper already rejects empty objects, and such
+ * content is sized one byte per element.
+ */
+#define get_heap_obj(descriptor, obj, is_string, output)		\
+	__get_heap_obj(header, nbft->filename,				\
+		       stringify(descriptor), stringify(obj),		\
+		       descriptor->obj, is_string,			\
+		       (is_string) ? 0 : sizeof(**(output)),		\
+		       (char **)(output))
 
 static struct nbft_info_discovery *discovery_from_index(struct nbft_info *nbft, int i)
 {
@@ -227,9 +241,19 @@ static int read_ssns(struct nbft_info *nbft,
 	}
 
 	/* subsystem transport address */
-	ret = get_heap_obj(raw_ssns, subsys_traddr_obj, 0, (char **)&tmp);
+	ret = get_heap_obj(raw_ssns, subsys_traddr_obj, 0, &tmp);
 	if (ret)
 		goto fail;
+
+	/* format_ip_addr() always reads a full 16 bytes of IP address */
+	if (le16_to_cpu(raw_ssns->subsys_traddr_obj.length) < sizeof(struct in6_addr)) {
+		nvme_msg(NULL, LOG_DEBUG,
+			 "file %s: SSNS %d transport address heap object too short (%d bytes)\n",
+			 nbft->filename, ssns->index,
+			 le16_to_cpu(raw_ssns->subsys_traddr_obj.length));
+		ret = -EINVAL;
+		goto fail;
+	}
 
 	format_ip_addr(ssns->traddr, sizeof(ssns->traddr), tmp);
 
@@ -262,7 +286,7 @@ static int read_ssns(struct nbft_info *nbft,
 	}
 
 	/* HFI descriptors */
-	ret = get_heap_obj(raw_ssns, secondary_hfi_assoc_obj, 0, (char **)&ss_hfi_indexes);
+	ret = get_heap_obj(raw_ssns, secondary_hfi_assoc_obj, 0, &ss_hfi_indexes);
 	if (ret)
 		goto fail;
 
@@ -328,7 +352,7 @@ static int read_ssns(struct nbft_info *nbft,
 		struct nbft_ssns_ext_info *ssns_extended_info;
 
 		if (!get_heap_obj(raw_ssns, ssns_extended_info_desc_obj, 0,
-				  (char **)&ssns_extended_info))
+				  &ssns_extended_info))
 			read_ssns_exended_info(nbft, ssns, ssns_extended_info);
 	}
 
@@ -419,7 +443,7 @@ static int read_hfi(struct nbft_info *nbft,
 		strncpy(hfi->transport, trtype_to_string(raw_hfi->trtype),
 			sizeof(hfi->transport));
 
-		ret = get_heap_obj(raw_hfi, trinfo_obj, 0, (char **)&raw_hfi_info_tcp);
+		ret = get_heap_obj(raw_hfi, trinfo_obj, 0, &raw_hfi_info_tcp);
 		if (ret)
 			goto fail;
 
