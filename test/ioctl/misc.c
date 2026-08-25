@@ -1678,6 +1678,26 @@ static void run_test(const char *test_name, void (*test_fn)(void))
 	puts(" OK");
 }
 
+static void test_reset_bad_fd(void)
+{
+	int err;
+
+	errno = 0;
+	err = nvme_ctrl_reset(-1);
+	check(err == -1 && errno == EBADF,
+	      "ctrl reset on bad fd: got %d, errno %m", err);
+
+	errno = 0;
+	err = nvme_subsystem_reset(-1);
+	check(err == -1 && errno == EBADF,
+	      "subsystem reset on bad fd: got %d, errno %m", err);
+
+	errno = 0;
+	err = nvme_ns_rescan(-1);
+	check(err == -1 && errno == EBADF,
+	      "ns rescan on bad fd: got %d, errno %m", err);
+}
+
 #define RUN_TEST(name) run_test(#name, test_##name)
 
 int main(void)
@@ -1709,6 +1729,7 @@ int main(void)
 	RUN_TEST(capacity_mgmt);
 	RUN_TEST(lockdown);
 	RUN_TEST(sanitize_nvm);
+	RUN_TEST(reset_bad_fd);
 	RUN_TEST(dev_self_test);
 	RUN_TEST(virtual_mgmt);
 	RUN_TEST(flush);
