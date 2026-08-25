@@ -2682,9 +2682,15 @@ int nvme_mi_aem_process(nvme_mi_ep_t ep, void *userdata)
 		reset_list_info(ep->aem_ctx);
 
 		if (action == NVME_MI_AEM_HNA_ACK) {
-			response_len = sizeof(response_buffer);
+			/*
+			 * The ack response data is written to the occurrence
+			 * list area, which starts after the message header.
+			 */
+			response_len = sizeof(response_buffer) -
+				offsetof(struct nvme_mi_aem_msg, occ_list_hdr);
 
-			rc = nvme_mi_aem_ack(ep, &response->occ_list_hdr, &response_len);
+			rc = nvme_mi_aem_ack(ep, &response->occ_list_hdr,
+					     &response_len);
 			if (rc)
 				goto cleanup;
 
