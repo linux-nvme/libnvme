@@ -1022,13 +1022,13 @@ static void test_get_lba_sts_interval(void)
 
 static void test_set_host_behavior(void)
 {
-	/* nvme_set_features_host_behavior() ignores SAVE */
 	struct nvme_feat_host_behavior behavior;
 	struct mock_cmd mock_admin_cmd = {
 		.opcode = nvme_admin_set_features,
 		.in_data = &behavior,
 		.data_len = sizeof(behavior),
-		.cdw10 = NVME_FEAT_FID_HOST_BEHAVIOR,
+		.cdw10 = (uint32_t)1 << 31 /* SAVE */
+		       | NVME_FEAT_FID_HOST_BEHAVIOR,
 	};
 	int err;
 
