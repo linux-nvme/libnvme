@@ -7453,7 +7453,8 @@ enum nvme_mi_ccs {
  * @pdlu:	Percentage Used
  * @spare:	Available Spare
  * @cwarn:	Critical Warning
- * @rsvd9:	Reserved
+ * @chsc:	Controller Health Status Changed Flags (CHSCF)
+ * @rsvd11:	Reserved
  */
 struct nvme_mi_ctrl_health_status {
 	__le16	ctlid;
@@ -7462,7 +7463,8 @@ struct nvme_mi_ctrl_health_status {
 	__u8	pdlu;
 	__u8	spare;
 	__u8	cwarn;
-	__u8	rsvd9[7];
+	__u8	chsc[2];
+	__u8	rsvd11[5];
 };
 
 /**
@@ -7474,6 +7476,7 @@ struct nvme_mi_ctrl_health_status {
  * @NVME_MI_CSTS_CECO:	Controller Enable Change Occurred
  * @NVME_MI_CSTS_NAC:	Namespace Attribute Changed
  * @NVME_MI_CSTS_FA:	Firmware Activated
+ * @NVME_MI_CSTS_TCIDA:	Telemetry Controller-Initiated Data Available
  */
 enum nvme_mi_csts {
 	NVME_MI_CSTS_RDY	= 1 << 0,
@@ -7483,6 +7486,39 @@ enum nvme_mi_csts {
 	NVME_MI_CSTS_CECO	= 1 << 5,
 	NVME_MI_CSTS_NAC	= 1 << 6,
 	NVME_MI_CSTS_FA		= 1 << 7,
+	NVME_MI_CSTS_TCIDA	= 1 << 8,
+};
+
+/**
+ * enum nvme_mi_chsc - Controller Health Status Changed Flags (CHSCF)
+ * @NVME_MI_CHSC_RDY:	Ready
+ * @NVME_MI_CHSC_CFS:	Controller Fatal Status
+ * @NVME_MI_CHSC_SHST:	Shutdown Status
+ * @NVME_MI_CHSC_NSSRO:	NVM Subsystem Reset Occurred
+ * @NVME_MI_CHSC_CECO:	Controller Enable Change Occurred
+ * @NVME_MI_CHSC_NAC:	Namespace Attribute Changed
+ * @NVME_MI_CHSC_FA:	Firmware Activated
+ * @NVME_MI_CHSC_CSTS:	Controller Status Change
+ * @NVME_MI_CHSC_CTEMP:	Composite Temperature Change
+ * @NVME_MI_CHSC_PDLU:	Percentage Used
+ * @NVME_MI_CHSC_SPARE:	Available Spare
+ * @NVME_MI_CHSC_CWARN:	Critical Warning
+ * @NVME_MI_CHSC_TCIDA:	Telemetry Controller-Initiated Data Available
+ */
+enum nvme_mi_chsc {
+	NVME_MI_CHSC_RDY	= 1 << 0,
+	NVME_MI_CHSC_CFS	= 1 << 1,
+	NVME_MI_CHSC_SHST	= 1 << 2,
+	NVME_MI_CHSC_NSSRO	= 1 << 4,
+	NVME_MI_CHSC_CECO	= 1 << 5,
+	NVME_MI_CHSC_NAC	= 1 << 6,
+	NVME_MI_CHSC_FA		= 1 << 7,
+	NVME_MI_CHSC_CSTS	= 1 << 8,
+	NVME_MI_CHSC_CTEMP	= 1 << 9,
+	NVME_MI_CHSC_PDLU	= 1 << 10,
+	NVME_MI_CHSC_SPARE	= 1 << 11,
+	NVME_MI_CHSC_CWARN	= 1 << 12,
+	NVME_MI_CHSC_TCIDA	= 1 << 13,
 };
 
 /**

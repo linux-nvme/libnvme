@@ -1951,6 +1951,117 @@ int nvme_mi_mi_subsystem_health_status_poll(nvme_mi_ep_t ep, bool clear,
 	return 0;
 }
 
+int nvme_mi_mi_controller_health_status_poll(nvme_mi_ep_t ep,
+					    struct nvme_mi_ctrl_health_poll_args *args)
+{
+	struct nvme_mi_mi_resp_hdr resp_hdr;
+	struct nvme_mi_mi_req_hdr req_hdr;
+	struct nvme_mi_resp resp;
+	struct nvme_mi_req req;
+	unsigned int requested, total = 0;
+	__u32 current_sctlid;
+	__u32 dw0_flags = 0, dw1_flags = 0;
+
+	if (!args || args->args_size < sizeof(*args)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (!args->entries || !args->num_entries || *args->num_entries == 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	requested = *args->num_entries;
+	current_sctlid = args->start_ctrl_id;
+
+	if (args->all)
+		dw0_flags |= (1U << 31);
+	if (args->inc_sriov_vf)
+		dw0_flags |= (1U << 26);
+	if (args->inc_sriov_pf)
+		dw0_flags |= (1U << 25);
+	if (args->inc_pci)
+		dw0_flags |= (1U << 24);
+
+	if (args->clear)
+		dw1_flags |= (1U << 31);
+	if (args->filter_cwarn)
+		dw1_flags |= (1U << 4);
+	if (args->filter_spare)
+		dw1_flags |= (1U << 3);
+	if (args->filter_pdlu)
+		dw1_flags |= (1U << 2);
+	if (args->filter_ctemp)
+		dw1_flags |= (1U << 1);
+	if (args->filter_csts)
+		dw1_flags |= (1U << 0);
+
+	while (total < requested) {
+		unsigned int chunk = requested - total;
+		__u8 maxrent;
+		__u32 cdw0, cdw1;
+		size_t exp_len;
+		__u8 rent;
+		int rc;
+
+		if (chunk > 255)
+			chunk = 255;
+
+		maxrent = (__u8)(chunk - 1);
+		cdw0 = (current_sctlid & 0xffff) |
+		       ((__u32)maxrent << 16) |
+		       dw0_flags;
+		cdw1 = dw1_flags;
+
+		nvme_mi_mi_init_req(ep, &req, &req_hdr, cdw0,
+				    nvme_mi_mi_opcode_ctrl_health_status_poll);
+		req_hdr.cdw1 = cpu_to_le32(cdw1);
+
+		memset(&resp, 0, sizeof(resp));
+		resp.hdr = &resp_hdr.hdr;
+		resp.hdr_len = sizeof(resp_hdr);
+		resp.data = &args->entries[total];
+		resp.data_len = chunk * sizeof(struct nvme_mi_ctrl_health_status);
+
+		rc = nvme_mi_submit(ep, &req, &resp);
+		if (rc) {
+			*args->num_entries = total;
+			return rc;
+		}
+
+		if (resp_hdr.status) {
+			*args->num_entries = total;
+			return resp_hdr.status;
+		}
+
+		rent = resp_hdr.nmresp[2];
+		exp_len = (size_t)rent * sizeof(struct nvme_mi_ctrl_health_status);
+
+		if (resp.data_len != exp_len) {
+			nvme_msg(ep->root, LOG_WARNING,
+				 "MI Controller Health Status length mismatch: got %zd bytes, expected %zd (rent=%u)\n",
+				 resp.data_len, exp_len, rent);
+			*args->num_entries = total;
+			errno = EPROTO;
+			return -1;
+		}
+
+		total += rent;
+
+		if (rent < chunk)
+			break;
+
+		if (le16_to_cpu(args->entries[total - 1].ctlid) == 0xffff)
+			break;
+
+		current_sctlid = le16_to_cpu(args->entries[total - 1].ctlid) + 1;
+	}
+
+	*args->num_entries = total;
+	return 0;
+}
+
 int nvme_mi_mi_config_set_get_ex(nvme_mi_ep_t ep, __u8 opcode, __u32 dw0,
 				__u32 dw1, void *data_out, size_t data_out_len,
 				void *data_in, size_t *data_in_len, __u32 *nmresp)

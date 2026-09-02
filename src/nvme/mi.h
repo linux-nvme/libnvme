@@ -213,12 +213,14 @@ struct nvme_mi_msg_resp {
  * enum nvme_mi_mi_opcode - Operation code for supported NVMe-MI commands.
  * @nvme_mi_mi_opcode_mi_data_read: Read NVMe-MI Data Structure
  * @nvme_mi_mi_opcode_subsys_health_status_poll: Subsystem Health Status Poll
+ * @nvme_mi_mi_opcode_ctrl_health_status_poll: Controller Health Status Poll
  * @nvme_mi_mi_opcode_configuration_set: MI Configuration Set
  * @nvme_mi_mi_opcode_configuration_get: MI Configuration Get
  */
 enum nvme_mi_mi_opcode {
 	nvme_mi_mi_opcode_mi_data_read = 0x00,
 	nvme_mi_mi_opcode_subsys_health_status_poll = 0x01,
+	nvme_mi_mi_opcode_ctrl_health_status_poll = 0x02,
 	nvme_mi_mi_opcode_configuration_set = 0x03,
 	nvme_mi_mi_opcode_configuration_get = 0x04,
 };
@@ -1121,6 +1123,93 @@ int nvme_mi_mi_read_mi_data_ctrl(nvme_mi_ep_t ep, __u16 ctrl_id,
  */
 int nvme_mi_mi_subsystem_health_status_poll(nvme_mi_ep_t ep, bool clear,
 					    struct nvme_mi_nvm_ss_health_status *nshds);
+
+/**
+ * struct nvme_mi_ctrl_health_poll_args - Arguments for nvme_mi_mi_controller_health_status_poll()
+ * @args_size:     Size of &struct nvme_mi_ctrl_health_poll_args (for ABI extensibility)
+ * @start_ctrl_id: Starting Controller ID (SCTLID)
+ * @clear:         Clear Changed Flags (CCF): clear CHSCF and NAC/FA/TCIDA on returned controllers
+ * @all:           Report All (ALL): ignore error selection filter bits
+ * @inc_pci:       Include non-SR-IOV PCI Functions (INCF)
+ * @inc_sriov_pf:  Include SR-IOV Physical Functions (INCPF)
+ * @inc_sriov_vf:  Include SR-IOV Virtual Functions (INCVF)
+ * @filter_csts:   Filter by Controller Status Changes (CSTS)
+ * @filter_ctemp:  Filter by Composite Temperature Changes (CTEMP)
+ * @filter_pdlu:   Filter by Percentage Used (PDLU)
+ * @filter_spare:  Filter by Available Spare (SPARE)
+ * @filter_cwarn:  Filter by Critical Warning (CWARN)
+ * @entries:       Caller-allocated buffer to store Controller Health Data Structures
+ * @num_entries:   In/Out: on input, maximum entries to return; on output, actual entries returned
+ */
+struct nvme_mi_ctrl_health_poll_args {
+	__u32 args_size;
+	__u16 start_ctrl_id;
+	bool clear;
+	bool all;
+	bool inc_pci;
+	bool inc_sriov_pf;
+	bool inc_sriov_vf;
+	bool filter_csts;
+	bool filter_ctemp;
+	bool filter_pdlu;
+	bool filter_spare;
+	bool filter_cwarn;
+	struct nvme_mi_ctrl_health_status *entries;
+	unsigned int *num_entries;
+};
+
+/**
+ * nvme_mi_mi_controller_health_status_poll() - Read Controller Health Data
+ * Structure entries from the NVM subsystem
+ * @ep:   Endpoint for MI communication
+ * @args: Arguments structure controlling query parameters and output buffers
+ *
+ * Retrieves one or more Controller Health Data Structures into @args->entries
+ * according to NVMe-MI 2.0 section 5.3. When @args->num_entries specifies
+ * more than 255 entries, multiple requests will be issued sequentially to
+ * fulfill the query.
+ *
+ * See &struct nvme_mi_ctrl_health_poll_args, &struct nvme_mi_ctrl_health_status.
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise..
+ */
+int nvme_mi_mi_controller_health_status_poll(nvme_mi_ep_t ep,
+					    struct nvme_mi_ctrl_health_poll_args *args);
+
+/**
+ * nvme_mi_mi_controller_health_status_poll_all() - Read Controller Health Data
+ * Structure for all controllers from the NVM subsystem
+ * @ep:          Endpoint for MI communication
+ * @clear:       Flag to clear changed flags for returned controllers
+ * @entries:     Buffer to receive health data structures
+ * @num_entries: In/Out: on input, maximum entries to return; on output, actual entries returned
+ *
+ * Convenience helper to query all controller types starting from ID 0 with
+ * Report All enabled.
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise..
+ */
+static inline int nvme_mi_mi_controller_health_status_poll_all(
+	nvme_mi_ep_t ep, bool clear,
+	struct nvme_mi_ctrl_health_status *entries,
+	unsigned int *num_entries)
+{
+	struct nvme_mi_ctrl_health_poll_args args = {
+		.args_size = sizeof(args),
+		.start_ctrl_id = 0,
+		.clear = clear,
+		.all = true,
+		.inc_pci = true,
+		.inc_sriov_pf = true,
+		.inc_sriov_vf = true,
+		.entries = entries,
+		.num_entries = num_entries,
+	};
+
+	return nvme_mi_mi_controller_health_status_poll(ep, &args);
+}
 
 /**
  * nvme_mi_mi_config_get - query a configuration parameter
