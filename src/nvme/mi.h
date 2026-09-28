@@ -213,12 +213,14 @@ struct nvme_mi_msg_resp {
  * enum nvme_mi_mi_opcode - Operation code for supported NVMe-MI commands.
  * @nvme_mi_mi_opcode_mi_data_read: Read NVMe-MI Data Structure
  * @nvme_mi_mi_opcode_subsys_health_status_poll: Subsystem Health Status Poll
+ * @nvme_mi_mi_opcode_ctrl_health_status_poll: Controller Health Status Poll
  * @nvme_mi_mi_opcode_configuration_set: MI Configuration Set
  * @nvme_mi_mi_opcode_configuration_get: MI Configuration Get
  */
 enum nvme_mi_mi_opcode {
 	nvme_mi_mi_opcode_mi_data_read = 0x00,
 	nvme_mi_mi_opcode_subsys_health_status_poll = 0x01,
+	nvme_mi_mi_opcode_ctrl_health_status_poll = 0x02,
 	nvme_mi_mi_opcode_configuration_set = 0x03,
 	nvme_mi_mi_opcode_configuration_get = 0x04,
 };
@@ -1121,6 +1123,62 @@ int nvme_mi_mi_read_mi_data_ctrl(nvme_mi_ep_t ep, __u16 ctrl_id,
  */
 int nvme_mi_mi_subsystem_health_status_poll(nvme_mi_ep_t ep, bool clear,
 					    struct nvme_mi_nvm_ss_health_status *nshds);
+
+/**
+ * nvme_mi_mi_controller_health_status_poll() - Read Controller Health Data
+ * Structure entries from the NVM subsystem
+ * @ep: Endpoint for MI communication
+ * @start_ctrl_id: Starting Controller ID (SCTLID)
+ * @clear: Clear Changed Flags (CCF): clear CHSCF and NAC/FA/TCIDA on returned
+ *         controllers
+ * @dw0_flags: Controller selection flags (see &enum nvme_mi_chsp_dw0)
+ * @dw1_flags: Error selection filter flags (see &enum nvme_mi_chsp_dw1)
+ * @entries: Caller-allocated buffer to store Controller Health Data Structures
+ * @num_entries: In/Out: on input, maximum entries to return; on output, actual
+ *               entries returned
+ *
+ * Retrieves one or more Controller Health Data Structures into @entries
+ * according to NVMe-MI 2.0 section 5.3. When @num_entries specifies more than
+ * 255 entries, multiple requests will be issued sequentially to fulfill the
+ * query.
+ *
+ * See &struct nvme_mi_ctrl_health_status, &enum nvme_mi_chsp_dw0,
+ * &enum nvme_mi_chsp_dw1.
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise..
+ */
+int nvme_mi_mi_controller_health_status_poll(
+	nvme_mi_ep_t ep, __u16 start_ctrl_id, bool clear, __u32 dw0_flags,
+	__u32 dw1_flags, struct nvme_mi_ctrl_health_status *entries,
+	unsigned int *num_entries);
+
+/**
+ * nvme_mi_mi_controller_health_status_poll_all() - Read Controller Health Data
+ * Structure for all controllers from the NVM subsystem
+ * @ep: Endpoint for MI communication
+ * @clear: Flag to clear changed flags for returned controllers
+ * @entries: Buffer to receive health data structures
+ * @num_entries: In/Out: on input, maximum entries to return; on output, actual
+ *               entries returned
+ *
+ * Convenience helper to query all controller types starting from ID 0 with
+ * Report All enabled.
+ *
+ * Return: The nvme command status if a response was received (see
+ * &enum nvme_status_field) or -1 with errno set otherwise..
+ */
+static inline int nvme_mi_mi_controller_health_status_poll_all(
+	nvme_mi_ep_t ep, bool clear,
+	struct nvme_mi_ctrl_health_status *entries,
+	unsigned int *num_entries)
+{
+	__u32 dw0_flags = NVME_MI_CHSP_DW0_ALL | NVME_MI_CHSP_DW0_INCF |
+			  NVME_MI_CHSP_DW0_INCPF | NVME_MI_CHSP_DW0_INCVF;
+
+	return nvme_mi_mi_controller_health_status_poll(
+		ep, 0, clear, dw0_flags, 0, entries, num_entries);
+}
 
 /**
  * nvme_mi_mi_config_get - query a configuration parameter
