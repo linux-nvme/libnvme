@@ -86,3 +86,12 @@ if diff.found()
         )
     endforeach
 endif
+
+test_dhchap_key = executable(
+    'test-dhchap-key',
+    ['dhchap-key.c'],
+    dependencies: libnvme_dep,
+    include_directories: [incdir],
+)
+
+test('dhchap-key', test_dhchap_key)

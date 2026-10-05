@@ -578,11 +578,17 @@ static bool traddr_is_hostname(nvme_root_t r, nvme_ctrl_t c)
 	return true;
 }
 
+/* Whether __add_argument() would pass @key on: not NULL, empty or "none" */
+static bool dhchap_key_is_usable(const char *key)
+{
+	return key && key[0] != '\0' && strcmp(key, "none");
+}
+
 static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 {
 	struct nvme_fabrics_config *cfg = nvme_ctrl_get_config(c);
 	const char *transport = nvme_ctrl_get_transport(c);
-	const char *hostnqn, *hostid, *hostkey, *ctrlkey;
+	const char *hostnqn, *hostid, *hostkey, *ctrl_hostkey, *ctrlkey;
 	bool discover = false, discovery_nqn = false;
 	nvme_root_t r = h->r;
 	long keyring_id = 0;
@@ -624,6 +630,14 @@ static int build_options(nvme_host_t h, nvme_ctrl_t c, char **argstr)
 	hostkey = nvme_host_get_dhchap_key(h);
 	if (!hostkey)
 		hostkey = nvme_ctrl_get_dhchap_host_key(c);
+	/*
+	 * A host key read by the scan is the last secret which the scan
+	 * read: the host key of the controller itself takes precedence
+	 * unless it is empty or "none".
+	 */
+	ctrl_hostkey = nvme_ctrl_get_dhchap_host_key(c);
+	if (h->dhchap_key_from_sysfs && dhchap_key_is_usable(ctrl_hostkey))
+		hostkey = ctrl_hostkey;
 
 	ctrlkey = nvme_ctrl_get_dhchap_key(c);
 

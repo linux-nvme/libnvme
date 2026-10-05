@@ -483,6 +483,7 @@ void nvme_host_set_dhchap_key(nvme_host_t h, const char *key)
 {
 	free(h->dhchap_key);
 	h->dhchap_key = NULL;
+	h->dhchap_key_from_sysfs = false;
 
 	if (key)
 		h->dhchap_key = strdup(key);
@@ -2285,9 +2286,17 @@ nvme_ctrl_t nvme_scan_ctrl(nvme_root_t r, const char *name)
 	h = nvme_lookup_host(r, hostnqn, hostid);
 	if (h) {
 		host_key = nvme_get_attr(path, "dhchap_secret");
-		if (host_key && strcmp(host_key, "none")) {
+		/*
+		 * The controller might be connected to a different
+		 * subsystem: do not replace a key which has been set with
+		 * nvme_host_set_dhchap_key(), e.g. from the configuration.
+		 * A secret read by the scan is replaced, the last one wins.
+		 */
+		if (host_key && strcmp(host_key, "none") &&
+		    (!h->dhchap_key || h->dhchap_key_from_sysfs)) {
 			free(h->dhchap_key);
 			h->dhchap_key = host_key;
+			h->dhchap_key_from_sysfs = true;
 			host_key = NULL;
 		}
 		free(host_key);
