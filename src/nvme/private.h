@@ -133,6 +133,7 @@ struct nvme_host {
 	char *hostid;
 	char *dhchap_key;
 	char *hostsymname;
+	bool dhchap_key_from_sysfs; /* dhchap_key was read by the scan */
 	bool pdc_enabled;
 	bool pdc_enabled_valid; /* set if pdc_enabled doesn't have an undefined
 				 * value */

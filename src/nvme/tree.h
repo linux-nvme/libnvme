@@ -141,6 +141,10 @@ const char *nvme_host_get_dhchap_key(nvme_host_t h);
  * nvme_host_set_dhchap_key() - set host key
  * @h:		Host for which the key should be set
  * @key:	DH-HMAC-CHAP Key to set or NULL to clear existing key
+ *
+ * A key set here, including "none" or an empty string, is not replaced
+ * by the secret of a controller found by a topology scan. After the key
+ * is cleared with NULL, a scan may set one again.
  */
 void nvme_host_set_dhchap_key(nvme_host_t h, const char *key);
 
