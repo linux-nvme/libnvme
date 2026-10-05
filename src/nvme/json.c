@@ -412,7 +412,8 @@ int json_update_config(nvme_root_t r, const char *config_file)
 			json_object_object_add(host_obj, "hostid",
 					       json_object_new_string(hostid));
 		dhchap_key = nvme_host_get_dhchap_key(h);
-		if (dhchap_key)
+		/* A secret read by the scan is not configured */
+		if (dhchap_key && !h->dhchap_key_from_sysfs)
 			json_object_object_add(host_obj, "dhchap_key",
 					       json_object_new_string(dhchap_key));
 		hostsymname = nvme_host_get_hostsymname(h);

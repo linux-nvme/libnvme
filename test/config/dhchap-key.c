@@ -4,7 +4,8 @@
  *
  * Check which DH-HMAC-CHAP host key a connect request carries, given the
  * keys of the configuration, a key set with nvme_host_set_dhchap_key()
- * and the secrets of the live controllers found by a topology scan.
+ * and the secrets of the live controllers found by a topology scan, and
+ * which host keys nvme_update_config() writes then.
  * The sysfs tree is created in a temporary directory, used via
  * LIBNVME_SYSFS_PATH. open() below fakes /dev/nvme-fabrics with one end
  * of a socket pair, the request is read from the other end.
@@ -70,7 +71,7 @@ static const char *live[][4] = {
 
 enum {
 	SCAN = 1, SET_BEFORE = 2, SET_AFTER = 4, DUP = 8, LIVE_B = 16,
-	HOST2 = 32, ADD = 64,
+	HOST2 = 32, ADD = 64, DUMP = 128,
 };
 
 /*
@@ -81,12 +82,14 @@ enum {
  * of B instead of A. With ADD, it is for a new controller of subsystem Z
  * with the host key KEY_Z, created with nvme_create_ctrl() and connected
  * with nvmf_add_ctrl(), as 'nvme connect' and the Python bindings do. With
- * HOST2, the expected key is the host key of the second host instead.
+ * HOST2, the expected key is the host key of the second host instead. With
+ * DUMP, it is the host key written, or with LIVE_B the key written for the
+ * port of B.
  */
 static const struct test {
 	const char *name, *host_key, *port_key; /* keys of the configuration */
 	int steps;
-	const char *expect; /* NULL: no secret */
+	const char *expect; /* sent, or with DUMP written; NULL: none */
 } tests[] = {
 	{ "host key", KEY_H, KEY_A, SCAN, KEY_H },
 	{ "host key equal to the secret of B", KEY_B, KEY_A, SCAN, KEY_B },
@@ -109,6 +112,12 @@ static const struct test {
 	{ "host key, live controller of B", KEY_H, NULL, SCAN | LIVE_B, KEY_H },
 	{ "controller added with nvmf_add_ctrl()", NULL, NULL, SCAN | ADD, KEY_Z },
 	{ "second host, no secret scanned", NULL, NULL, SCAN | HOST2, NULL },
+	{ "dump, no host key", NULL, KEY_A, SCAN | DUMP, NULL },
+	{ "dump, host key", KEY_H, KEY_A, SCAN | DUMP, KEY_H },
+	{ "dump, host key 'none'", "none", KEY_A, SCAN | DUMP, "none" },
+	{ "dump, empty host key", "", KEY_A, SCAN | DUMP, "" },
+	{ "dump, no host key, nothing scanned", NULL, KEY_A, DUMP, NULL },
+	{ "dump, live controller of B", NULL, NULL, SCAN | DUMP | LIVE_B, KEY_B },
 	{ NULL }
 };
 
@@ -277,7 +286,7 @@ static bool run(const struct test *t)
 	const char *key = "(no tree)";
 	char buf[4096];
 	struct nvme_fabrics_config cfg;
-	nvme_root_t r;
+	nvme_root_t r, d = NULL;
 	nvme_host_t h;
 	nvme_subsystem_t s;
 	nvme_ctrl_t c;
@@ -311,6 +320,21 @@ static bool run(const struct test *t)
 					nvme_free_ctrl(c);
 				key = sent_key(buf, sizeof(buf));
 			}
+		} else if (t->steps & DUMP) {
+			d = nvme_create_root(stderr, LOG_ERR);
+			key = "(no dump)";
+			unlink(CONFIG);
+			if (d && !nvme_update_config(r) && !access(CONFIG, F_OK) &&
+			    !nvme_read_config(d, CONFIG)) {
+				h = nvme_lookup_host(d, HOSTNQN, HOSTID);
+				key = nvme_host_get_dhchap_key(h);
+				if (t->steps & LIVE_B) {
+					s = nvme_lookup_subsystem(h, NULL, NQN("b"));
+					c = nvme_subsystem_first_ctrl(s);
+					key = c ? nvme_ctrl_get_dhchap_host_key(c) :
+					      "(no port)";
+				}
+			}
 		} else {
 			s = nvme_lookup_subsystem(h, NULL, t->steps & LIVE_B ?
 						  NQN("b") : NQN("a"));
@@ -322,6 +346,7 @@ static bool run(const struct test *t)
 	pass = key && t->expect ? !strcmp(key, t->expect) : key == t->expect;
 	printf("%s: %s, expected %s: %s\n", t->name, show(key),
 	       show(t->expect), pass ? "PASS" : "FAIL");
+	nvme_free_tree(d);
 	nvme_free_tree(r);
 	return pass;
 }
