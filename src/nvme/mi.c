@@ -1951,6 +1951,100 @@ int nvme_mi_mi_subsystem_health_status_poll(nvme_mi_ep_t ep, bool clear,
 	return 0;
 }
 
+int nvme_mi_mi_controller_health_status_poll(
+	nvme_mi_ep_t ep, __u16 start_ctrl_id, bool clear, __u32 dw0_flags,
+	__u32 dw1_flags, struct nvme_mi_ctrl_health_status *entries,
+	unsigned int *num_entries)
+{
+	struct nvme_mi_mi_resp_hdr resp_hdr;
+	struct nvme_mi_mi_req_hdr req_hdr;
+	struct nvme_mi_resp resp;
+	struct nvme_mi_req req;
+	unsigned int requested, total = 0;
+	__u32 current_sctlid;
+
+	if (!entries || !num_entries || *num_entries == 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	requested = *num_entries;
+	current_sctlid = start_ctrl_id;
+
+	while (total < requested) {
+		unsigned int chunk = requested - total;
+		__u8 maxrent;
+		__u32 cdw0, cdw1;
+		size_t exp_len;
+		__u8 rent;
+		int rc;
+
+		if (chunk > 255)
+			chunk = 255;
+
+		maxrent = (__u8)(chunk - 1);
+		cdw0 = (current_sctlid & 0xffff) |
+		       ((__u32)maxrent << 16) |
+		       (dw0_flags & (NVME_MI_CHSP_DW0_ALL |
+				     NVME_MI_CHSP_DW0_INCVF |
+				     NVME_MI_CHSP_DW0_INCPF |
+				     NVME_MI_CHSP_DW0_INCF));
+		cdw1 = (dw1_flags & (NVME_MI_CHSP_DW1_CCF |
+				     NVME_MI_CHSP_DW1_CWARN |
+				     NVME_MI_CHSP_DW1_SPARE |
+				     NVME_MI_CHSP_DW1_PDLU |
+				     NVME_MI_CHSP_DW1_CTEMP |
+				     NVME_MI_CHSP_DW1_CSTS)) |
+		       (clear ? NVME_MI_CHSP_DW1_CCF : 0);
+
+		nvme_mi_mi_init_req(ep, &req, &req_hdr, cdw0,
+				    nvme_mi_mi_opcode_ctrl_health_status_poll);
+		req_hdr.cdw1 = cpu_to_le32(cdw1);
+
+		memset(&resp, 0, sizeof(resp));
+		resp.hdr = &resp_hdr.hdr;
+		resp.hdr_len = sizeof(resp_hdr);
+		resp.data = &entries[total];
+		resp.data_len = chunk * sizeof(*entries);
+
+		rc = nvme_mi_submit(ep, &req, &resp);
+		if (rc) {
+			*num_entries = total;
+			return rc;
+		}
+
+		if (resp_hdr.status) {
+			*num_entries = total;
+			return resp_hdr.status;
+		}
+
+		rent = resp_hdr.nmresp[2];
+		exp_len = (size_t)rent * sizeof(*entries);
+
+		if (resp.data_len != exp_len) {
+			nvme_msg(ep->root, LOG_WARNING,
+				 "MI Controller Health Status length mismatch: got %zd bytes, expected %zd (rent=%u)\n",
+				 resp.data_len, exp_len, rent);
+			*num_entries = total;
+			errno = EPROTO;
+			return -1;
+		}
+
+		total += rent;
+
+		if (rent < chunk)
+			break;
+
+		if (le16_to_cpu(entries[total - 1].ctlid) == 0xffff)
+			break;
+
+		current_sctlid = le16_to_cpu(entries[total - 1].ctlid) + 1;
+	}
+
+	*num_entries = total;
+	return 0;
+}
+
 int nvme_mi_mi_config_set_get_ex(nvme_mi_ep_t ep, __u8 opcode, __u32 dw0,
 				__u32 dw1, void *data_out, size_t data_out_len,
 				void *data_in, size_t *data_in_len, __u32 *nmresp)
