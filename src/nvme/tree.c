@@ -2751,6 +2751,14 @@ static int nvme_strtouuid(const char *str, void *res)
 	return 0;
 }
 
+static int nvme_wwidtouuid(const char *str, void *res)
+{
+	if (strncmp(str, "uuid.", 5))
+		return 0;
+
+	return nvme_strtouuid(str + 5, res);
+}
+
 struct sysfs_attr_table {
 	void *var;
 	int (*parse)(const char *str, void *res);
@@ -2797,7 +2805,7 @@ static int nvme_ns_init(const char *path, struct nvme_ns *ns)
 		{ &ns->lba_size,  nvme_strtou32,  true, "queue/logical_block_size" },
 		{ ns->eui64,      nvme_strtoeuid, false, "eui" },
 		{ ns->nguid,      nvme_strtouuid, false, "nguid" },
-		{ ns->uuid,       nvme_strtouuid, false, "uuid" }
+		{ ns->uuid,       nvme_wwidtouuid, false, "wwid" }
 	};
 
 	ret = parse_attrs(path, base, ARRAY_SIZE(base));
