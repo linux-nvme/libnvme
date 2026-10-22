@@ -41,6 +41,7 @@ LIBNVME_MI_1_14 {
 LIBNVME_MI_1_12 {
 	global:
 		nvme_mi_mi_xfer;
+		nvme_mi_pcie_xfer;
 };
 
 LIBNVME_MI_1_11 {
