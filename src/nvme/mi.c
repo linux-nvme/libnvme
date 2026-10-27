@@ -2699,7 +2699,7 @@ int nvme_mi_aem_process(nvme_mi_ep_t ep, void *userdata)
 				rc = validate_occ_list_update_ctx(&response->occ_list_hdr,
 										response_len,
 										ep->aem_ctx,
-										true);
+										false);
 				//Callbacks based on ack
 				if (rc == 0 && response->occ_list_hdr.numaeo) {
 					//Return value unused here
