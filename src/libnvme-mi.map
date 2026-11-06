@@ -16,6 +16,7 @@ LIBNVME_MI_UNRELEASED {
 		nvme_mi_ep_set_mprt_max;
 		nvme_mi_mi_config_get_async_event;
 		nvme_mi_mi_config_set_async_event;
+		nvme_mi_pcie_xfer;
 };
 
 LIBNVME_MI_1_15 {
@@ -41,7 +42,6 @@ LIBNVME_MI_1_14 {
 LIBNVME_MI_1_12 {
 	global:
 		nvme_mi_mi_xfer;
-		nvme_mi_pcie_xfer;
 };
 
 LIBNVME_MI_1_11 {
