@@ -1455,8 +1455,12 @@ int nvme_mi_admin_set_features(nvme_mi_ctrl_t ctrl,
 	req_hdr.cdw13 = cpu_to_le32(args->cdw13);
 	req_hdr.cdw15 = cpu_to_le32(args->cdw15);
 
-	req.data_len = args->data_len;
-	req.data = args->data;
+	if (args->data && args->data_len) {
+		req_hdr.dlen = cpu_to_le32(args->data_len);
+		req_hdr.flags = 0x1;
+		req.data_len = args->data_len;
+		req.data = args->data;
+	}
 
 	nvme_mi_admin_init_resp(&resp, &resp_hdr);
 

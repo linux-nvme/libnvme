@@ -1021,6 +1021,7 @@ static int test_admin_set_features_cb(struct nvme_mi_ep *ep,
 {
 	__u8 save, fid, ror, mt, *rq_hdr, *rq_data, *rs_hdr;
 	__u16 ctrl_id;
+	__u32 dlen;
 	uint8_t ts[6];
 	int i;
 
@@ -1039,9 +1040,17 @@ static int test_admin_set_features_cb(struct nvme_mi_ep *ep,
 	/* opcode */
 	assert(rq_hdr[4] == nvme_admin_set_features);
 
+	/* flags: bit 0 indicates dlen is valid */
+	assert(rq_hdr[5] == 0x1);
+
 	/* controller */
 	ctrl_id = rq_hdr[7] << 8 | rq_hdr[6];
 	assert(ctrl_id == 0x5); /* controller id */
+
+	/* dlen matches payload length */
+	dlen = rq_hdr[35] << 24 | rq_hdr[34] << 16 |
+	       rq_hdr[33] << 8 | rq_hdr[32];
+	assert(dlen == req->data_len);
 
 	/* fid from lower bytes of cdw10, save from top bit */
 	fid = rq_hdr[44];
