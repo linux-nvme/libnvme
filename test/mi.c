@@ -2315,6 +2315,580 @@ static void test_mi_ctrl_health_errors(nvme_mi_ep_t ep)
 	assert(rc == -1 && errno == EPROTO);
 }
 
+struct pcie_test_expect {
+	__u8 opcode;
+	__u16 ctrl_id;
+	__u32 cdw0;
+	__u32 cdw1;
+	__u32 cdw2;
+	size_t exp_req_data_len;
+	const __u8 *exp_req_data;
+	size_t exp_resp_data_len;
+	const __u8 *resp_data;
+	__u8 status;
+	__u8 pel[3];
+};
+
+static int test_pcie_common_cb(struct nvme_mi_ep *ep,
+			       struct nvme_mi_req *req,
+			       struct nvme_mi_resp *resp,
+			       void *data)
+{
+	struct pcie_test_expect *exp = data;
+	struct nvme_mi_pcie_req_hdr *pcie_req;
+	struct nvme_mi_pcie_resp_hdr *pcie_resp;
+	__u8 ror, mt;
+
+	assert(sizeof(struct nvme_mi_pcie_req_hdr) == 20);
+	assert(sizeof(struct nvme_mi_pcie_resp_hdr) == 8);
+
+	assert(req->hdr->type == NVME_MI_MSGTYPE_NVME);
+	assert(req->hdr->meb == 0);
+	assert(req->hdr->rsvd0 == 0);
+
+	ror = req->hdr->nmp >> 7;
+	mt = (req->hdr->nmp >> 3) & 0x0f;
+	assert(ror == NVME_MI_ROR_REQ);
+	assert(mt == NVME_MI_MT_PCIE);
+	assert((req->hdr->nmp & 0x1) == (ep->csi & 0x1));
+
+	assert(req->hdr_len == sizeof(struct nvme_mi_pcie_req_hdr));
+	pcie_req = (struct nvme_mi_pcie_req_hdr *)req->hdr;
+	assert(pcie_req->opcode == exp->opcode);
+	assert(pcie_req->rsvd == 0);
+	assert(le16_to_cpu(pcie_req->ctrlid) == exp->ctrl_id);
+	assert(le32_to_cpu(pcie_req->nmd0) == exp->cdw0);
+	assert(le32_to_cpu(pcie_req->nmd1) == exp->cdw1);
+	assert(le32_to_cpu(pcie_req->nmd2) == exp->cdw2);
+
+	assert(req->data_len == exp->exp_req_data_len);
+	if (exp->exp_req_data_len > 0 && exp->exp_req_data)
+		assert(!memcmp(req->data, exp->exp_req_data,
+			       exp->exp_req_data_len));
+
+	assert(resp->hdr_len == sizeof(struct nvme_mi_pcie_resp_hdr));
+	assert(resp->data_len == exp->exp_resp_data_len);
+
+	pcie_resp = (struct nvme_mi_pcie_resp_hdr *)resp->hdr;
+	pcie_resp->status = exp->status;
+	memcpy(pcie_resp->rsvd, exp->pel, sizeof(pcie_resp->rsvd));
+
+	if (exp->status) {
+		resp->data_len = 0;
+	} else if (exp->exp_resp_data_len > 0 && exp->resp_data) {
+		memcpy(resp->data, exp->resp_data, exp->exp_resp_data_len);
+	}
+
+	test_transport_resp_calc_mic(resp);
+	return 0;
+}
+
+static void test_pcie_cfg_read(nvme_mi_ep_t ep)
+{
+	__u8 wire_resp[16] = {
+		0x86, 0x80, 0x10, 0x0a, 0x06, 0x04, 0x10, 0x00,
+		0x02, 0x00, 0x08, 0x01, 0x10, 0x00, 0x00, 0x00,
+	};
+	__u8 large_wire_resp[4096];
+	__u8 large_buf[4096];
+	struct pcie_test_expect exp = {
+		.opcode = nvme_mi_pcie_opcode_cfg_read,
+		.ctrl_id = 3,
+		.cdw0 = 16,
+		.cdw1 = 0x100,
+		.cdw2 = 0,
+		.exp_req_data_len = 0,
+		.exp_resp_data_len = 16,
+		.resp_data = wire_resp,
+		.status = NVME_MI_RESP_SUCCESS,
+	};
+	__u8 buf[16] = { 0 };
+	nvme_mi_ctrl_t ctrl;
+	unsigned int i;
+	int rc;
+
+	test_set_transport_callback(ep, test_pcie_common_cb, &exp);
+	ctrl = nvme_mi_init_ctrl(ep, 3);
+	assert(ctrl);
+
+	rc = nvme_mi_pcie_config_read(ctrl, 0x100, sizeof(buf), buf);
+	assert(rc == 0);
+	assert(!memcmp(buf, wire_resp, sizeof(buf)));
+
+	/* Verify length > 64 (256 bytes and full 4096-byte Config Space) */
+	for (i = 0; i < sizeof(large_wire_resp); i++)
+		large_wire_resp[i] = (__u8)((i * 7 + 3) & 0xff);
+
+	exp.cdw0 = 256;
+	exp.cdw1 = 0x100;
+	exp.exp_resp_data_len = 256;
+	exp.resp_data = large_wire_resp;
+	memset(large_buf, 0, sizeof(large_buf));
+	rc = nvme_mi_pcie_config_read(ctrl, 0x100, 256, large_buf);
+	assert(rc == 0);
+	assert(!memcmp(large_buf, large_wire_resp, 256));
+
+	exp.cdw0 = 4096;
+	exp.cdw1 = 0;
+	exp.exp_resp_data_len = 4096;
+	memset(large_buf, 0, sizeof(large_buf));
+	rc = nvme_mi_pcie_config_read(ctrl, 0, 4096, large_buf);
+	assert(rc == 0);
+	assert(!memcmp(large_buf, large_wire_resp, 4096));
+
+	nvme_mi_close_ctrl(ctrl);
+}
+
+static void test_pcie_cfg_write(nvme_mi_ep_t ep)
+{
+	__u8 payload[8] = { 0x01, 0x00, 0x00, 0x00, 0xaa, 0x55, 0x12, 0x34 };
+	__u8 large_payload[4096];
+	struct pcie_test_expect exp = {
+		.opcode = nvme_mi_pcie_opcode_cfg_write,
+		.ctrl_id = 2,
+		.cdw0 = 8,
+		.cdw1 = 0x110,
+		.cdw2 = 0,
+		.exp_req_data_len = 8,
+		.exp_req_data = payload,
+		.exp_resp_data_len = 0,
+		.status = NVME_MI_RESP_SUCCESS,
+	};
+	nvme_mi_ctrl_t ctrl;
+	unsigned int i;
+	int rc;
+
+	test_set_transport_callback(ep, test_pcie_common_cb, &exp);
+	ctrl = nvme_mi_init_ctrl(ep, 2);
+	assert(ctrl);
+
+	rc = nvme_mi_pcie_config_write(ctrl, 0x110, sizeof(payload), payload);
+	assert(rc == 0);
+
+	/* Verify length > 64 (256 bytes and full 4096-byte Config Space) */
+	for (i = 0; i < sizeof(large_payload); i++)
+		large_payload[i] = (__u8)((i * 11 + 5) & 0xff);
+
+	exp.cdw0 = 256;
+	exp.cdw1 = 0x200;
+	exp.exp_req_data_len = 256;
+	exp.exp_req_data = large_payload;
+	rc = nvme_mi_pcie_config_write(ctrl, 0x200, 256, large_payload);
+	assert(rc == 0);
+
+	exp.cdw0 = 4096;
+	exp.cdw1 = 0;
+	exp.exp_req_data_len = 4096;
+	rc = nvme_mi_pcie_config_write(ctrl, 0, 4096, large_payload);
+	assert(rc == 0);
+
+	nvme_mi_close_ctrl(ctrl);
+}
+
+static void test_pcie_mem_read(nvme_mi_ep_t ep)
+{
+	__u8 wire_resp[8] = { 0x01, 0x00, 0x00, 0x00, 0x00, 0x04, 0x01, 0x00 };
+	__u8 large_wire_resp[4096];
+	__u8 large_buf[4096];
+	__u64 offset = 0x000000028000001cULL;
+	struct pcie_test_expect exp = {
+		.opcode = nvme_mi_pcie_opcode_mem_read,
+		.ctrl_id = 1,
+		.cdw0 = (4U << 16) | 8U,
+		.cdw1 = 0x8000001cU,
+		.cdw2 = 0x00000002U,
+		.exp_req_data_len = 0,
+		.exp_resp_data_len = 8,
+		.resp_data = wire_resp,
+		.status = NVME_MI_RESP_SUCCESS,
+	};
+	__u8 buf[8] = { 0 };
+	nvme_mi_ctrl_t ctrl;
+	unsigned int i;
+	int rc;
+
+	test_set_transport_callback(ep, test_pcie_common_cb, &exp);
+	ctrl = nvme_mi_init_ctrl(ep, 1);
+	assert(ctrl);
+
+	rc = nvme_mi_pcie_mem_read(ctrl, 4, offset, sizeof(buf), buf);
+	assert(rc == 0);
+	assert(!memcmp(buf, wire_resp, sizeof(buf)));
+
+	/* Verify length = 4096 on Memory BAR read */
+	for (i = 0; i < sizeof(large_wire_resp); i++)
+		large_wire_resp[i] = (__u8)((i ^ 0x5a) & 0xff);
+
+	exp.cdw0 = (0U << 16) | 4096U;
+	exp.cdw1 = 0x00001000U;
+	exp.cdw2 = 0x00000000U;
+	exp.exp_resp_data_len = 4096;
+	exp.resp_data = large_wire_resp;
+	memset(large_buf, 0, sizeof(large_buf));
+	rc = nvme_mi_pcie_mem_read(ctrl, 0, 0x1000ULL, 4096, large_buf);
+	assert(rc == 0);
+	assert(!memcmp(large_buf, large_wire_resp, 4096));
+
+	nvme_mi_close_ctrl(ctrl);
+}
+
+static void test_pcie_mem_write(nvme_mi_ep_t ep)
+{
+	__u8 payload[4] = { 0x01, 0x46, 0x00, 0x00 };
+	__u8 large_payload[4096];
+	__u64 offset = 0x0000000100000014ULL;
+	struct pcie_test_expect exp = {
+		.opcode = nvme_mi_pcie_opcode_mem_write,
+		.ctrl_id = 0,
+		.cdw0 = (2U << 16) | 4U,
+		.cdw1 = 0x00000014U,
+		.cdw2 = 0x00000001U,
+		.exp_req_data_len = 4,
+		.exp_req_data = payload,
+		.exp_resp_data_len = 0,
+		.status = NVME_MI_RESP_SUCCESS,
+	};
+	nvme_mi_ctrl_t ctrl;
+	unsigned int i;
+	int rc;
+
+	test_set_transport_callback(ep, test_pcie_common_cb, &exp);
+	ctrl = nvme_mi_init_ctrl(ep, 0);
+	assert(ctrl);
+
+	rc = nvme_mi_pcie_mem_write(ctrl, 2, offset, sizeof(payload), payload);
+	assert(rc == 0);
+
+	/* Verify length = 4096 on Memory BAR write */
+	for (i = 0; i < sizeof(large_payload); i++)
+		large_payload[i] = (__u8)((i ^ 0xa5) & 0xff);
+
+	exp.cdw0 = (0U << 16) | 4096U;
+	exp.cdw1 = 0x00002000U;
+	exp.cdw2 = 0x00000000U;
+	exp.exp_req_data_len = 4096;
+	exp.exp_req_data = large_payload;
+	rc = nvme_mi_pcie_mem_write(ctrl, 0, 0x2000ULL, 4096, large_payload);
+	assert(rc == 0);
+
+	nvme_mi_close_ctrl(ctrl);
+}
+
+static void test_pcie_io_read(nvme_mi_ep_t ep)
+{
+	__u8 wire_resp[4] = { 0xde, 0xad, 0xbe, 0xef };
+	struct pcie_test_expect exp = {
+		.opcode = nvme_mi_pcie_opcode_io_read,
+		.ctrl_id = 5,
+		.cdw0 = (5U << 16) | 4U,
+		.cdw1 = 0xdead0040U,
+		.cdw2 = 0,
+		.exp_req_data_len = 0,
+		.exp_resp_data_len = 4,
+		.resp_data = wire_resp,
+		.status = NVME_MI_RESP_SUCCESS,
+	};
+	__u8 buf[4] = { 0 };
+	nvme_mi_ctrl_t ctrl;
+	int rc;
+
+	test_set_transport_callback(ep, test_pcie_common_cb, &exp);
+	ctrl = nvme_mi_init_ctrl(ep, 5);
+	assert(ctrl);
+
+	rc = nvme_mi_pcie_io_read(ctrl, 5, 0xdead0040U, sizeof(buf), buf);
+	assert(rc == 0);
+	assert(!memcmp(buf, wire_resp, sizeof(buf)));
+
+	nvme_mi_close_ctrl(ctrl);
+}
+
+static void test_pcie_io_write(nvme_mi_ep_t ep)
+{
+	__u8 payload[4] = { 0xca, 0xfe, 0xba, 0xbe };
+	struct pcie_test_expect exp = {
+		.opcode = nvme_mi_pcie_opcode_io_write,
+		.ctrl_id = 4,
+		.cdw0 = (3U << 16) | 4U,
+		.cdw1 = 0x00001020U,
+		.cdw2 = 0,
+		.exp_req_data_len = 4,
+		.exp_req_data = payload,
+		.exp_resp_data_len = 0,
+		.status = NVME_MI_RESP_SUCCESS,
+	};
+	nvme_mi_ctrl_t ctrl;
+	int rc;
+
+	test_set_transport_callback(ep, test_pcie_common_cb, &exp);
+	ctrl = nvme_mi_init_ctrl(ep, 4);
+	assert(ctrl);
+
+	rc = nvme_mi_pcie_io_write(ctrl, 3, 0x00001020U, sizeof(payload),
+				   payload);
+	assert(rc == 0);
+
+	nvme_mi_close_ctrl(ctrl);
+}
+
+static void test_pcie_xfer_raw(nvme_mi_ep_t ep)
+{
+	__u8 wire_resp[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+	struct pcie_test_expect exp = {
+		.opcode = nvme_mi_pcie_opcode_cfg_read,
+		.ctrl_id = 7,
+		.cdw0 = 8,
+		.cdw1 = 0x20,
+		.cdw2 = 0,
+		.exp_req_data_len = 0,
+		.exp_resp_data_len = 8,
+		.resp_data = wire_resp,
+		.status = NVME_MI_RESP_SUCCESS,
+	};
+	struct nvme_mi_pcie_req_hdr req = { 0 };
+	struct {
+		struct nvme_mi_pcie_resp_hdr hdr;
+		__u8 data[8];
+	} resp = { 0 };
+	size_t resp_data_size = sizeof(resp.data);
+	nvme_mi_ctrl_t ctrl;
+	int rc;
+
+	test_set_transport_callback(ep, test_pcie_common_cb, &exp);
+	ctrl = nvme_mi_init_ctrl(ep, 7);
+	assert(ctrl);
+
+	/* Test CSI=1 propagation in nvme_mi_pcie_xfer as well */
+	rc = nvme_mi_set_csi(ep, 1);
+	assert(rc == 0);
+
+	req.opcode = nvme_mi_pcie_opcode_cfg_read;
+	req.ctrlid = cpu_to_le16(7);
+	req.nmd0 = cpu_to_le32(8);
+	req.nmd1 = cpu_to_le32(0x20);
+	req.nmd2 = cpu_to_le32(0);
+
+	rc = nvme_mi_pcie_xfer(ep, &req, 0, &resp.hdr, &resp_data_size);
+	assert(rc == 0);
+	assert(resp_data_size == 8);
+	assert(!memcmp(resp.data, wire_resp, 8));
+
+	rc = nvme_mi_set_csi(ep, 0);
+	assert(rc == 0);
+	nvme_mi_close_ctrl(ctrl);
+}
+
+static void test_pcie_unaligned_lengths(nvme_mi_ep_t ep)
+{
+	static const __u16 test_lens[] = { 1, 2, 3, 5 };
+	static const size_t aligned_lens[] = { 4, 4, 4, 8 };
+	static const __u8 full_pattern[8] = {
+		0xa1, 0xb2, 0xc3, 0xd4, 0xe5, 0xf6, 0x07, 0x18
+	};
+	nvme_mi_ctrl_t ctrl;
+	unsigned int i;
+	int rc;
+
+	ctrl = nvme_mi_init_ctrl(ep, 1);
+	assert(ctrl);
+
+	for (i = 0; i < ARRAY_SIZE(test_lens); i++) {
+		__u16 len = test_lens[i];
+		size_t aligned = aligned_lens[i];
+		__u8 wire_buf[8] = { 0 };
+		__u8 read_buf[16];
+		struct pcie_test_expect exp_read = {
+			.opcode = nvme_mi_pcie_opcode_cfg_read,
+			.ctrl_id = 1,
+			.cdw0 = len,
+			.cdw1 = 0x04,
+			.cdw2 = 0,
+			.exp_req_data_len = 0,
+			.exp_resp_data_len = aligned,
+			.resp_data = wire_buf,
+			.status = NVME_MI_RESP_SUCCESS,
+		};
+		struct pcie_test_expect exp_write = {
+			.opcode = nvme_mi_pcie_opcode_mem_write,
+			.ctrl_id = 1,
+			.cdw0 = (1U << 16) | len,
+			.cdw1 = 0x20,
+			.cdw2 = 0,
+			.exp_req_data_len = aligned,
+			.exp_req_data = wire_buf,
+			.exp_resp_data_len = 0,
+			.status = NVME_MI_RESP_SUCCESS,
+		};
+
+		/* Prepare expected zero-padded wire buffer */
+		memset(wire_buf, 0, sizeof(wire_buf));
+		memcpy(wire_buf, full_pattern, len);
+
+		/* 1. Unaligned Read: verify exact len copied and canary intact */
+		memset(read_buf, 0xcc, sizeof(read_buf));
+		test_set_transport_callback(ep, test_pcie_common_cb, &exp_read);
+		rc = nvme_mi_pcie_config_read(ctrl, 0x04, len, read_buf);
+		assert(rc == 0);
+		assert(!memcmp(read_buf, full_pattern, len));
+		assert(read_buf[len] == 0xcc);
+
+		/* 2. Unaligned Write: verify wire request is padded with 0x00 */
+		test_set_transport_callback(ep, test_pcie_common_cb, &exp_write);
+		rc = nvme_mi_pcie_mem_write(ctrl, 1, 0x20, len, full_pattern);
+		assert(rc == 0);
+	}
+
+	nvme_mi_close_ctrl(ctrl);
+}
+
+static void test_pcie_invalid_params(nvme_mi_ep_t ep)
+{
+	struct {
+		struct nvme_mi_pcie_req_hdr hdr;
+		__u8 data[8];
+	} req = { 0 };
+	struct {
+		struct nvme_mi_pcie_resp_hdr hdr;
+		__u8 data[8];
+	} resp = { 0 };
+	__u8 buf[16] = { 0 };
+	nvme_mi_ctrl_t ctrl;
+	size_t resp_len;
+	int rc;
+
+	/* Ensure no wire transfer occurs for any invalid parameter test */
+	test_set_transport_callback(ep, test_rejected_command_cb, NULL);
+
+	ctrl = nvme_mi_init_ctrl(ep, 1);
+	assert(ctrl);
+
+	/* 1. Config Space boundary overflow: offset + length > 4096 */
+	errno = 0;
+	rc = nvme_mi_pcie_config_read(ctrl, 4096, 1, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_config_read(ctrl, 4095, 2, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_config_write(ctrl, 0xffc, 8, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	/* 2. Memory / IO BAR > 5 */
+	errno = 0;
+	rc = nvme_mi_pcie_mem_read(ctrl, 6, 0, 4, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_mem_write(ctrl, 7, 0, 4, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_io_read(ctrl, 6, 0, 4, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_io_write(ctrl, 8, 0, 4, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	/* 3. length == 0 or length > 4096 */
+	errno = 0;
+	rc = nvme_mi_pcie_config_read(ctrl, 0, 0, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_config_write(ctrl, 0, 0, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_mem_read(ctrl, 0, 0, 0, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_mem_read(ctrl, 0, 0, 4097, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_io_write(ctrl, 0, 0, 0, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	/* 4. NULL pointer checks */
+	errno = 0;
+	rc = nvme_mi_pcie_config_read(NULL, 0, 4, buf);
+	assert(rc == -1 && errno == EINVAL);
+
+	errno = 0;
+	rc = nvme_mi_pcie_config_read(ctrl, 0, 4, NULL);
+	assert(rc == -1 && errno == EINVAL);
+
+	/* 5. Raw nvme_mi_pcie_xfer response size limit check */
+	resp_len = 4096 + 4;
+	errno = 0;
+	rc = nvme_mi_pcie_xfer(ep, &req.hdr, 0, &resp.hdr, &resp_len);
+	assert(rc == -1 && errno == EINVAL);
+
+	nvme_mi_close_ctrl(ctrl);
+}
+
+static void test_pcie_err_status(nvme_mi_ep_t ep)
+{
+	static const __u8 status_codes[] = {
+		NVME_MI_RESP_PCIE_INACCESSIBLE,
+		NVME_MI_RESP_ACCESS_DENIED,
+		NVME_MI_RESP_INVALID_PARAM,
+	};
+	struct nvme_mi_pcie_req_hdr raw_req = { 0 };
+	struct {
+		struct nvme_mi_pcie_resp_hdr hdr;
+		__u8 data[4];
+	} raw_resp = { 0 };
+	size_t raw_resp_len;
+	nvme_mi_ctrl_t ctrl;
+	unsigned int i;
+	int rc;
+
+	ctrl = nvme_mi_init_ctrl(ep, 0);
+	assert(ctrl);
+
+	for (i = 0; i < ARRAY_SIZE(status_codes); i++) {
+		__u8 st = status_codes[i];
+		__u8 buf[4] = { 0 };
+		struct pcie_test_expect exp = {
+			.opcode = nvme_mi_pcie_opcode_cfg_read,
+			.ctrl_id = 0,
+			.cdw0 = 4,
+			.cdw1 = 0x10,
+			.cdw2 = 0,
+			.exp_req_data_len = 0,
+			.exp_resp_data_len = 4,
+			.status = st,
+			.pel = { 0x02, 0x08, 0x00 },
+		};
+
+		test_set_transport_callback(ep, test_pcie_common_cb, &exp);
+		rc = nvme_mi_pcie_config_read(ctrl, 0x10, sizeof(buf), buf);
+		assert(rc == st);
+
+		/* Also verify raw nvme_mi_pcie_xfer populates status and pel[3] */
+		memset(&raw_req, 0, sizeof(raw_req));
+		memset(&raw_resp, 0, sizeof(raw_resp));
+		raw_req.opcode = nvme_mi_pcie_opcode_cfg_read;
+		raw_req.nmd0 = cpu_to_le32(4);
+		raw_req.nmd1 = cpu_to_le32(0x10);
+		raw_resp_len = sizeof(raw_resp.data);
+		rc = nvme_mi_pcie_xfer(ep, &raw_req, 0, &raw_resp.hdr,
+				       &raw_resp_len);
+		assert(rc == st);
+		assert(raw_resp.hdr.status == st);
+		assert(raw_resp.hdr.rsvd[0] == 0x02);
+		assert(raw_resp.hdr.rsvd[1] == 0x08);
+		assert(raw_resp.hdr.rsvd[2] == 0x00);
+	}
+
+	nvme_mi_close_ctrl(ctrl);
+}
+
 #define DEFINE_TEST(name) { #name, test_ ## name }
 struct test {
 	const char *name;
@@ -2365,6 +2939,16 @@ struct test {
 	DEFINE_TEST(mi_ctrl_health_flags),
 	DEFINE_TEST(mi_ctrl_health_autopaging),
 	DEFINE_TEST(mi_ctrl_health_errors),
+	DEFINE_TEST(pcie_cfg_read),
+	DEFINE_TEST(pcie_cfg_write),
+	DEFINE_TEST(pcie_mem_read),
+	DEFINE_TEST(pcie_mem_write),
+	DEFINE_TEST(pcie_io_read),
+	DEFINE_TEST(pcie_io_write),
+	DEFINE_TEST(pcie_xfer_raw),
+	DEFINE_TEST(pcie_unaligned_lengths),
+	DEFINE_TEST(pcie_invalid_params),
+	DEFINE_TEST(pcie_err_status),
 };
 
 static void run_test(struct test *test, FILE *logfd, nvme_mi_ep_t ep)
