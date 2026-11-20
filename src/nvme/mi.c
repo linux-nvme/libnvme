@@ -2195,6 +2195,181 @@ int nvme_mi_mi_config_set_async_event(nvme_mi_ep_t ep,
 		NULL);
 }
 
+static inline size_t nvme_mi_dword_align(size_t len)
+{
+	return (len + 3) & ~((size_t)3);
+}
+
+static int nvme_mi_pcie_read_common(nvme_mi_ctrl_t ctrl, __u8 opcode,
+				    __u32 cdw0, __u32 cdw1, __u32 cdw2,
+				    __u16 length, void *data)
+{
+	struct nvme_mi_pcie_req_hdr req = { 0 };
+	struct nvme_mi_pcie_resp_hdr *resp;
+	size_t aligned_len;
+	int rc;
+
+	if (!ctrl || !data || !length || length > 4096) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	aligned_len = nvme_mi_dword_align(length);
+	resp = calloc(1, sizeof(*resp) + aligned_len);
+	if (!resp)
+		return -1;
+
+	req.opcode = opcode;
+	req.ctrlid = cpu_to_le16(ctrl->id);
+	req.nmd0 = cpu_to_le32(cdw0);
+	req.nmd1 = cpu_to_le32(cdw1);
+	req.nmd2 = cpu_to_le32(cdw2);
+
+	rc = nvme_mi_pcie_xfer(ctrl->ep, &req, 0, resp, &aligned_len);
+	if (!rc) {
+		if (aligned_len < nvme_mi_dword_align(length)) {
+			errno = EPROTO;
+			rc = -1;
+		} else {
+			memcpy(data, resp + 1, length);
+		}
+	}
+
+	free(resp);
+	return rc;
+}
+
+static int nvme_mi_pcie_write_common(nvme_mi_ctrl_t ctrl, __u8 opcode,
+				     __u32 cdw0, __u32 cdw1, __u32 cdw2,
+				     __u16 length, const void *data)
+{
+	struct nvme_mi_pcie_req_hdr *req;
+	struct nvme_mi_pcie_resp_hdr resp = { 0 };
+	size_t aligned_len, resp_len = 0;
+	int rc;
+
+	if (!ctrl || !data || !length || length > 4096) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	aligned_len = nvme_mi_dword_align(length);
+	req = calloc(1, sizeof(*req) + aligned_len);
+	if (!req)
+		return -1;
+
+	req->opcode = opcode;
+	req->ctrlid = cpu_to_le16(ctrl->id);
+	req->nmd0 = cpu_to_le32(cdw0);
+	req->nmd1 = cpu_to_le32(cdw1);
+	req->nmd2 = cpu_to_le32(cdw2);
+	memcpy(req + 1, data, length);
+
+	rc = nvme_mi_pcie_xfer(ctrl->ep, req, aligned_len, &resp, &resp_len);
+	free(req);
+	return rc;
+}
+
+static inline __u32 nvme_mi_pcie_bar_cdw0(__u8 bar, __u16 length)
+{
+	return (((__u32)bar & 0x7) << 16) | length;
+}
+
+int nvme_mi_pcie_config_read(nvme_mi_ctrl_t ctrl, __u16 offset,
+			     __u16 length, void *data)
+{
+	__u32 cdw0 = length;
+	__u32 cdw1 = offset & 0x0fff;
+	__u32 cdw2 = 0;
+
+	if ((__u32)offset + (__u32)length > 4096) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	return nvme_mi_pcie_read_common(ctrl, nvme_mi_pcie_opcode_cfg_read,
+					cdw0, cdw1, cdw2, length, data);
+}
+
+int nvme_mi_pcie_config_write(nvme_mi_ctrl_t ctrl, __u16 offset,
+			      __u16 length, const void *data)
+{
+	__u32 cdw0 = length;
+	__u32 cdw1 = offset & 0x0fff;
+	__u32 cdw2 = 0;
+
+	if ((__u32)offset + (__u32)length > 4096) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	return nvme_mi_pcie_write_common(ctrl, nvme_mi_pcie_opcode_cfg_write,
+					 cdw0, cdw1, cdw2, length, data);
+}
+
+int nvme_mi_pcie_mem_read(nvme_mi_ctrl_t ctrl, __u8 bar, __u64 offset,
+			  __u16 length, void *data)
+{
+	__u32 cdw0 = nvme_mi_pcie_bar_cdw0(bar, length);
+	__u32 cdw1 = (__u32)(offset & 0xffffffffULL);
+	__u32 cdw2 = (__u32)(offset >> 32);
+
+	if (bar > 5) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	return nvme_mi_pcie_read_common(ctrl, nvme_mi_pcie_opcode_mem_read,
+					cdw0, cdw1, cdw2, length, data);
+}
+
+int nvme_mi_pcie_mem_write(nvme_mi_ctrl_t ctrl, __u8 bar, __u64 offset,
+			   __u16 length, const void *data)
+{
+	__u32 cdw0 = nvme_mi_pcie_bar_cdw0(bar, length);
+	__u32 cdw1 = (__u32)(offset & 0xffffffffULL);
+	__u32 cdw2 = (__u32)(offset >> 32);
+
+	if (bar > 5) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	return nvme_mi_pcie_write_common(ctrl, nvme_mi_pcie_opcode_mem_write,
+					 cdw0, cdw1, cdw2, length, data);
+}
+
+int nvme_mi_pcie_io_read(nvme_mi_ctrl_t ctrl, __u8 bar, __u32 offset,
+			 __u16 length, void *data)
+{
+	__u32 cdw0 = nvme_mi_pcie_bar_cdw0(bar, length);
+	__u32 cdw1 = offset;
+	__u32 cdw2 = 0;
+
+	if (bar > 5) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	return nvme_mi_pcie_read_common(ctrl, nvme_mi_pcie_opcode_io_read,
+					cdw0, cdw1, cdw2, length, data);
+}
+
+int nvme_mi_pcie_io_write(nvme_mi_ctrl_t ctrl, __u8 bar, __u32 offset,
+			  __u16 length, const void *data)
+{
+	__u32 cdw0 = nvme_mi_pcie_bar_cdw0(bar, length);
+	__u32 cdw1 = offset;
+	__u32 cdw2 = 0;
+
+	if (bar > 5) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	return nvme_mi_pcie_write_common(ctrl, nvme_mi_pcie_opcode_io_write,
+					 cdw0, cdw1, cdw2, length, data);
+}
 
 void nvme_mi_close(nvme_mi_ep_t ep)
 {
