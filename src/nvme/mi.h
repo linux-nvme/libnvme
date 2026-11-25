@@ -3534,6 +3534,112 @@ int nvme_mi_admin_sanitize_nvm(nvme_mi_ctrl_t ctrl,
 			       struct nvme_sanitize_nvm_args *args);
 
 /**
+ * nvme_mi_pcie_config_read() - Perform a PCIe Configuration Read command.
+ * @ctrl: Controller to query
+ * @offset: Starting byte offset in PCIe Configuration Space (0..4095)
+ * @length: Number of bytes to read (1..4096; @offset + @length <= 4096)
+ * @data: Buffer to populate with @length bytes of configuration data
+ *
+ * Reads @length bytes from the 4 KiB PCIe Configuration Space of @ctrl
+ * starting at @offset (Opcode 0x00, NVMe-MI section 7.1). Wire 4-byte dword
+ * padding is handled transparently.
+ *
+ * Return: 0 on success, a positive NVMe-MI response status code (see
+ * &enum nvme_mi_resp_status), or -1 with errno set otherwise.
+ */
+int nvme_mi_pcie_config_read(nvme_mi_ctrl_t ctrl, __u16 offset,
+			     __u16 length, void *data);
+
+/**
+ * nvme_mi_pcie_config_write() - Perform a PCIe Configuration Write command.
+ * @ctrl: Controller to modify
+ * @offset: Starting byte offset in PCIe Configuration Space (0..4095)
+ * @length: Number of bytes to write (1..4096; @offset + @length <= 4096)
+ * @data: Buffer containing @length bytes to write
+ *
+ * Writes @length bytes from @data to the 4 KiB PCIe Configuration Space of
+ * @ctrl starting at @offset (Opcode 0x01, NVMe-MI section 7.2). Wire 4-byte
+ * dword alignment and trailing zero-padding are handled transparently.
+ *
+ * Return: 0 on success, a positive NVMe-MI response status code (see
+ * &enum nvme_mi_resp_status), or -1 with errno set otherwise.
+ */
+int nvme_mi_pcie_config_write(nvme_mi_ctrl_t ctrl, __u16 offset,
+			      __u16 length, const void *data);
+
+/**
+ * nvme_mi_pcie_mem_read() - Perform a PCIe Memory Read command.
+ * @ctrl: Controller to query
+ * @bar: PCIe Base Address Register index (0..5, corresponding to BAR0..BAR5)
+ * @offset: 64-bit byte offset within the specified Memory BAR
+ * @length: Number of bytes to read (1..4096)
+ * @data: Buffer to populate with @length bytes of memory BAR data
+ *
+ * Reads @length bytes from the PCIe Memory BAR @bar of @ctrl starting at
+ * 64-bit @offset (Opcode 0x02, NVMe-MI section 7.5). Wire 4-byte dword
+ * padding is handled transparently.
+ *
+ * Return: 0 on success, a positive NVMe-MI response status code (see
+ * &enum nvme_mi_resp_status), or -1 with errno set otherwise.
+ */
+int nvme_mi_pcie_mem_read(nvme_mi_ctrl_t ctrl, __u8 bar, __u64 offset,
+			  __u16 length, void *data);
+
+/**
+ * nvme_mi_pcie_mem_write() - Perform a PCIe Memory Write command.
+ * @ctrl: Controller to modify
+ * @bar: PCIe Base Address Register index (0..5, corresponding to BAR0..BAR5)
+ * @offset: 64-bit byte offset within the specified Memory BAR
+ * @length: Number of bytes to write (1..4096)
+ * @data: Buffer containing @length bytes to write
+ *
+ * Writes @length bytes from @data to the PCIe Memory BAR @bar of @ctrl
+ * starting at 64-bit @offset (Opcode 0x03, NVMe-MI section 7.6). Wire 4-byte
+ * dword alignment and trailing zero-padding are handled transparently.
+ *
+ * Return: 0 on success, a positive NVMe-MI response status code (see
+ * &enum nvme_mi_resp_status), or -1 with errno set otherwise.
+ */
+int nvme_mi_pcie_mem_write(nvme_mi_ctrl_t ctrl, __u8 bar, __u64 offset,
+			   __u16 length, const void *data);
+
+/**
+ * nvme_mi_pcie_io_read() - Perform a PCIe I/O Read command.
+ * @ctrl: Controller to query
+ * @bar: PCIe Base Address Register index (0..5, corresponding to BAR0..BAR5)
+ * @offset: 32-bit byte offset within the specified I/O BAR
+ * @length: Number of bytes to read (1..4096)
+ * @data: Buffer to populate with @length bytes of I/O BAR data
+ *
+ * Reads @length bytes from the PCIe I/O BAR @bar of @ctrl starting at 32-bit
+ * @offset (Opcode 0x04, NVMe-MI section 7.3). Wire 4-byte dword padding is
+ * handled transparently.
+ *
+ * Return: 0 on success, a positive NVMe-MI response status code (see
+ * &enum nvme_mi_resp_status), or -1 with errno set otherwise.
+ */
+int nvme_mi_pcie_io_read(nvme_mi_ctrl_t ctrl, __u8 bar, __u32 offset,
+			 __u16 length, void *data);
+
+/**
+ * nvme_mi_pcie_io_write() - Perform a PCIe I/O Write command.
+ * @ctrl: Controller to modify
+ * @bar: PCIe Base Address Register index (0..5, corresponding to BAR0..BAR5)
+ * @offset: 32-bit byte offset within the specified I/O BAR
+ * @length: Number of bytes to write (1..4096)
+ * @data: Buffer containing @length bytes to write
+ *
+ * Writes @length bytes from @data to the PCIe I/O BAR @bar of @ctrl starting
+ * at 32-bit @offset (Opcode 0x05, NVMe-MI section 7.4). Wire 4-byte dword
+ * alignment and trailing zero-padding are handled transparently.
+ *
+ * Return: 0 on success, a positive NVMe-MI response status code (see
+ * &enum nvme_mi_resp_status), or -1 with errno set otherwise.
+ */
+int nvme_mi_pcie_io_write(nvme_mi_ctrl_t ctrl, __u8 bar, __u32 offset,
+			  __u16 length, const void *data);
+
+/**
  * enum nvme_mi_aem_handler_next_action - Next action for the AEM state machine handler
  * @NVME_MI_AEM_HNA_ACK: Send an ack for the AEM
  * @NVME_MI_AEM_HNA_NONE: No further action
@@ -3687,6 +3793,24 @@ int nvme_mi_aem_disable(nvme_mi_ep_t ep);
  * Return: 0 is a success, nonzero is an error and errno may be read for further details
  */
 int nvme_mi_aem_process(nvme_mi_ep_t ep, void *userdata);
+
+/**
+ * enum nvme_mi_pcie_opcode - Operation code for NVMe-MI PCIe commands.
+ * @nvme_mi_pcie_opcode_cfg_read: PCIe Configuration Read (Section 7.1)
+ * @nvme_mi_pcie_opcode_cfg_write: PCIe Configuration Write (Section 7.2)
+ * @nvme_mi_pcie_opcode_mem_read: PCIe Memory Read (Section 7.5)
+ * @nvme_mi_pcie_opcode_mem_write: PCIe Memory Write (Section 7.6)
+ * @nvme_mi_pcie_opcode_io_read: PCIe I/O Read (Section 7.3)
+ * @nvme_mi_pcie_opcode_io_write: PCIe I/O Write (Section 7.4)
+ */
+enum nvme_mi_pcie_opcode {
+	nvme_mi_pcie_opcode_cfg_read = 0x00,
+	nvme_mi_pcie_opcode_cfg_write = 0x01,
+	nvme_mi_pcie_opcode_mem_read = 0x02,
+	nvme_mi_pcie_opcode_mem_write = 0x03,
+	nvme_mi_pcie_opcode_io_read = 0x04,
+	nvme_mi_pcie_opcode_io_write = 0x05,
+};
 
 /**
  * struct nvme_mi_pcie_req_hdr - PCIe command request header.

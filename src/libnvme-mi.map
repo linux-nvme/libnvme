@@ -16,6 +16,12 @@ LIBNVME_MI_UNRELEASED {
 		nvme_mi_ep_set_mprt_max;
 		nvme_mi_mi_config_get_async_event;
 		nvme_mi_mi_config_set_async_event;
+		nvme_mi_pcie_config_read;
+		nvme_mi_pcie_config_write;
+		nvme_mi_pcie_io_read;
+		nvme_mi_pcie_io_write;
+		nvme_mi_pcie_mem_read;
+		nvme_mi_pcie_mem_write;
 		nvme_mi_pcie_xfer;
 		nvme_mi_mi_controller_health_status_poll;
 };

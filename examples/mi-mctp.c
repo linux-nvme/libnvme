@@ -806,6 +806,484 @@ int do_config_set(nvme_mi_ep_t ep, int argc, char **argv)
 	return rc;
 }
 
+static int parse_hex_bytes(const char *hex_str, uint8_t **out_buf,
+			   uint16_t *out_len)
+{
+	uint16_t len, i;
+	uint8_t *buf;
+	size_t slen;
+
+	if (!strncmp(hex_str, "0x", 2) || !strncmp(hex_str, "0X", 2))
+		hex_str += 2;
+
+	slen = strlen(hex_str);
+	if (slen == 0 || (slen % 2) != 0 || slen > 8192)
+		return -1;
+
+	len = slen / 2;
+	buf = calloc(1, len);
+	if (!buf)
+		return -1;
+
+	for (i = 0; i < len; i++) {
+		unsigned int byte_val;
+
+		if (!isxdigit((unsigned char)hex_str[i * 2]) ||
+		    !isxdigit((unsigned char)hex_str[i * 2 + 1]) ||
+		    sscanf(hex_str + (i * 2), "%2x", &byte_val) != 1) {
+			free(buf);
+			return -1;
+		}
+		buf[i] = byte_val & 0xff;
+	}
+
+	*out_buf = buf;
+	*out_len = len;
+	return 0;
+}
+
+/* PCIe Type 0 configuration header defines six BARs (BAR0..BAR5) */
+static const unsigned long pcie_max_bar = 5;
+
+int do_pcie_cfg_read(nvme_mi_ep_t ep, int argc, char **argv)
+{
+	unsigned long ctrl_id_ul, offset_ul, length_ul;
+	uint16_t ctrl_id, offset, length;
+	struct nvme_mi_ctrl *ctrl;
+	uint8_t *buf;
+	int rc;
+
+	if (argc < 4) {
+		fprintf(stderr,
+			"usage: pcie-cfg-read <ctrl-id> <offset> <length>\n");
+		return -1;
+	}
+
+	ctrl_id_ul = strtoul(argv[1], NULL, 0);
+	offset_ul = strtoul(argv[2], NULL, 0);
+	length_ul = strtoul(argv[3], NULL, 0);
+
+	if (ctrl_id_ul > 0xffff || offset_ul >= 4096 ||
+	    !length_ul || length_ul > 4096 ||
+	    offset_ul + length_ul > 4096) {
+		fprintf(stderr,
+			"invalid ctrl-id/offset/length (must fit within 4096-byte PCIe config space)\n");
+		return -1;
+	}
+
+	ctrl_id = ctrl_id_ul & 0xffff;
+	offset = offset_ul & 0xffff;
+	length = length_ul & 0xffff;
+
+	buf = calloc(1, length);
+	if (!buf)
+		return -1;
+
+	ctrl = nvme_mi_init_ctrl(ep, ctrl_id);
+	if (!ctrl) {
+		warn("can't create controller");
+		free(buf);
+		return -1;
+	}
+
+	rc = nvme_mi_pcie_config_read(ctrl, offset, length, buf);
+	if (rc < 0) {
+		warn("PCIe Configuration Read failed");
+	} else if (rc > 0) {
+		warnx("PCIe Configuration Read MI error: 0x%02x (%s)",
+		      rc, nvme_mi_status_to_string(rc));
+	} else {
+		printf("PCIe Config Space (ctrl %u, offset 0x%03x, %u bytes):\n",
+		       ctrl_id, offset, length);
+		hexdump(buf, length);
+	}
+
+	nvme_mi_close_ctrl(ctrl);
+	free(buf);
+	return rc;
+}
+
+int do_pcie_cfg_write(nvme_mi_ep_t ep, int argc, char **argv)
+{
+	unsigned long ctrl_id_ul, offset_ul;
+	uint16_t ctrl_id, offset, length = 0;
+	struct nvme_mi_ctrl *ctrl;
+	uint8_t *buf = NULL;
+	int rc;
+
+	if (argc < 4) {
+		fprintf(stderr,
+			"usage: pcie-cfg-write <ctrl-id> <offset> <hex-data>\n");
+		return -1;
+	}
+
+	ctrl_id_ul = strtoul(argv[1], NULL, 0);
+	offset_ul = strtoul(argv[2], NULL, 0);
+	if (ctrl_id_ul > 0xffff || offset_ul >= 4096) {
+		fprintf(stderr, "invalid ctrl-id or offset\n");
+		return -1;
+	}
+
+	ctrl_id = ctrl_id_ul & 0xffff;
+	offset = offset_ul & 0xffff;
+
+	if (parse_hex_bytes(argv[3], &buf, &length) < 0) {
+		fprintf(stderr, "invalid hex data '%s'\n", argv[3]);
+		return -1;
+	}
+
+	if ((uint32_t)offset + (uint32_t)length > 4096) {
+		fprintf(stderr,
+			"invalid offset/length (must fit within 4096-byte PCIe config space)\n");
+		free(buf);
+		return -1;
+	}
+
+	ctrl = nvme_mi_init_ctrl(ep, ctrl_id);
+	if (!ctrl) {
+		warn("can't create controller");
+		free(buf);
+		return -1;
+	}
+
+	rc = nvme_mi_pcie_config_write(ctrl, offset, length, buf);
+	if (rc < 0) {
+		warn("PCIe Configuration Write failed");
+	} else if (rc > 0) {
+		warnx("PCIe Configuration Write MI error: 0x%02x (%s)",
+		      rc, nvme_mi_status_to_string(rc));
+	} else {
+		printf("PCIe Config Write succeeded (ctrl %u, offset 0x%03x, %u bytes)\n",
+		       ctrl_id, offset, length);
+	}
+
+	nvme_mi_close_ctrl(ctrl);
+	free(buf);
+	return rc;
+}
+
+int do_pcie_mem_read(nvme_mi_ep_t ep, int argc, char **argv)
+{
+	unsigned long ctrl_id_ul, bar_ul, length_ul;
+	uint16_t ctrl_id, length;
+	struct nvme_mi_ctrl *ctrl;
+	uint64_t offset;
+	uint8_t *buf, bar;
+	int rc;
+
+	if (argc < 5) {
+		fprintf(stderr,
+			"usage: pcie-mem-read <ctrl-id> <bar> <offset> <length>\n");
+		return -1;
+	}
+
+	ctrl_id_ul = strtoul(argv[1], NULL, 0);
+	bar_ul = strtoul(argv[2], NULL, 0);
+	offset = strtoull(argv[3], NULL, 0);
+	length_ul = strtoul(argv[4], NULL, 0);
+
+	if (ctrl_id_ul > 0xffff || bar_ul > pcie_max_bar || !length_ul || length_ul > 4096) {
+		fprintf(stderr,
+			"invalid ctrl-id, bar (0..5), or length (1..4096)\n");
+		return -1;
+	}
+
+	ctrl_id = ctrl_id_ul & 0xffff;
+	bar = bar_ul & 0xff;
+	length = length_ul & 0xffff;
+
+	buf = calloc(1, length);
+	if (!buf)
+		return -1;
+
+	ctrl = nvme_mi_init_ctrl(ep, ctrl_id);
+	if (!ctrl) {
+		warn("can't create controller");
+		free(buf);
+		return -1;
+	}
+
+	rc = nvme_mi_pcie_mem_read(ctrl, bar, offset, length, buf);
+	if (rc < 0) {
+		warn("PCIe Memory Read failed");
+	} else if (rc > 0) {
+		warnx("PCIe Memory Read MI error: 0x%02x (%s)",
+		      rc, nvme_mi_status_to_string(rc));
+	} else {
+		printf("PCIe Memory Space (ctrl %u, BAR%u, offset 0x%llx, %u bytes):\n",
+		       ctrl_id, bar, (unsigned long long)offset, length);
+		hexdump(buf, length);
+	}
+
+	nvme_mi_close_ctrl(ctrl);
+	free(buf);
+	return rc;
+}
+
+int do_pcie_mem_write(nvme_mi_ep_t ep, int argc, char **argv)
+{
+	unsigned long ctrl_id_ul, bar_ul;
+	uint16_t ctrl_id, length = 0;
+	struct nvme_mi_ctrl *ctrl;
+	uint8_t *buf = NULL, bar;
+	uint64_t offset;
+	int rc;
+
+	if (argc < 5) {
+		fprintf(stderr,
+			"usage: pcie-mem-write <ctrl-id> <bar> <offset> <hex-data>\n");
+		return -1;
+	}
+
+	ctrl_id_ul = strtoul(argv[1], NULL, 0);
+	bar_ul = strtoul(argv[2], NULL, 0);
+	offset = strtoull(argv[3], NULL, 0);
+
+	if (ctrl_id_ul > 0xffff || bar_ul > pcie_max_bar) {
+		fprintf(stderr, "invalid ctrl-id or bar (0..5)\n");
+		return -1;
+	}
+
+	ctrl_id = ctrl_id_ul & 0xffff;
+	bar = bar_ul & 0xff;
+
+	if (parse_hex_bytes(argv[4], &buf, &length) < 0) {
+		fprintf(stderr, "invalid hex data '%s'\n", argv[4]);
+		return -1;
+	}
+
+	ctrl = nvme_mi_init_ctrl(ep, ctrl_id);
+	if (!ctrl) {
+		warn("can't create controller");
+		free(buf);
+		return -1;
+	}
+
+	rc = nvme_mi_pcie_mem_write(ctrl, bar, offset, length, buf);
+	if (rc < 0) {
+		warn("PCIe Memory Write failed");
+	} else if (rc > 0) {
+		warnx("PCIe Memory Write MI error: 0x%02x (%s)",
+		      rc, nvme_mi_status_to_string(rc));
+	} else {
+		printf("PCIe Memory Write succeeded (ctrl %u, BAR%u, offset 0x%llx, %u bytes)\n",
+		       ctrl_id, bar, (unsigned long long)offset, length);
+	}
+
+	nvme_mi_close_ctrl(ctrl);
+	free(buf);
+	return rc;
+}
+
+int do_pcie_io_read(nvme_mi_ep_t ep, int argc, char **argv)
+{
+	unsigned long ctrl_id_ul, bar_ul, offset_ul, length_ul;
+	uint16_t ctrl_id, length;
+	struct nvme_mi_ctrl *ctrl;
+	uint8_t *buf, bar;
+	uint32_t offset;
+	int rc;
+
+	if (argc < 5) {
+		fprintf(stderr,
+			"usage: pcie-io-read <ctrl-id> <bar> <offset> <length>\n");
+		return -1;
+	}
+
+	ctrl_id_ul = strtoul(argv[1], NULL, 0);
+	bar_ul = strtoul(argv[2], NULL, 0);
+	offset_ul = strtoul(argv[3], NULL, 0);
+	length_ul = strtoul(argv[4], NULL, 0);
+
+	if (ctrl_id_ul > 0xffff || bar_ul > pcie_max_bar || !length_ul || length_ul > 4096) {
+		fprintf(stderr,
+			"invalid ctrl-id, bar (0..5), or length (1..4096)\n");
+		return -1;
+	}
+
+	ctrl_id = ctrl_id_ul & 0xffff;
+	bar = bar_ul & 0xff;
+	offset = offset_ul & 0xffffffff;
+	length = length_ul & 0xffff;
+
+	buf = calloc(1, length);
+	if (!buf)
+		return -1;
+
+	ctrl = nvme_mi_init_ctrl(ep, ctrl_id);
+	if (!ctrl) {
+		warn("can't create controller");
+		free(buf);
+		return -1;
+	}
+
+	rc = nvme_mi_pcie_io_read(ctrl, bar, offset, length, buf);
+	if (rc < 0) {
+		warn("PCIe I/O Read failed");
+	} else if (rc > 0) {
+		warnx("PCIe I/O Read MI error: 0x%02x (%s)",
+		      rc, nvme_mi_status_to_string(rc));
+	} else {
+		printf("PCIe I/O Space (ctrl %u, BAR%u, offset 0x%x, %u bytes):\n",
+		       ctrl_id, bar, offset, length);
+		hexdump(buf, length);
+	}
+
+	nvme_mi_close_ctrl(ctrl);
+	free(buf);
+	return rc;
+}
+
+int do_pcie_io_write(nvme_mi_ep_t ep, int argc, char **argv)
+{
+	unsigned long ctrl_id_ul, bar_ul, offset_ul;
+	uint16_t ctrl_id, length = 0;
+	struct nvme_mi_ctrl *ctrl;
+	uint8_t *buf = NULL, bar;
+	uint32_t offset;
+	int rc;
+
+	if (argc < 5) {
+		fprintf(stderr,
+			"usage: pcie-io-write <ctrl-id> <bar> <offset> <hex-data>\n");
+		return -1;
+	}
+
+	ctrl_id_ul = strtoul(argv[1], NULL, 0);
+	bar_ul = strtoul(argv[2], NULL, 0);
+	offset_ul = strtoul(argv[3], NULL, 0);
+
+	if (ctrl_id_ul > 0xffff || bar_ul > pcie_max_bar) {
+		fprintf(stderr, "invalid ctrl-id or bar (0..5)\n");
+		return -1;
+	}
+
+	ctrl_id = ctrl_id_ul & 0xffff;
+	bar = bar_ul & 0xff;
+	offset = offset_ul & 0xffffffff;
+
+	if (parse_hex_bytes(argv[4], &buf, &length) < 0) {
+		fprintf(stderr, "invalid hex data '%s'\n", argv[4]);
+		return -1;
+	}
+
+	ctrl = nvme_mi_init_ctrl(ep, ctrl_id);
+	if (!ctrl) {
+		warn("can't create controller");
+		free(buf);
+		return -1;
+	}
+
+	rc = nvme_mi_pcie_io_write(ctrl, bar, offset, length, buf);
+	if (rc < 0) {
+		warn("PCIe I/O Write failed");
+	} else if (rc > 0) {
+		warnx("PCIe I/O Write MI error: 0x%02x (%s)",
+		      rc, nvme_mi_status_to_string(rc));
+	} else {
+		printf("PCIe I/O Write succeeded (ctrl %u, BAR%u, offset 0x%x, %u bytes)\n",
+		       ctrl_id, bar, offset, length);
+	}
+
+	nvme_mi_close_ctrl(ctrl);
+	free(buf);
+	return rc;
+}
+
+int do_pcie_raw(nvme_mi_ep_t ep, int argc, char **argv)
+{
+	struct nvme_mi_pcie_req_hdr *req = NULL;
+	struct nvme_mi_pcie_resp_hdr *resp = NULL;
+	unsigned long ctrl_id_ul, opcode_ul;
+	size_t req_data_len = 0, resp_data_len = 0;
+	uint32_t cdw0, cdw1, cdw2;
+	uint8_t *hex_buf = NULL;
+	uint16_t raw_len = 0;
+	uint16_t ctrl_id;
+	uint8_t opcode;
+	int rc;
+
+	if (argc < 6) {
+		fprintf(stderr,
+			"usage: pcie <ctrl-id> <opcode> <cdw0> <cdw1> <cdw2> [<hex-data>]\n");
+		return -1;
+	}
+
+	ctrl_id_ul = strtoul(argv[1], NULL, 0);
+	opcode_ul = strtoul(argv[2], NULL, 0);
+	if (ctrl_id_ul > 0xffff || opcode_ul > 0xff) {
+		fprintf(stderr, "invalid ctrl-id or opcode\n");
+		return -1;
+	}
+
+	ctrl_id = ctrl_id_ul & 0xffff;
+	opcode = opcode_ul & 0xff;
+	cdw0 = strtoul(argv[3], NULL, 0) & 0xffffffff;
+	cdw1 = strtoul(argv[4], NULL, 0) & 0xffffffff;
+	cdw2 = strtoul(argv[5], NULL, 0) & 0xffffffff;
+
+	if (argc >= 7) {
+		if (parse_hex_bytes(argv[6], &hex_buf, &raw_len) < 0) {
+			fprintf(stderr, "invalid hex data '%s'\n", argv[6]);
+			return -1;
+		}
+		req_data_len = (raw_len + 3) & ~((size_t)3);
+	} else {
+		size_t req_len_field = cdw0 & 0xffff;
+
+		if (req_len_field > 0 && req_len_field <= 4096)
+			resp_data_len = (req_len_field + 3) & ~((size_t)3);
+	}
+
+	req = calloc(1, sizeof(*req) + req_data_len);
+	resp = calloc(1, sizeof(*resp) + 4096);
+	if (!req || !resp) {
+		free(hex_buf);
+		free(req);
+		free(resp);
+		return -1;
+	}
+
+	req->opcode = opcode;
+	req->ctrlid = cpu_to_le16(ctrl_id);
+	req->nmd0 = cpu_to_le32(cdw0);
+	req->nmd1 = cpu_to_le32(cdw1);
+	req->nmd2 = cpu_to_le32(cdw2);
+	if (hex_buf && raw_len)
+		memcpy(req + 1, hex_buf, raw_len);
+	free(hex_buf);
+
+	printf("PCIe request:\n");
+	printf(" opcode: 0x%02x\n", req->opcode);
+	printf(" ctrl:   0x%04x\n", le16_to_cpu(req->ctrlid));
+	printf(" cdw0:   0x%08x\n", le32_to_cpu(req->nmd0));
+	printf(" cdw1:   0x%08x\n", le32_to_cpu(req->nmd1));
+	printf(" cdw2:   0x%08x\n", le32_to_cpu(req->nmd2));
+	printf(" raw:\n");
+	hexdump((const unsigned char *)req, sizeof(*req) + req_data_len);
+
+	rc = nvme_mi_pcie_xfer(ep, req, req_data_len, resp, &resp_data_len);
+	if (rc < 0) {
+		warn("nvme_mi_pcie_xfer failed");
+		free(req);
+		free(resp);
+		return -1;
+	}
+
+	printf("PCIe response:\n");
+	printf(" Status: 0x%02x (%s)\n", resp->status,
+	       nvme_mi_status_to_string(resp->status));
+	printf(" PEL:    0x%02x 0x%02x 0x%02x\n",
+	       resp->rsvd[0], resp->rsvd[1], resp->rsvd[2]);
+	printf(" data [%zu bytes]\n", resp_data_len);
+	if (resp_data_len > 0)
+		hexdump((const unsigned char *)(resp + 1), resp_data_len);
+
+	free(req);
+	free(resp);
+	return rc;
+}
+
 enum action {
 	ACTION_INFO,
 	ACTION_CONTROLLERS,
@@ -816,6 +1294,13 @@ enum action {
 	ACTION_CONFIG_GET,
 	ACTION_CONFIG_SET,
 	ACTION_CONTROL_PRIMITIVE,
+	ACTION_PCIE_CFG_READ,
+	ACTION_PCIE_CFG_WRITE,
+	ACTION_PCIE_MEM_READ,
+	ACTION_PCIE_MEM_WRITE,
+	ACTION_PCIE_IO_READ,
+	ACTION_PCIE_IO_WRITE,
+	ACTION_PCIE_RAW,
 };
 
 static int do_action_endpoint(enum action action, nvme_mi_ep_t ep, int argc, char** argv)
@@ -849,6 +1334,27 @@ static int do_action_endpoint(enum action action, nvme_mi_ep_t ep, int argc, cha
 		break;
 	case ACTION_CONTROL_PRIMITIVE:
 		rc = do_control_primitive(ep, argc, argv);
+		break;
+	case ACTION_PCIE_CFG_READ:
+		rc = do_pcie_cfg_read(ep, argc, argv);
+		break;
+	case ACTION_PCIE_CFG_WRITE:
+		rc = do_pcie_cfg_write(ep, argc, argv);
+		break;
+	case ACTION_PCIE_MEM_READ:
+		rc = do_pcie_mem_read(ep, argc, argv);
+		break;
+	case ACTION_PCIE_MEM_WRITE:
+		rc = do_pcie_mem_write(ep, argc, argv);
+		break;
+	case ACTION_PCIE_IO_READ:
+		rc = do_pcie_io_read(ep, argc, argv);
+		break;
+	case ACTION_PCIE_IO_WRITE:
+		rc = do_pcie_io_write(ep, argc, argv);
+		break;
+	case ACTION_PCIE_RAW:
+		rc = do_pcie_raw(ep, argc, argv);
 		break;
 	default:
 		/* This shouldn't be possible, as we should be covering all
@@ -897,6 +1403,13 @@ int main(int argc, char **argv)
 			"  get-config [port]\n"
 			"  set-config <port> <type> <val>\n"
 			"  control-primitive [action(abort|pause|resume|get-state|replay)]\n"
+			"  pcie-cfg-read <ctrl-id> <offset> <length>\n"
+			"  pcie-cfg-write <ctrl-id> <offset> <hex-data>\n"
+			"  pcie-mem-read <ctrl-id> <bar> <offset> <length>\n"
+			"  pcie-mem-write <ctrl-id> <bar> <offset> <hex-data>\n"
+			"  pcie-io-read <ctrl-id> <bar> <offset> <length>\n"
+			"  pcie-io-write <ctrl-id> <bar> <offset> <hex-data>\n"
+			"  pcie <ctrl-id> <opcode> <cdw0> <cdw1> <cdw2> [<hex-data>]\n"
 			"\n"
 			"  'dbus' target will query D-Bus for known MCTP endpoints\n"
 			);
@@ -928,6 +1441,20 @@ int main(int argc, char **argv)
 			action = ACTION_CONFIG_SET;
 		} else if (!strcmp(action_str, "control-primitive")) {
 			action = ACTION_CONTROL_PRIMITIVE;
+		} else if (!strcmp(action_str, "pcie-cfg-read")) {
+			action = ACTION_PCIE_CFG_READ;
+		} else if (!strcmp(action_str, "pcie-cfg-write")) {
+			action = ACTION_PCIE_CFG_WRITE;
+		} else if (!strcmp(action_str, "pcie-mem-read")) {
+			action = ACTION_PCIE_MEM_READ;
+		} else if (!strcmp(action_str, "pcie-mem-write")) {
+			action = ACTION_PCIE_MEM_WRITE;
+		} else if (!strcmp(action_str, "pcie-io-read")) {
+			action = ACTION_PCIE_IO_READ;
+		} else if (!strcmp(action_str, "pcie-io-write")) {
+			action = ACTION_PCIE_IO_WRITE;
+		} else if (!strcmp(action_str, "pcie")) {
+			action = ACTION_PCIE_RAW;
 		} else {
 			fprintf(stderr, "invalid action '%s'\n", action_str);
 			return EXIT_FAILURE;
