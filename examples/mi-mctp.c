@@ -842,6 +842,9 @@ static int parse_hex_bytes(const char *hex_str, uint8_t **out_buf,
 	return 0;
 }
 
+/* PCIe Type 0 configuration header defines six BARs (BAR0..BAR5) */
+static const unsigned long pcie_max_bar = 5;
+
 int do_pcie_cfg_read(nvme_mi_ep_t ep, int argc, char **argv)
 {
 	unsigned long ctrl_id_ul, offset_ul, length_ul;
@@ -979,7 +982,7 @@ int do_pcie_mem_read(nvme_mi_ep_t ep, int argc, char **argv)
 	offset = strtoull(argv[3], NULL, 0);
 	length_ul = strtoul(argv[4], NULL, 0);
 
-	if (ctrl_id_ul > 0xffff || bar_ul > 5 || !length_ul || length_ul > 4096) {
+	if (ctrl_id_ul > 0xffff || bar_ul > pcie_max_bar || !length_ul || length_ul > 4096) {
 		fprintf(stderr,
 			"invalid ctrl-id, bar (0..5), or length (1..4096)\n");
 		return -1;
@@ -1036,7 +1039,7 @@ int do_pcie_mem_write(nvme_mi_ep_t ep, int argc, char **argv)
 	bar_ul = strtoul(argv[2], NULL, 0);
 	offset = strtoull(argv[3], NULL, 0);
 
-	if (ctrl_id_ul > 0xffff || bar_ul > 5) {
+	if (ctrl_id_ul > 0xffff || bar_ul > pcie_max_bar) {
 		fprintf(stderr, "invalid ctrl-id or bar (0..5)\n");
 		return -1;
 	}
@@ -1092,7 +1095,7 @@ int do_pcie_io_read(nvme_mi_ep_t ep, int argc, char **argv)
 	offset_ul = strtoul(argv[3], NULL, 0);
 	length_ul = strtoul(argv[4], NULL, 0);
 
-	if (ctrl_id_ul > 0xffff || bar_ul > 5 || !length_ul || length_ul > 4096) {
+	if (ctrl_id_ul > 0xffff || bar_ul > pcie_max_bar || !length_ul || length_ul > 4096) {
 		fprintf(stderr,
 			"invalid ctrl-id, bar (0..5), or length (1..4096)\n");
 		return -1;
@@ -1150,7 +1153,7 @@ int do_pcie_io_write(nvme_mi_ep_t ep, int argc, char **argv)
 	bar_ul = strtoul(argv[2], NULL, 0);
 	offset_ul = strtoul(argv[3], NULL, 0);
 
-	if (ctrl_id_ul > 0xffff || bar_ul > 5) {
+	if (ctrl_id_ul > 0xffff || bar_ul > pcie_max_bar) {
 		fprintf(stderr, "invalid ctrl-id or bar (0..5)\n");
 		return -1;
 	}

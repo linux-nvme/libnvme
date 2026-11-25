@@ -2195,6 +2195,9 @@ int nvme_mi_mi_config_set_async_event(nvme_mi_ep_t ep,
 		NULL);
 }
 
+/* PCIe Type 0 configuration header defines six BARs (BAR0..BAR5) */
+static const __u8 pcie_max_bar = 5;
+
 static inline size_t nvme_mi_dword_align(size_t len)
 {
 	return (len + 3) & ~((size_t)3);
@@ -2314,7 +2317,7 @@ int nvme_mi_pcie_mem_read(nvme_mi_ctrl_t ctrl, __u8 bar, __u64 offset,
 	__u32 cdw1 = (__u32)(offset & 0xffffffffULL);
 	__u32 cdw2 = (__u32)(offset >> 32);
 
-	if (bar > 5) {
+	if (bar > pcie_max_bar) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -2330,7 +2333,7 @@ int nvme_mi_pcie_mem_write(nvme_mi_ctrl_t ctrl, __u8 bar, __u64 offset,
 	__u32 cdw1 = (__u32)(offset & 0xffffffffULL);
 	__u32 cdw2 = (__u32)(offset >> 32);
 
-	if (bar > 5) {
+	if (bar > pcie_max_bar) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -2346,7 +2349,7 @@ int nvme_mi_pcie_io_read(nvme_mi_ctrl_t ctrl, __u8 bar, __u32 offset,
 	__u32 cdw1 = offset;
 	__u32 cdw2 = 0;
 
-	if (bar > 5) {
+	if (bar > pcie_max_bar) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -2362,7 +2365,7 @@ int nvme_mi_pcie_io_write(nvme_mi_ctrl_t ctrl, __u8 bar, __u32 offset,
 	__u32 cdw1 = offset;
 	__u32 cdw2 = 0;
 
-	if (bar > 5) {
+	if (bar > pcie_max_bar) {
 		errno = EINVAL;
 		return -1;
 	}
